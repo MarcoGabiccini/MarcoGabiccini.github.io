@@ -118,7 +118,14 @@ h1 em, h2 em { color: var(--accent); font-weight: 500; }
 .footer-main h2 { grid-column: 2; margin: 0; font-size: clamp(46px, 6vw, 74px); line-height: .94; }
 .footer-main h2 em { color: var(--accent); }
 .footer-email { grid-column: 2; justify-self: start; margin-top: 55px; font-size: clamp(17px, 2vw, 24px); border-bottom: 1px solid currentColor; }
-.footer-bottom { display: grid; grid-template-columns: 1.3fr 1fr .7fr; gap: 35px; align-items: end; margin-top: 82px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.2); color: #969e97; font-size: 11px; }
+.contact-grid { display: grid; grid-template-columns: .65fr 1fr 1.35fr; margin-top: 72px; border: 1px solid rgba(255,255,255,.2); }
+.contact-card { min-height: 240px; padding: 25px; border-right: 1px solid rgba(255,255,255,.2); }
+.contact-label { margin: 0 0 28px; color: #969e97; font: 500 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.contact-value { font: 500 clamp(20px, 2vw, 28px) var(--serif); letter-spacing: -.02em; border-bottom: 1px solid currentColor; }
+.contact-address { color: #d2d7d2; font-size: 13px; line-height: 1.75; }
+.contact-map { min-height: 240px; }
+.contact-map iframe { display: block; width: 100%; height: 100%; min-height: 240px; border: 0; }
+.footer-bottom { display: grid; grid-template-columns: 1fr auto; gap: 35px; align-items: end; margin-top: 60px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.2); color: #969e97; font-size: 11px; }
 .footer-bottom p { margin: 0; }
 .footer-bottom nav { display: flex; gap: 24px; }
 .footer-bottom nav a { color: #f3f1e9; }
@@ -148,6 +155,9 @@ h1 em, h2 em { color: var(--accent); font-weight: 500; }
   .research-list { grid-template-columns: 1fr; }
   .footer-main { grid-template-columns: 1fr; }
   .footer-main h2, .footer-email { grid-column: 1; }
+  .contact-grid { grid-template-columns: 1fr 1fr; }
+  .contact-card:nth-child(2) { border-right: 0; }
+  .contact-map { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,.2); }
 }
 
 @media (max-width: 640px) {
@@ -171,6 +181,10 @@ h1 em, h2 em { color: var(--accent); font-weight: 500; }
   .publication-card { min-height: 280px; padding: 23px; }
   .course-card { min-height: 290px; padding: 25px; }
   .site-footer { padding-top: 90px; }
+  .contact-grid { grid-template-columns: 1fr; margin-top: 55px; }
+  .contact-card { min-height: auto; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.2); }
+  .contact-card:nth-child(2) { border-right: 0; }
+  .contact-map { grid-column: 1; border-top: 0; }
   .footer-bottom { grid-template-columns: 1fr; margin-top: 80px; }
   .footer-bottom p:last-child { text-align: left; }
 }
