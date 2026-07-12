@@ -18,6 +18,7 @@ Then open `http://localhost:8000`.
 - Visual design and responsive layout: `assets/css/styles.css`
 - Navigation and entrance animations: `assets/js/main.js`
 - Portrait: `assets/images/Marco_mezzo_busto.jpg`
+- Public manuscripts: `papers/`
 - Teaching material remains linked at `https://marcogabiccini.github.io/AppliedMechanicsLab/`
 
 GitHub Pages publishes the repository root automatically when Pages is configured to deploy from the default branch.
