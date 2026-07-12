@@ -24,6 +24,7 @@ button { font: inherit; }
 
 .site-header { width: var(--shell); height: 72px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); position: relative; z-index: 20; }
 .wordmark { display: flex; align-items: center; gap: 13px; font-weight: 700; letter-spacing: -.02em; }
+.wordmark > span:last-child { white-space: nowrap; }
 .wordmark-mark { display: grid; place-items: center; width: 37px; height: 37px; border-radius: 50%; background: var(--ink); color: var(--paper); font: 500 11px var(--mono); letter-spacing: .04em; }
 .primary-nav { display: flex; gap: 32px; font-size: 14px; font-weight: 600; }
 .primary-nav a { position: relative; }
@@ -150,9 +151,17 @@ h1 em, h2 em { color: var(--accent); font-weight: 500; }
 }
 
 @media (max-width: 640px) {
-  h1 { font-size: clamp(45px, 13vw, 62px); }
-  .hero { padding-top: 43px; }
+  .wordmark { gap: 9px; font-size: 14px; }
+  .wordmark-mark { width: 32px; height: 32px; font-size: 10px; }
+  h1 { font-size: clamp(40px, 11.5vw, 48px); line-height: .98; }
+  h1 br { display: none; }
+  .hero { padding-top: 34px; }
+  .hero-copy { padding-bottom: 22px; }
+  .hero-intro { margin-top: 20px; font-size: 16px; }
+  .hero-actions { margin-top: 23px; gap: 20px; }
+  .button { padding: 13px 16px; }
   .hero-actions, .archive-links { align-items: flex-start; flex-direction: column; }
+  .hero-portrait { margin-top: 20px; margin-bottom: 38px; width: min(100%, 300px); }
   .statement, .research, .work, .teaching, .about { padding-top: 70px; padding-bottom: 70px; }
   .statement blockquote { font-size: 34px; }
   .research-link { grid-template-columns: 30px 1fr; padding: 23px; }
