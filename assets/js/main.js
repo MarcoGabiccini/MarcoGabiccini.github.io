@@ -29,3 +29,48 @@ if ('IntersectionObserver' in window) {
 }
 
 document.querySelector('#year').textContent = new Date().getFullYear();
+
+const researchLinks = document.querySelectorAll('.research-link[href^="#paper-"]');
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+researchLinks.forEach((link) => {
+  link.addEventListener('click', (event) => {
+    const selector = link.getAttribute('href');
+    const paper = document.querySelector(selector);
+    if (!paper) return;
+
+    event.preventDefault();
+    paper.scrollIntoView({
+      behavior: prefersReducedMotion.matches ? 'auto' : 'smooth',
+      block: 'center'
+    });
+    history.pushState(null, '', selector);
+
+    const highlight = () => {
+      paper.classList.remove('is-highlighted');
+      void paper.offsetWidth;
+      paper.classList.add('is-highlighted');
+      window.setTimeout(() => paper.classList.remove('is-highlighted'), 750);
+    };
+
+    if (prefersReducedMotion.matches) {
+      highlight();
+      return;
+    }
+
+    const startedAt = performance.now();
+    const waitForScroll = () => {
+      const bounds = paper.getBoundingClientRect();
+      const paperCenter = bounds.top + bounds.height / 2;
+      const nearCenter = Math.abs(paperCenter - window.innerHeight / 2) < 90;
+
+      if (nearCenter || performance.now() - startedAt > 1400) {
+        highlight();
+      } else {
+        window.requestAnimationFrame(waitForScroll);
+      }
+    };
+
+    window.requestAnimationFrame(waitForScroll);
+  });
+});
