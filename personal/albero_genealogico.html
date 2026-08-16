@@ -52,7 +52,6 @@
   .node.detail rect.box { fill:#eef6ff; }
   .node.selA rect.box { stroke:#5c940d; stroke-width:3; fill:#f4fce3; }
   .node.selB rect.box { stroke:#1971c2; stroke-width:3; fill:#e7f5ff; }
-  .node.onpath rect.box { fill:#fff4e6; }
   .node.flash rect.box { fill:#fff3bf; }
   .cb rect.box2 { fill:#fff; stroke:#777; stroke-width:1.2; rx:2; cursor:pointer; }
   .cb.onA rect.box2 { fill:#5c940d; stroke:#3b6a00; }
@@ -64,7 +63,11 @@
   .tog text { font-size:11px; font-weight:700; text-anchor:middle; pointer-events:none; fill:#333; }
   .edge { fill:none; stroke:var(--line); stroke-width:1.5; }
   .edge.dashed { stroke-dasharray:4 3; }
-  .edge.onpath { stroke:var(--path); stroke-width:3; }
+  .edge.onpath { stroke:var(--path); stroke-width:4.5; }
+  .edge.halo { stroke:#ffe066; stroke-width:18; stroke-opacity:.8; stroke-linecap:round; stroke-linejoin:round; }
+  .node.onpath rect.box { fill:#fff3bf; stroke:var(--path); stroke-width:3; filter:drop-shadow(0 0 5px #ffd43b); }
+  .marr.onpath { stroke:var(--path); stroke-width:4; }
+  .marr-halo { stroke:#ffe066; stroke-width:18; stroke-opacity:.8; stroke-linecap:round; }
   .marr { stroke:#b08900; stroke-width:1.5; }
   .marr-sym { font-size:13px; fill:#b08900; text-anchor:middle; pointer-events:none; }
   .rowlab { font-size:12px; fill:#888; }
@@ -360,7 +363,8 @@ let currentRel = null;
 function render() {
   computeLayout();
   vp.innerHTML = '';
-  const gEdges = el('g', { class: 'edges' }, vp), gNodes = el('g', { class: 'nodes' }, vp), gLabels = el('g', { class: 'labels' }, vp);
+  const gHalo = el('g', { class: 'halo' }, vp), gEdges = el('g', { class: 'edges' }, vp), gNodes = el('g', { class: 'nodes' }, vp), gLabels = el('g', { class: 'labels' }, vp);
+  gEdges.dataset.halo = '1'; window.__gHalo = gHalo;
   // etichette di riga (generazioni)
   for (let r = 0; r <= layout.maxRow; r++) {
     const y = TOP_PAD + r * ROW_H;
@@ -382,7 +386,9 @@ function drawUnit(u, gEdges, gNodes, pathSet, pathEdges) {
     // linea di matrimonio
     const x1 = u.x + BOX_W * (i === 0 ? 1 : 0) ; // il collegamento va dal box precedente
     const prevRight = (i === 0) ? u.x + BOX_W : spouseX(u, u.spouses[i - 1]) + BOX_W;
-    el('line', { x1: prevRight, y1: u.y + BOX_H / 2, x2: sx, y2: u.y + BOX_H / 2, class: 'marr' }, gEdges);
+    const marrOn = pathSet.has(u.id) && pathSet.has(sid);
+    if (marrOn) el('line', { x1: prevRight, y1: u.y + BOX_H / 2, x2: sx, y2: u.y + BOX_H / 2, class: 'marr-halo' }, window.__gHalo);
+    el('line', { x1: prevRight, y1: u.y + BOX_H / 2, x2: sx, y2: u.y + BOX_H / 2, class: 'marr' + (marrOn ? ' onpath' : '') }, gEdges);
     txt(gEdges, (prevRight + sx) / 2, u.y + BOX_H / 2 - 4, '⚭', 'marr-sym');
     drawBox(u, sid, sx, u.y, gNodes, pathSet, false);
   });
@@ -403,6 +409,7 @@ function drawUnit(u, gEdges, gNodes, pathSet, pathEdges) {
       const onp = pathEdges.has(u.id + '>' + c.id) || pathEdges.has(c.id + '>' + u.id);
       const d = `M${up.x},${up.y} V${busY} H${cx} V${cy}`;
       const dashed = c.p.ph || u.p.ph;
+      if (onp) el('path', { d, class: 'edge halo' }, window.__gHalo);
       el('path', { d, class: 'edge' + (dashed ? ' dashed' : '') + (onp ? ' onpath' : '') }, gEdges);
     }
   }
