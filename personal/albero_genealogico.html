@@ -54,8 +54,10 @@
   .node.selB rect.box { stroke:#1971c2; stroke-width:3; fill:#e7f5ff; }
   .node.onpath rect.box { fill:#fff4e6; }
   .node.flash rect.box { fill:#fff3bf; }
-  .cb rect { fill:#fff; stroke:#777; stroke-width:1.2; rx:2; cursor:pointer; }
-  .cb text { font-size:11px; font-weight:700; pointer-events:none; }
+  .cb rect.box2 { fill:#fff; stroke:#777; stroke-width:1.2; rx:2; cursor:pointer; }
+  .cb.onA rect.box2 { fill:#5c940d; stroke:#3b6a00; }
+  .cb.onB rect.box2 { fill:#1971c2; stroke:#0b4f8a; }
+  .cb text { font-size:10px; font-weight:800; fill:#fff; pointer-events:none; }
   .tog { cursor:pointer; }
   .tog circle { fill:#fff; stroke:#666; stroke-width:1.5; }
   .tog:hover circle { fill:#ffe8cc; }
@@ -441,10 +443,10 @@ function drawBox(u, pid, x, y, parent, pathSet, isMain) {
   hit.addEventListener('click', ev => { ev.stopPropagation(); showDetails(pid); });
   hit.addEventListener('dblclick', ev => { ev.stopPropagation(); if (isMain) toggle(pid); else jumpTo(pid); });
   // checkbox selezione (area cliccabile un po' piu' grande del quadratino)
-  const cb = el('g', { class: 'cb', transform: 'translate(5,6)' }, gnode);
-  el('rect', { width: 11, height: 11 }, cb);
   const si = selected.indexOf(pid);
-  if (si >= 0) txt(cb, 5.5, 9.5, si === 0 ? 'A' : 'B', '', 'middle');
+  const cb = el('g', { class: 'cb' + (si === 0 ? ' onA' : (si === 1 ? ' onB' : '')), transform: 'translate(5,6)' }, gnode);
+  el('rect', { class: 'box2', width: 12, height: 12 }, cb);
+  if (si >= 0) txt(cb, 6, 9.8, si === 0 ? 'A' : 'B', '', 'middle');
   const cbhit = el('rect', { x: -4, y: -5, width: 20, height: 20, fill: 'transparent', style: 'cursor:pointer' }, cb);
   cbhit.addEventListener('click', ev => { ev.stopPropagation(); toggleSelect(pid); });
   const cbt = el('title', {}, cb); cbt.textContent = 'Seleziona come A/B per calcolare la parentela';
