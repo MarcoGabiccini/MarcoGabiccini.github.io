@@ -23,7 +23,10 @@
       linear-gradient(90deg, transparent 24%, rgba(0,0,0,.035) 25%, rgba(0,0,0,.035) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.035) 75%, rgba(0,0,0,.035) 76%, transparent 77%);
       background-size:60px 60px; }
   svg#canvas.grabbing { cursor:grabbing; }
-  aside#panel { width:360px; min-width:300px; background:var(--panel); border-left:1px solid #ddd; overflow:auto; padding:10px 12px; font-size:13px; }
+  aside#panel { width:360px; min-width:220px; max-width:75vw; flex:0 0 auto; background:var(--panel); border-left:1px solid #ddd; overflow:auto; padding:10px 12px; font-size:13px; }
+  #splitter { width:7px; cursor:col-resize; background:#e6e6e6; border-left:1px solid #d0d0d0; border-right:1px solid #d0d0d0; flex:0 0 auto; }
+  #splitter:hover, #splitter.active { background:#c8d8ea; }
+  .node[data-key] rect.hit { cursor:grab; }
   aside h2 { font-size:14px; margin:12px 0 6px; border-bottom:1px solid #eee; padding-bottom:3px; }
   aside h2:first-child { margin-top:0; }
   .sel-slot { display:flex; align-items:center; gap:6px; margin:3px 0; }
@@ -77,7 +80,7 @@
   .rellab text { font-size:11px; font-weight:700; }
   .rellab.A text { fill:#3b6a00; } .rellab.B text { fill:#0b4f8a; }
   .dup { font-size:10px; fill:#999; }
-  @media (max-width:900px) { aside#panel { width:280px; min-width:220px; } }
+  @media (max-width:900px) { aside#panel { width:280px; } }
 </style>
 </head>
 <body>
@@ -90,12 +93,13 @@
     <button id="bFit" title="Adatta l'albero alla finestra">Adatta</button>
     <button id="bZin">＋</button><button id="bZout">－</button>
     <button id="bClearSel" title="Deseleziona A e B">Azzera selezione</button>
+    <button id="bResetPos" title="Annulla gli spostamenti manuali delle schede">Ripristina disposizione</button>
   </div>
   <div class="legend">
     <span><span class="sw" style="border-color:#1c7ed6"></span>uomo</span>
     <span><span class="sw" style="border-color:#d6336c"></span>donna</span>
     <span><span class="sw" style="border-color:#888;border-style:dashed"></span>coniuge acquisito</span>
-    <span>⚭ coppia</span><span>☐ = seleziona A/B per la parentela</span><span>⊕/⊖ = mostra/nascondi figli</span>
+    <span>⚭ coppia</span><span>☐ = seleziona A/B per la parentela</span><span>⊕/⊖ = mostra/nascondi figli</span><span>trascina una scheda per spostarla (con i discendenti) lungo la sua generazione</span>
   </div>
 </header>
 <main>
@@ -103,6 +107,7 @@
     <svg id="canvas" xmlns="http://www.w3.org/2000/svg"><g id="vp"></g></svg>
     <div class="hint">Trascina per spostare · rotella per zoomare · clic su una scheda per i dettagli · ☐ per scegliere due persone e vedere la parentela</div>
   </div>
+  <div id="splitter" title="Trascina per ridimensionare la barra laterale"></div>
   <aside id="panel">
     <h2>Parentela tra due persone</h2>
     <div class="sel-slot"><b class="badge A">A</b><span id="selA" class="muted">— nessuna (clicca ☐ su una scheda)</span></div>
@@ -312,11 +317,14 @@ function measure(u) {
   u.subW = Math.max(u.selfW, kw);
 }
 const MIN_ROW = Math.min(...ROOTS.map(r => ROOTGEN.get(r)));
-function place(u, x0) {
-  u.x = x0 + (u.subW - u.selfW) / 2;      // bordo sinistro della scheda della persona
+const OFFSETS = new Map();     // chiave istanza -> spostamento orizzontale manuale (px), applicato anche al sottoalbero
+function place(u, x0, off) {
+  off = (off || 0) + (OFFSETS.get(u.key) || 0);
+  u.off = off;
+  u.x = x0 + (u.subW - u.selfW) / 2 + off;      // bordo sinistro della scheda della persona
   u.y = TOP_PAD + (u.row - MIN_ROW) * ROW_H;
   let cx = x0 + (u.subW - u.kidsW) / 2;
-  for (const c of u.children) { place(c, cx); cx += c.subW + H_GAP; }
+  for (const c of u.children) { place(c, cx, off); cx += c.subW + H_GAP; }
 }
 function spouseX(u, sid) { const i = u.spouses.indexOf(sid); return u.x + (i + 1) * (BOX_W + SP_GAP); }
 function unionPoint(u, sid) {
@@ -363,14 +371,18 @@ let currentRel = null;
 function render() {
   computeLayout();
   vp.innerHTML = '';
-  const gHalo = el('g', { class: 'halo' }, vp), gEdges = el('g', { class: 'edges' }, vp), gNodes = el('g', { class: 'nodes' }, vp), gLabels = el('g', { class: 'labels' }, vp);
+  const gBands = el('g', { class: 'bands' }, vp), gHalo = el('g', { class: 'halo' }, vp), gEdges = el('g', { class: 'edges' }, vp), gNodes = el('g', { class: 'nodes' }, vp), gLabels = el('g', { class: 'labels' }, vp);
   gEdges.dataset.halo = '1'; window.__gHalo = gHalo;
-  // etichette di riga (generazioni)
+  // strisce di sfondo per generazione (colori alternati) + etichette di riga
+  const BAND_COLORS = ['#f2ede2', '#e8eef5', '#efe6ec', '#e7f0e6', '#f3ecdc', '#e6ecf3'];
+  const bandW = Math.max(layout.width, 20000) + 40000;
   for (let r = 0; r <= layout.maxRow; r++) {
     const y = TOP_PAD + r * ROW_H;
-    el('line', { x1: 0, y1: y - 18, x2: layout.width, y2: y - 18, stroke: '#e6e2d8', 'stroke-width': 1 }, gEdges);
-    txt(gEdges, 12, y + BOX_H / 2 + 4, rowLabel(r), 'rowlab');
+    el('rect', { x: -20000, y: y - 18, width: bandW, height: ROW_H, fill: BAND_COLORS[r % BAND_COLORS.length], stroke: 'none' }, gBands);
+    el('line', { x1: -20000, y1: y - 18, x2: bandW - 20000, y2: y - 18, stroke: 'rgba(0,0,0,.08)', 'stroke-width': 1 }, gBands);
+    txt(gBands, 12, y + BOX_H / 2 + 4, rowLabel(r), 'rowlab');
   }
+  stickRowLabels();
   for (const gp of layout.groupsPos) txt(gLabels, gp.x0, TOP_PAD + (gp.row - MIN_ROW) * ROW_H - 26, gp.label, 'grplab');
   const pathSet = new Set(currentRel && currentRel.pathIds ? currentRel.pathIds : []);
   const pathEdges = currentRel && currentRel.pathEdges ? currentRel.pathEdges : new Set();
@@ -424,6 +436,7 @@ function drawBox(u, pid, x, y, parent, pathSet, isMain) {
   if (pathSet.has(pid)) cls.push('onpath');
   if (detailId === pid) cls.push('detail');
   const gnode = el('g', { class: cls.join(' '), 'data-id': pid, transform: `translate(${x},${y})` }, parent);
+  if (isMain && !u.isPhRoot) gnode.dataset.key = u.key;
   el('rect', { class: 'box', width: BOX_W, height: BOX_H }, gnode);
   const unknown = p.nome.startsWith('(') || p.ph || p.forceLabel;
   const twoLines = !unknown && p.cognome;
@@ -587,7 +600,11 @@ function jumpTo(pid) {
 
 // ============================================================ zoom / pan
 let tf = { k: 1, x: 0, y: 0 };
-function applyTf() { vp.setAttribute('transform', `translate(${tf.x},${tf.y}) scale(${tf.k})`); }
+function applyTf() { vp.setAttribute('transform', `translate(${tf.x},${tf.y}) scale(${tf.k})`); stickRowLabels(); }
+function stickRowLabels() {   // le etichette delle generazioni restano ancorate al bordo sinistro visibile
+  const x = (10 - tf.x) / tf.k;
+  document.querySelectorAll('#vp text.rowlab').forEach(t => t.setAttribute('x', x));
+}
 function centerOn(x, y) { const r = svg.getBoundingClientRect(); tf.x = r.width / 2 - x * tf.k; tf.y = r.height / 2 - y * tf.k; applyTf(); }
 function fit() {
   if (!layout) return;
@@ -603,9 +620,31 @@ svg.addEventListener('wheel', ev => {
 }, { passive: false });
 let drag = null, suppressClick = false;
 // NB: niente setPointerCapture: catturerebbe anche i "click" sulle schede. Il trascinamento prosegue su window.
-svg.addEventListener('pointerdown', ev => { if (ev.button !== 0) return; drag = { x: ev.clientX, y: ev.clientY, tx: tf.x, ty: tf.y, moved: false }; svg.classList.add('grabbing'); });
-window.addEventListener('pointermove', ev => { if (!drag) return; const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true; if (drag.moved) { tf.x = drag.tx + dx; tf.y = drag.ty + dy; applyTf(); } });
-window.addEventListener('pointerup', ev => { if (drag) { suppressClick = drag.moved; setTimeout(() => { suppressClick = false; }, 60); } drag = null; svg.classList.remove('grabbing'); });
+svg.addEventListener('pointerdown', ev => {
+  if (ev.button !== 0) return;
+  const gnode = ev.target.closest && ev.target.closest('g.node[data-key]');
+  const onCb = ev.target.closest && ev.target.closest('g.cb');
+  if (gnode && !onCb) {
+    // trascinamento orizzontale di una scheda (e del suo sottoalbero) per riorganizzare la disposizione
+    const key = gnode.dataset.key;
+    drag = { mode: 'node', key, x: ev.clientX, y: ev.clientY, orig: OFFSETS.get(key) || 0, moved: false, raf: 0 };
+  } else {
+    drag = { mode: 'pan', x: ev.clientX, y: ev.clientY, tx: tf.x, ty: tf.y, moved: false };
+  }
+  svg.classList.add('grabbing');
+});
+window.addEventListener('pointermove', ev => {
+  if (!drag) return;
+  const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+  if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+  if (!drag.moved) return;
+  if (drag.mode === 'pan') { tf.x = drag.tx + dx; tf.y = drag.ty + dy; applyTf(); }
+  else {
+    OFFSETS.set(drag.key, drag.orig + dx / tf.k);
+    if (!drag.raf) drag.raf = requestAnimationFrame(() => { if (drag) drag.raf = 0; render(); });
+  }
+});
+window.addEventListener('pointerup', ev => { if (drag) { suppressClick = drag.moved; setTimeout(() => { suppressClick = false; }, 60); if (drag.mode === 'node' && drag.moved) render(); } drag = null; svg.classList.remove('grabbing'); });
 window.addEventListener('pointercancel', () => { drag = null; svg.classList.remove('grabbing'); });
 svg.addEventListener('click', ev => { if (suppressClick) { ev.stopPropagation(); ev.preventDefault(); suppressClick = false; } }, true);
 function zoomBy(f) { const r = svg.getBoundingClientRect(); const mx = r.width / 2, my = r.height / 2; const k2 = Math.min(4, Math.max(0.03, tf.k * f)); tf.x = mx - (mx - tf.x) * (k2 / tf.k); tf.y = my - (my - tf.y) * (k2 / tf.k); tf.k = k2; applyTf(); }
@@ -632,6 +671,16 @@ document.getElementById('bFit').addEventListener('click', fit);
 document.getElementById('bZin').addEventListener('click', () => zoomBy(1.25));
 document.getElementById('bZout').addEventListener('click', () => zoomBy(0.8));
 document.getElementById('bClearSel').addEventListener('click', clearSelection);
+document.getElementById('bResetPos').addEventListener('click', () => { OFFSETS.clear(); render(); });
+// barra laterale ridimensionabile
+(function () {
+  const sp = document.getElementById('splitter'), panel = document.getElementById('panel');
+  const saved = localStorage.getItem('albero.panelWidth'); if (saved) panel.style.width = saved + 'px';
+  let sd = null;
+  sp.addEventListener('pointerdown', ev => { sd = { x: ev.clientX, w: panel.getBoundingClientRect().width }; sp.classList.add('active'); ev.preventDefault(); });
+  window.addEventListener('pointermove', ev => { if (!sd) return; const w = Math.max(220, Math.min(window.innerWidth * 0.75, sd.w - (ev.clientX - sd.x))); panel.style.width = w + 'px'; });
+  window.addEventListener('pointerup', () => { if (sd) { localStorage.setItem('albero.panelWidth', Math.round(panel.getBoundingClientRect().width)); } sd = null; sp.classList.remove('active'); });
+})();
 window.addEventListener('resize', () => {});
 
 // ============================================================ avvio
