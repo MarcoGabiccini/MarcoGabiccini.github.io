@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meccanismo di sterzo</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --panel: #16213e;
+  --accent: #0f3460;
+  --text: #e0e0e0;
+  --muted: #9aa6b8;
+  --highlight: #e94560;
+  --inner: #ff9f43;     /* ruota interna */
+  --outer: #2ec4b6;     /* ruota esterna */
+  --arm: #ffd166;       /* bracci */
+  --tie: #7cc4ff;       /* barra di accoppiamento e tiranti */
+  --target: #c77dff;    /* bersaglio dei minimi quadrati */
+  --knob: #ffc857;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg); color: var(--text);
+  display: flex; height: 100vh; overflow: hidden;
+}
+.panel {
+  background: var(--panel); padding: 10px; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: 8px;
+}
+#left-panel  { width: 360px; flex: 0 0 auto; }
+#right-panel { width: 370px; flex: 0 0 auto; }
+#left-panel.chiuso, #right-panel.chiuso { width: 0 !important; padding: 0; overflow: hidden; }
+.resizer {
+  flex: 0 0 6px; cursor: col-resize; background: var(--accent); position: relative;
+  transition: background .15s;
+}
+.resizer:hover, .resizer.attivo { background: var(--highlight); }
+.resizer::after {
+  content: '\22EE'; position: absolute; top: 50%; left: -2px; transform: translateY(-50%);
+  color: #8fa0c0; font-size: 12px; pointer-events: none;
+}
+.resizer-h {
+  flex: 0 0 6px; cursor: row-resize; background: var(--accent); position: relative;
+  transition: background .15s;
+}
+.resizer-h:hover, .resizer-h.attivo { background: var(--highlight); }
+.resizer-h::after {
+  content: '\22EF'; position: absolute; left: 50%; top: -7px; transform: translateX(-50%);
+  color: #8fa0c0; font-size: 12px; pointer-events: none;
+}
+
+/* centro: due viste una sopra l'altra */
+#center { flex: 1; display: flex; flex-direction: column; min-width: 320px; position: relative; }
+.vista-wrap { position: relative; min-height: 0; }
+#mecc-wrap { flex: 0 0 60%; }
+#veic-wrap { flex: 1 1 auto; }
+#veic-wrap.chiuso { flex: 0 0 0 !important; overflow: hidden; }
+canvas.vista { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+canvas.vista.trascina { cursor: grabbing; }
+.tag {
+  position: absolute; left: 10px; top: 8px; font-size: .72em; color: #cdd;
+  background: rgba(22,33,62,.9); padding: 3px 8px; border-radius: 5px; pointer-events: none;
+}
+.tag b { color: #fff; }
+.inquadra {
+  position: absolute; right: 10px; top: 8px; background: rgba(22,33,62,.9); color: #dde;
+  border: 1px solid #4a5a80; border-radius: 5px; font-size: .74em; padding: 4px 9px; cursor: pointer;
+}
+.inquadra:hover { border-color: var(--highlight); }
+.hint {
+  position: absolute; right: 10px; bottom: 8px; font-size: .68em; color: #8899aa;
+  background: rgba(22,33,62,.85); padding: 3px 8px; border-radius: 5px; pointer-events: none;
+}
+.legenda {
+  position: absolute; right: 10px; bottom: 32px; background: rgba(22,33,62,.88); border-radius: 6px;
+  padding: 6px 9px; font-size: .68em; line-height: 1.6; pointer-events: none;
+}
+.legenda i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+/* dettaglio pignone e cremagliera: finestra trascinabile */
+#dett {
+  position: absolute; left: 10px; top: 40px; width: 264px; height: 196px; z-index: 5;
+  background: rgba(14,20,42,.95); border: 1px solid #3b5384; border-radius: 8px; overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0,0,0,.4);
+}
+#dett .dett-testa {
+  display: flex; justify-content: space-between; align-items: center; padding: 5px 8px;
+  font-size: .7em; font-weight: 700; letter-spacing: .5px; color: #aab; text-transform: uppercase;
+  cursor: move; user-select: none; background: rgba(15,52,96,.55);
+}
+#dett .riduci { cursor: pointer; color: #dde; padding: 0 4px; }
+#dett-cv { position: absolute; left: 0; top: 28px; width: 264px; height: 168px; }
+#dett.ridotto { height: 28px; }
+#dett.ridotto #dett-cv { display: none; }
+
+/* intestazione e sezioni */
+.title { text-align: center; line-height: 1.3; }
+.title .t1 { font-size: 1em; font-weight: 700; color: var(--highlight); }
+.title .t2 { font-size: .72em; color: #bbb; }
+.title .t3 { font-size: .52em; color: #666; }
+.section { background: var(--accent); border-radius: 8px; padding: 7px 10px 8px; }
+.section-title {
+  font-size: .68em; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: #aab; margin-bottom: 6px;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.section-title .num { font-family: Consolas, monospace; color: #ccd; letter-spacing: 0; text-transform: none; }
+.sub { font-size: .7em; color: var(--muted); margin: 6px 0 3px; }
+.note { font-size: .68em; color: var(--muted); line-height: 1.45; }
+.note.attiva { color: #ffd1a1; }
+.note.ok { color: #b8f0c8; }
+.note b { color: #dde; }
+
+/* riquadri dei due meccanismi */
+.card { border: 1px solid #3b5384; border-radius: 8px; background: rgba(0,0,0,.16); margin-top: 6px; overflow: hidden; }
+.card .card-testa {
+  display: flex; align-items: center; gap: 8px; padding: 6px 9px; cursor: pointer;
+  font-size: .8em; font-weight: 700; color: #cdd;
+}
+.card .card-testa i {
+  width: 11px; height: 11px; border-radius: 50%; border: 2px solid #8fa0c0; flex: 0 0 11px;
+}
+.card .card-testa span { font-weight: 400; font-size: .86em; color: var(--muted); margin-left: auto; }
+.card.attiva { border-color: var(--highlight); background: rgba(233,69,96,.06); }
+.card.attiva .card-testa { color: #fff; }
+.card.attiva .card-testa i { background: var(--highlight); border-color: var(--highlight); }
+.card .card-corpo { padding: 0 9px 9px; display: none; }
+.card.attiva .card-corpo { display: block; }
+.card .note { margin: 4px 0; }
+
+/* righe con cursore */
+.riga { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.riga label { flex: 0 0 96px; font-size: .76em; text-align: right; }
+.riga input[type="range"] { flex: 1; min-width: 0; accent-color: var(--highlight); }
+.riga .val { flex: 0 0 62px; font-size: .74em; font-family: Consolas, monospace; color: #dde; text-align: right; }
+input[type="range"]:disabled { opacity: .35; }
+button.zero {
+  flex: 0 0 auto; background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 9px;
+  font-size: .66em; padding: 1px 7px; cursor: pointer;
+}
+button.zero:hover { border-color: var(--highlight); }
+
+/* segmented control */
+.seg { display: flex; border-radius: 6px; overflow: hidden; border: 1px solid #4a5a80; margin: 4px 0; }
+.seg button {
+  flex: 1; border: none; border-right: 1px solid #4a5a80; background: #1d2d52; color: #dde;
+  font-size: .72em; font-weight: 600; padding: 5px 6px; cursor: pointer;
+}
+.seg button:last-child { border-right: none; }
+.seg button.on { background: var(--highlight); color: #fff; }
+
+/* preset piccoli */
+.mini { display: flex; gap: 4px; margin: 2px 0 4px 102px; flex-wrap: wrap; }
+.mini button {
+  background: #1d2d52; border: 1px solid #4a5a80; color: #cdd; border-radius: 4px;
+  font-size: .66em; padding: 2px 6px; cursor: pointer;
+}
+.mini button:hover { border-color: var(--highlight); }
+
+/* dimensionamento */
+.liberi { display: flex; flex-wrap: wrap; gap: 3px 14px; margin: 2px 0 4px; }
+.liberi label { font-size: .74em; display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+.liberi input { accent-color: var(--highlight); }
+button.azione {
+  width: 100%; background: var(--highlight); color: #fff; border: none; border-radius: 6px;
+  padding: 6px; font-weight: 700; cursor: pointer; margin: 6px 0 4px; font-size: .76em;
+}
+button.azione:hover { background: #c73e54; }
+
+/* volante e manopola */
+#volante-box { display: flex; align-items: center; gap: 10px; }
+#volante { width: 82px; height: 82px; flex: 0 0 82px; }
+.lettura { font-family: Consolas, monospace; line-height: 1.5; }
+.lettura .grande { font-size: 1.15em; color: #fff; }
+.lettura .piccola { font-size: .78em; color: var(--muted); }
+#anim-box {
+  display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 6px 8px;
+  border-radius: 8px; background: rgba(255,200,87,.07); border: 1px solid rgba(255,200,87,.35);
+}
+#knob { width: 66px; height: 66px; flex: 0 0 66px; cursor: ns-resize; touch-action: none; }
+#knob:focus { outline: 2px solid rgba(255,200,87,.6); outline-offset: 2px; border-radius: 50%; }
+#anim-box .lab { font-size: .7em; color: #ffd98a; line-height: 1.4; }
+#anim-box .lab b { font-family: Consolas, monospace; color: #fff; font-size: 1.15em; }
+#play {
+  margin-left: auto; width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--knob);
+  background: rgba(255,200,87,.12); color: var(--knob); font-size: 1.1em; cursor: pointer;
+}
+#play.on { background: var(--knob); color: #1a1a2e; }
+
+/* pannello destro */
+.formula { text-align: center; font-size: .76em; padding: 2px 0; }
+.formula.spenta { display: none; }
+table.valori { width: 100%; border-collapse: collapse; font-size: .74em; }
+table.valori th { text-align: right; color: var(--muted); font-weight: 600; padding: 2px 4px; font-size: .9em; }
+table.valori th:first-child { text-align: left; }
+table.valori td { padding: 2px 4px; font-family: Consolas, monospace; text-align: right; white-space: nowrap; }
+table.valori td:first-child { font-family: 'Segoe UI', sans-serif; text-align: left; color: #cdd; white-space: normal; }
+table.valori tr.sep td { border-top: 1px solid rgba(255,255,255,.12); padding-top: 4px; }
+table.valori .lim { color: #ffb36b; font-family: 'Segoe UI', sans-serif; font-size: .85em; }
+table.valori .lib { color: #fff; font-weight: 700; }
+.int { color: var(--inner); } .est { color: var(--outer); }
+canvas.grafico { width: 100%; height: 200px; background: rgba(0,0,0,.25); border-radius: 6px; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .68em; margin-top: 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+.legend i.punto { width: 7px; height: 7px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<!-- ====================================================================== -->
+<div id="left-panel" class="panel">
+  <div class="title">
+    <div class="t1">Meccanismo di sterzo</div>
+    <div class="t2">Prof. M. Gabiccini &mdash; Dinamica del Veicolo</div>
+    <div class="t3">&copy; 2026 Tutti i diritti riservati</div>
+  </div>
+
+  <!-- 1. meccanismo: un riquadro per tipo, ciascuno con la sua geometria -->
+  <div class="section">
+    <div class="section-title">1 &middot; Meccanismo</div>
+
+    <div class="card attiva" id="card-quad" data-tipo="quad">
+      <div class="card-testa"><i></i>Quadrilatero articolato <span>trapezio di Jeantaud</span></div>
+      <div class="card-corpo">
+        <div class="note">Due bracci solidali ai fusi e una barra di accoppiamento rigida fra le loro punte.
+          Il volante comanda il fuso sinistro: &delta;<sub>11</sub> = &tau;<sub>1</sub>&delta;<sub>v</sub>.</div>
+        <div class="seg" id="q-lato">
+          <button data-v="-1" class="on">barra dietro l'assale</button>
+          <button data-v="1">barra davanti</button>
+        </div>
+        <div class="riga"><label>b braccio:</label>
+          <input type="range" id="q-b" min="0.08" max="0.25" step="0.001" value="0.150"><span class="val" id="q-b-v"></span></div>
+        <div class="riga"><label>&gamma;<sub>0</sub> inclinazione:</label>
+          <input type="range" id="q-g0" min="-35" max="40" step="0.01" value="16"><span class="val" id="q-g0-v"></span></div>
+        <div class="mini" data-pre="q">
+          <button data-p="zero" title="bracci paralleli all'asse x: parallelogramma, sterzo parallelo esatto">0&deg; parallelo</button>
+          <button data-p="jeantaud" title="regola di Jeantaud: il prolungamento dei bracci passa per il centro dell'assale posteriore, tan &gamma;0 = t1/(2l)">Jeantaud</button>
+          <button data-p="secondo" title="&gamma;0 per cui il meccanismo realizza, per angoli piccoli, l'&epsilon; del bersaglio">2&deg; ordine</button>
+        </div>
+        <div class="note" id="q-nota"></div>
+      </div>
+    </div>
+
+    <div class="card" id="card-crem" data-tipo="crem">
+      <div class="card-testa"><i></i>Pignone e cremagliera <span>con due tiranti</span></div>
+      <div class="card-corpo">
+        <div class="note">Il pignone, in fondo al piantone, sposta la cremagliera; due tiranti la collegano alle punte dei bracci.</div>
+        <div class="seg" id="c-lato">
+          <button data-v="-1" class="on">cremagliera dietro l'assale</button>
+          <button data-v="1">davanti</button>
+        </div>
+        <div class="riga"><label>b braccio:</label>
+          <input type="range" id="c-b" min="0.08" max="0.25" step="0.001" value="0.150"><span class="val" id="c-b-v"></span></div>
+        <div class="riga"><label>&gamma;<sub>0</sub> inclinazione:</label>
+          <input type="range" id="c-g0" min="-35" max="40" step="0.01" value="16"><span class="val" id="c-g0-v"></span></div>
+        <div class="mini" data-pre="c">
+          <button data-p="zero" title="bracci paralleli all'asse x">0&deg;</button>
+          <button data-p="jeantaud" title="regola di Jeantaud: tan &gamma;0 = t1/(2l)">Jeantaud</button>
+          <button data-p="secondo" title="&gamma;0 per cui il meccanismo realizza, per angoli piccoli, l'&epsilon; del bersaglio">2&deg; ordine</button>
+        </div>
+        <div class="riga"><label>|x<sub>c</sub>| dall'assale:</label>
+          <input type="range" id="c-xc" min="0.05" max="0.30" step="0.001" value="0.150"><span class="val" id="c-xc-v"></span></div>
+        <div class="riga"><label>w snodi interni:</label>
+          <input type="range" id="c-w" min="0.40" max="1.15" step="0.001" value="0.700"><span class="val" id="c-w-v"></span></div>
+        <div class="note" id="c-nota"></div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:6px">&gamma;<sub>0</sub> &gt; 0: bracci che, prolungati, convergono verso la mezzeria dietro l'assale
+      (il verso che d&agrave; la correzione di Ackermann); &gamma;<sub>0</sub> &lt; 0: bracci divergenti.</div>
+  </div>
+
+  <!-- 2. bersaglio e minimi quadrati -->
+  <div class="section">
+    <div class="section-title">2 &middot; Legge da imitare</div>
+    <div class="seg" id="bers">
+      <button data-v="ack" class="on">Ackermann esatto</button>
+      <button data-v="1">&epsilon; = 1</button>
+      <button data-v="0">&epsilon; = 0</button>
+      <button data-v="-1">&epsilon; = &minus;1</button>
+    </div>
+    <div class="sub">minimi quadrati su &delta;<sub>11</sub> &minus; &delta;<sub>12</sub> a pari angolo medio &delta;<sub>1</sub></div>
+    <div class="riga"><label>|&delta;<sub>1</sub>| fino a:</label>
+      <input type="range" id="mmax" min="10" max="40" step="1" value="30"><span class="val" id="mmax-v"></span></div>
+    <div class="riga"><label>punti N:</label>
+      <input type="range" id="npunti" min="1" max="40" step="1" value="10"><span class="val" id="npunti-v"></span></div>
+    <div class="sub">parametri liberi del meccanismo attivo</div>
+    <div class="liberi" id="liberi"></div>
+    <button class="azione" id="dimensiona">dimensiona ai minimi quadrati</button>
+    <div class="note" id="nota-dim"></div>
+  </div>
+
+  <!-- 3. volante -->
+  <div class="section">
+    <div class="section-title">3 &middot; Volante</div>
+    <div id="volante-box">
+      <canvas id="volante"></canvas>
+      <div class="lettura">
+        <div class="grande">&delta;<sub>v</sub> = <span id="dv-lett"></span></div>
+        <div class="piccola">&delta;<sub>1</sub> = <span id="dm-lett"></span> (angolo medio)</div>
+        <div class="piccola" id="ingresso-lett"></div>
+      </div>
+    </div>
+    <div class="riga"><label>&delta;<sub>v</sub> volante:</label>
+      <input type="range" id="dv" min="-540" max="540" step="1" value="300"><span class="val" id="dv-v"></span>
+      <button class="zero" id="dv-0" title="volante dritto: ruote dritte">0</button></div>
+    <div class="riga"><label>1/&tau;<sub>1</sub> rapporto:</label>
+      <input type="range" id="N" min="10" max="30" step="0.5" value="20"><span class="val" id="N-v"></span></div>
+    <div id="anim-box">
+      <canvas id="knob" tabindex="0" title="trascina in su o in gi&ugrave;, rotella o frecce"></canvas>
+      <div class="lab">velocit&agrave; dell'animazione<br><b id="knob-v"></b><br>sterzate avanti e indietro &plusmn;<span id="amp-v"></span></div>
+      <button id="play" title="avvia o ferma l'animazione">&#9654;</button>
+    </div>
+  </div>
+
+  <!-- 4. veicolo -->
+  <div class="section">
+    <div class="section-title">4 &middot; Veicolo</div>
+    <div class="riga"><label>passo l:</label>
+      <input type="range" id="l" min="1.5" max="3.6" step="0.01" value="2.70"><span class="val" id="l-v"></span></div>
+    <div class="riga"><label>carreggiata t<sub>1</sub>:</label>
+      <input type="range" id="t" min="1.0" max="2.0" step="0.01" value="1.55"><span class="val" id="t-v"></span></div>
+    <div class="note">t<sub>1</sub> &egrave; la distanza fra gli assi di sterzo (i fusi). Il veicolo entra solo nella condizione di
+      Ackermann: le normali alle ruote anteriori devono incontrarsi sulla retta dell'assale posteriore.</div>
+  </div>
+</div>
+
+<div class="resizer" id="rz-sx" title="trascina per allargare o stringere; doppio clic: chiudi o riapri il pannello"></div>
+
+<!-- ====================================================================== -->
+<div id="center">
+  <div id="mecc-wrap" class="vista-wrap">
+    <canvas id="mecc" class="vista"></canvas>
+    <div class="tag"><b>Meccanismo</b> &middot; assale anteriore visto dall'alto (x in avanti, y a sinistra)</div>
+    <button class="inquadra" id="mecc-inq" title="mette in vista tutto il meccanismo">&#8982; inquadra</button>
+    <div class="legenda" id="mecc-leg"></div>
+    <div class="hint">rotella: zoom &middot; trascina: sposta &middot; doppio clic: inquadra</div>
+  </div>
+  <div class="resizer-h" id="rz-c" title="trascina per spartire lo spazio fra le due viste; doppio clic: chiudi o riapri la vista del veicolo"></div>
+  <div id="veic-wrap" class="vista-wrap">
+    <canvas id="veic" class="vista"></canvas>
+    <div class="tag"><b>Veicolo</b> &middot; normali alle ruote anteriori e retta dell'assale posteriore</div>
+    <button class="inquadra" id="veic-inq" title="mette in vista veicolo e punti d'incontro">&#8982; inquadra</button>
+  </div>
+    <div id="dett">
+      <div class="dett-testa" id="dett-testa"><span title="vista dall'alto, scala vera; trascina per spostare">&#10021; Pignone e cremagliera</span><span class="riduci" id="dett-riduci" title="riduci o riapri">&#9662;</span></div>
+      <canvas id="dett-cv"></canvas>
+    </div>
+</div>
+
+<div class="resizer" id="rz-dx" title="trascina per allargare o stringere; doppio clic: chiudi o riapri il pannello"></div>
+
+<!-- ====================================================================== -->
+<div id="right-panel" class="panel">
+  <div class="section">
+    <div class="section-title">Condizione, bersaglio, minimi quadrati</div>
+    <div class="formula" id="f-ack"></div>
+    <div class="formula" id="f-legge"></div>
+    <div class="formula" id="f-ls"></div>
+    <div class="formula" id="f-quad"></div>
+    <div class="note" id="n-quad" style="text-align:center">&minus; barra dietro l'assale, + davanti. &epsilon;<sub>0</sub>: l'&epsilon; che il meccanismo realizza per angoli piccoli.</div>
+  </div>
+  <div class="section">
+    <div class="section-title">Angoli <span class="num">curva a <span id="verso"></span></span></div>
+    <table class="valori" id="tab-angoli"></table>
+  </div>
+  <div class="section">
+    <div class="section-title">Dimensionamento</div>
+    <table class="valori" id="tab-dim"></table>
+  </div>
+  <div class="section">
+    <div class="section-title" style="text-transform:none; letter-spacing:.3px">&Delta; = &delta;<sub>11</sub> &minus; &delta;<sub>12</sub> [&deg;] in funzione dell'angolo medio |&delta;<sub>1</sub>| [&deg;]</div>
+    <canvas id="graf-diff" class="grafico"></canvas>
+    <div class="legend">
+      <span><i style="background:#f8f8f2"></i>Ackermann esatto</span>
+      <span id="leg-bers"><i style="background:#c77dff"></i>bersaglio</span>
+      <span><i style="background:#4ea8ff"></i>parallelo</span>
+      <span><i style="background:#e94560"></i>meccanismo</span>
+      <span><i class="punto" style="background:#c77dff"></i>punti dei minimi quadrati</span>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Errore: meccanismo &minus; bersaglio [&deg;]</div>
+    <canvas id="graf-err" class="grafico" style="height:150px"></canvas>
+    <div class="note" style="margin-top:4px">In chiaro l'intervallo dei minimi quadrati; fuori dall'intervallo l'errore non &egrave; controllato.</div>
+  </div>
+  <div class="note">La regola di Jeantaud (bracci puntati sul centro dell'assale posteriore) d&agrave;, per angoli piccoli,
+    solo circa met&agrave; della correzione di Ackermann: per il quadrilatero &epsilon;<sub>0</sub> &asymp; t<sub>1</sub>/(2L<sub>b</sub>) &asymp; 0.5.
+    Per avere &epsilon;<sub>0</sub> = 1 i bracci devono puntare a circa met&agrave; passo; sull'intervallo dei minimi quadrati l'ottimo
+    sta in mezzo fra le due regole. &epsilon;<sub>0</sub>: l'&epsilon; della legge al 2&deg; ordine che il meccanismo realizza per angoli piccoli.</div>
+</div>
+
+<script>
+'use strict';
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const $ = id => document.getElementById(id);
+const COL = {
+  inner: '#ff9f43', outer: '#2ec4b6', arm: '#ffd166', tie: '#7cc4ff', rack: '#b8c0d0',
+  target: '#c77dff', mecc: '#e94560', ack: '#f8f8f2', par: '#4ea8ff', fondo: '#1a1a2e',
+};
+
+// ===========================================================================
+// MODELLO (funzioni pure). Terna del meccanismo: origine al centro dell'assale
+// anteriore, x in avanti, y a sinistra, angoli antiorari positivi. Fusi in
+// (0, +-t/2). Geometria g = {tipo, lato, t, b, g0 [rad], xc [m], w [m]}:
+// lato = -1 bracci (e barra o cremagliera) dietro l'assale, +1 davanti.
+// ===========================================================================
+const Modello = {
+  // intersezioni di due circonferenze (0 o 2 punti)
+  circ2(c1, r1, c2, r2) {
+    const dx = c2[0] - c1[0], dy = c2[1] - c1[1], d = Math.hypot(dx, dy);
+    if (d > r1 + r2 || d < Math.abs(r1 - r2) || d < 1e-12) return [];
+    const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, r1 * r1 - a * a));
+    const xm = c1[0] + a * dx / d, ym = c1[1] + a * dy / d;
+    return [[xm + h * dy / d, ym - h * dx / d], [xm - h * dy / d, ym + h * dx / d]];
+  },
+  norm: a => Math.atan2(Math.sin(a), Math.cos(a)),
+  fusi: g => [[0, g.t / 2], [0, -g.t / 2]],
+  // angoli dei bracci a ruote dritte; g0 > 0 nel verso di Ackermann
+  riposo: g => g.lato < 0 ? [Math.PI + g.g0, Math.PI - g.g0] : [g.g0, -g.g0],
+  punta: (g, K, th, d) => [K[0] + g.b * Math.cos(th + d), K[1] + g.b * Math.sin(th + d)],
+  // fra due posizioni possibili della punta del braccio sceglie quella piu' vicina alla precedente
+  scegli(sol, K, th0, prec) {
+    if (!sol.length) return null;
+    const c = sol.map(T => [this.norm(Math.atan2(T[1] - K[1], T[0] - K[0]) - th0), T]);
+    c.sort((p, q) => Math.abs(p[0] - prec) - Math.abs(q[0] - prec));
+    return c[0];
+  },
+  // quadrilatero: ingresso dL (fuso sinistro), uscita dR
+  quad(g, dL, dRprec) {
+    const [KL, KR] = this.fusi(g), [thL, thR] = this.riposo(g);
+    const TL0 = this.punta(g, KL, thL, 0), TR0 = this.punta(g, KR, thR, 0);
+    const Lb = Math.hypot(TL0[0] - TR0[0], TL0[1] - TR0[1]);
+    const TL = this.punta(g, KL, thL, dL);
+    const r = this.scegli(this.circ2(KR, g.b, TL, Lb), KR, thR, dRprec);
+    return r ? { dL, dR: r[0], TL, TR: r[1], Lb } : null;
+  },
+  // cremagliera: ingresso corsa s (positiva verso sinistra), uscite dL e dR
+  crem(g, s, prec) {
+    const [KL, KR] = this.fusi(g), [thL, thR] = this.riposo(g);
+    const xc = g.lato * g.xc;
+    const TL0 = this.punta(g, KL, thL, 0);
+    const c = Math.hypot(TL0[0] - xc, TL0[1] - g.w / 2);
+    const JL = [xc, g.w / 2 + s], JR = [xc, -g.w / 2 + s];
+    const L = this.scegli(this.circ2(KL, g.b, JL, c), KL, thL, prec[0]);
+    const R = this.scegli(this.circ2(KR, g.b, JR, c), KR, thR, prec[1]);
+    return L && R ? { dL: L[0], dR: R[0], TL: L[1], TR: R[1], JL, JR, c, s } : null;
+  },
+  // verso della corsa che fa sterzare a sinistra
+  versoCrem(g) {
+    const r = this.crem(g, 1e-4, [0, 0]);
+    return r && r.dL > 0 ? 1 : -1;
+  },
+  // |d delta_1 / d s| a ruote dritte (rad/m)
+  dmds0(g) {
+    const h = 1e-5, a = this.crem(g, h, [0, 0]), b = this.crem(g, -h, [0, 0]);
+    if (!a || !b) return NaN;
+    return Math.abs(0.5 * (a.dL + a.dR) - 0.5 * (b.dL + b.dR)) / (2 * h);
+  },
+  // curva a sinistra: punti [delta_1, delta_11 - delta_12] (rad) finche' delta_1 < mFine
+  // o il meccanismo arriva a fine corsa
+  spazzata(g, mFine, passoDeg = 0.2) {
+    const out = [[0, 0]];
+    let prec = { dL: 0, dR: 0 };
+    const ds = g.b * passoDeg * D2R, v = g.tipo === 'crem' ? this.versoCrem(g) : 1;
+    for (let i = 1; i <= 4000; i++) {
+      const r = g.tipo === 'quad' ? this.quad(g, i * passoDeg * D2R, prec.dR)
+                                  : this.crem(g, v * i * ds, [prec.dL, prec.dR]);
+      if (!r || Math.abs(r.dR - prec.dR) > 8 * D2R || Math.abs(r.dL - prec.dL) > 8 * D2R) break;
+      prec = r;
+      const m = 0.5 * (r.dL + r.dR);
+      if (m <= out[out.length - 1][0]) break;
+      out.push([m, r.dL - r.dR]);
+      if (m >= mFine) break;
+    }
+    return out;
+  },
+  interpola(curva, m) {
+    if (m > curva[curva.length - 1][0] + 1e-12) return NaN;
+    let lo = 0, hi = curva.length - 1;
+    while (hi - lo > 1) { const k = (lo + hi) >> 1; if (curva[k][0] <= m) lo = k; else hi = k; }
+    const [m0, d0] = curva[lo], [m1, d1] = curva[hi];
+    return d0 + (d1 - d0) * (m - m0) / (m1 - m0 || 1);
+  },
+  // eps0: l'epsilon della legge al secondo ordine che il meccanismo realizza per angoli piccoli
+  eps0(g, l) {
+    const c = this.spazzata(g, 1.0 * D2R, 0.05), [m, d] = c[c.length - 1];
+    return m > 0.5 * D2R ? d / (g.t / l * m * m) : NaN;
+  },
+  // gamma_0 (gradi) per cui eps0 = epsT, con gli altri parametri fissi
+  gammaSecondoOrdine(g, epsT, l) {
+    const f = gd => this.eps0({ ...g, g0: gd * D2R }, l) - epsT;
+    let a = -35, fa = f(a);
+    for (let b = -32.5; b <= 40 + 1e-9; b += 2.5) {
+      const fb = f(b);
+      if (isFinite(fa) && isFinite(fb) && fa * fb <= 0) {
+        let lo = a, hi = b, flo = fa;
+        for (let i = 0; i < 40; i++) {
+          const mid = 0.5 * (lo + hi), fm = f(mid);
+          if (!isFinite(fm)) break;
+          if (fm * flo <= 0) hi = mid; else { lo = mid; flo = fm; }
+        }
+        return 0.5 * (lo + hi);
+      }
+      a = b; fa = fb;
+    }
+    return NaN;
+  },
+  // Ackermann esatto: R > t/2 per cui la media degli angoli vale |m|
+  raggioAckermann(m, l, t) {
+    const a = Math.abs(m);
+    if (a < 1e-9) return Infinity;
+    const media = R => 0.5 * (Math.atan(l / (R - t / 2)) + Math.atan(l / (R + t / 2)));
+    let lo = t / 2 + 1e-9, hi = 1e7;
+    if (media(lo) <= a) return t / 2 + 1e-6;
+    for (let i = 0; i < 200; i++) { const x = Math.sqrt(lo * hi); if (media(x) > a) lo = x; else hi = x; }
+    return 0.5 * (lo + hi);
+  },
+  ackermann(m, l, t) {
+    if (Math.abs(m) < 1e-9) return { d11: 0, d12: 0, R: Infinity };
+    const R = this.raggioAckermann(m, l, t);
+    const din = Math.atan(l / (R - t / 2)), dout = Math.atan(l / (R + t / 2));
+    return m > 0 ? { d11: din, d12: dout, R } : { d11: -dout, d12: -din, R: -R };
+  },
+  // angoli del bersaglio a pari angolo medio m
+  bersaglio(bers, m, l, t) {
+    if (bers === 'ack') return this.ackermann(m, l, t);
+    const q = bers * t / (2 * l) * m * m;
+    return { d11: m + q, d12: m - q };
+  },
+  diffBersaglio(bers, m, l, t) { const a = this.bersaglio(bers, Math.abs(m), l, t); return a.d11 - a.d12; },
+  // configurazione del meccanismo per un dato volante (per continuita', a piccoli passi)
+  configurazione(g, dv, tau) {
+    if (g.tipo === 'quad') {
+      const dIn = tau * dv * D2R, n = Math.max(1, Math.ceil(Math.abs(dIn) / (0.5 * D2R)));
+      let ok = this.quad(g, 0, 0), blocco = false;
+      for (let i = 1; i <= n; i++) {
+        const r = this.quad(g, dIn * i / n, ok.dR);
+        if (!r || Math.abs(r.dR - ok.dR) > 8 * D2R) { blocco = true; break; }
+        ok = r;
+      }
+      return { ...ok, blocco };
+    }
+    const rp = tau / this.dmds0(g), verso = this.versoCrem(g);
+    const sObj = verso * rp * dv * D2R, n = Math.max(1, Math.ceil(Math.abs(sObj) / (g.b * 0.5 * D2R)));
+    let ok = this.crem(g, 0, [0, 0]), blocco = false;
+    for (let i = 1; i <= n; i++) {
+      const r = this.crem(g, sObj * i / n, [ok.dL, ok.dR]);
+      if (!r || Math.abs(r.dR - ok.dR) > 8 * D2R || Math.abs(r.dL - ok.dL) > 8 * D2R) { blocco = true; break; }
+      ok = r;
+    }
+    return { ...ok, rp, verso, theta: ok.s / rp, blocco };
+  },
+};
+
+// ===========================================================================
+// DIMENSIONAMENTO AI MINIMI QUADRATI. Residuo ai punti delta_1k = k/N delta_1max:
+// (delta_11 - delta_12) del meccanismo meno quella del bersaglio, in gradi.
+// Nelder-Mead nei parametri normalizzati su [0, 1], da piu' partenze.
+// ===========================================================================
+const Ottimizzatore = {
+  NOMI: { g0: 'γ₀', b: 'b', xc: '|x_c|', w: 'w' },
+  limiti(k) { return { g0: [-35, 40], b: [0.08, 0.25], xc: [0.05, 0.30], w: [0.40, st.t - 0.40] }[k]; },
+  punti(mMaxDeg, N) { return Array.from({ length: N }, (_, k) => mMaxDeg * D2R * (k + 1) / N); },
+  obiettivo(g, ms, target) {
+    const curva = Modello.spazzata(g, ms[ms.length - 1] + 0.2 * D2R);
+    const mFin = curva[curva.length - 1][0];
+    let s = 0;
+    for (let k = 0; k < ms.length; k++) {
+      const d = Modello.interpola(curva, ms[k]);
+      if (!isFinite(d)) return 1e4 * (1 + (ms[ms.length - 1] - mFin) * R2D);   // fine corsa prima dell'intervallo
+      const e = (d - target[k]) * R2D; s += e * e;
+    }
+    s /= ms.length;
+    if (g.tipo === 'crem') {                                 // tiranti non troppo corti
+      const c = Modello.crem(g, 0, [0, 0]).c;
+      if (c < 0.10) s += 1e3 * (0.10 - c);
+    }
+    return s;
+  },
+  nelderMead(f, x0, iter = 400, passo = 0.15) {
+    const n = x0.length, cl = x => x.map(v => Math.min(1, Math.max(0, v)));
+    let S = [cl(x0)];
+    for (let i = 0; i < n; i++) { const x = x0.slice(); x[i] += x[i] < 0.5 ? passo : -passo; S.push(cl(x)); }
+    let F = S.map(f), nf = S.length;
+    for (let it = 0; it < iter; it++) {
+      const idx = F.map((v, i) => i).sort((a, b) => F[a] - F[b]);
+      S = idx.map(i => S[i]); F = idx.map(i => F[i]);
+      if (it > 20 && Math.abs(F[n] - F[0]) < 1e-11 * (1 + Math.abs(F[0]))) break;
+      const c = new Array(n).fill(0);
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) c[j] += S[i][j] / n;
+      const pt = a => cl(c.map((v, j) => v + a * (S[n][j] - v)));
+      const xr = pt(-1), fr = f(xr); nf++;
+      if (fr < F[0]) {
+        const xe = pt(-2), fe = f(xe); nf++;
+        if (fe < fr) { S[n] = xe; F[n] = fe; } else { S[n] = xr; F[n] = fr; }
+      } else if (fr < F[n - 1]) { S[n] = xr; F[n] = fr; }
+      else {
+        const xc = fr < F[n] ? pt(-0.5) : pt(0.5), fc = f(xc); nf++;
+        if (fc < Math.min(fr, F[n])) { S[n] = xc; F[n] = fc; }
+        else for (let i = 1; i <= n; i++) { S[i] = cl(S[i].map((v, j) => S[0][j] + 0.5 * (v - S[0][j]))); F[i] = f(S[i]); nf++; }
+      }
+    }
+    const i0 = F.indexOf(Math.min(...F));
+    return { x: S[i0], f: F[i0], nf };
+  },
+  // parametri liberi (nomi), bersaglio, intervallo (gradi) e numero di punti
+  dimensiona(tipo, liberi, bers, mMaxDeg, N) {
+    const t0 = performance.now();
+    const ms = this.punti(mMaxDeg, N), target = ms.map(m => Modello.diffBersaglio(bers, m, st.l, st.t));
+    const lim = liberi.map(k => this.limiti(k));
+    const geo = u => {
+      const p = { ...st[tipo] };
+      liberi.forEach((k, i) => p[k] = lim[i][0] + u[i] * (lim[i][1] - lim[i][0]));
+      return { p, g: Modello.geom(tipo, p) };
+    };
+    const f = u => this.obiettivo(geo(u).g, ms, target);
+    // partenze: griglia grossolana (3 livelli per parametro), Nelder-Mead dalle quattro migliori
+    let partenze = [[]];
+    for (let i = 0; i < liberi.length; i++) partenze = partenze.flatMap(p => [0.15, 0.5, 0.85].map(v => p.concat(v)));
+    const migliori = partenze.map(u => [f(u), u]).sort((a, b) => a[0] - b[0]).slice(0, 4);
+    let best = null, nf = partenze.length;
+    for (const [, u0] of migliori) {
+      const r = this.nelderMead(f, u0);
+      nf += r.nf;
+      if (!best || r.f < best.f) best = r;
+    }
+    const { p } = geo(best.x);
+    const alLimite = liberi.filter((k, i) => best.x[i] < 1e-3 || best.x[i] > 1 - 1e-3);
+    return { p, liberi, alLimite, rmsPunti: Math.sqrt(best.f), nf, ms: ms.slice(), tempo: performance.now() - t0,
+             bers, mMax: mMaxDeg, N };
+  },
+  // errore sull'intervallo, su una griglia fitta (gradi): rms e massimo
+  erroreFitto(g, bers, mMaxDeg, curva = null) {
+    const c = curva || Modello.spazzata(g, mMaxDeg * D2R + 0.2 * D2R);
+    let s = 0, mx = 0;
+    const n = 120;
+    for (let k = 1; k <= n; k++) {
+      const m = mMaxDeg * D2R * k / n, d = Modello.interpola(c, m);
+      if (!isFinite(d)) return { rms: NaN, max: NaN };
+      const e = (d - Modello.diffBersaglio(bers, m, st.l, g.t)) * R2D;
+      s += e * e; mx = Math.max(mx, Math.abs(e));
+    }
+    return { rms: Math.sqrt(s / n), max: mx };
+  },
+};
+
+// ===========================================================================
+// STATO
+// ===========================================================================
+const st = {
+  tipo: 'quad',
+  quad: { lato: -1, b: 0.15, g0: 16 },
+  crem: { lato: -1, b: 0.15, g0: 16, xc: 0.15, w: 0.70 },
+  bers: 'ack', mMax: 30, nPunti: 10,
+  liberi: { quad: { g0: true, b: false }, crem: { g0: true, b: false, xc: false, w: false } },
+  auto: true,                       // la geometria segue l'ottimo del bersaglio
+  ris: { quad: null, crem: null },  // ultimo dimensionamento di ciascun meccanismo
+  dv: 300, N: 20,
+  l: 2.70, t: 1.55,
+  anim: { on: false, f: 0.2, fase: 0, tPrec: 0, amp: 480 },
+};
+Modello.geom = (tipo, p = st[tipo]) => ({ tipo, lato: p.lato, t: st.t, b: p.b, g0: p.g0 * D2R, xc: p.xc, w: p.w });
+const epsBersaglio = () => st.bers === 'ack' ? 1 : st.bers;
+const nomeBersaglio = b => b === 'ack' ? 'Ackermann esatto' : `ε = ${b === -1 ? '−1' : b}`;
+const tau = () => 1 / st.N;
+const pedice = s => s.replace(/\d/g, c => '₀₁₂₃₄₅₆₇₈₉'[+c]);
+const fmt = (x, n = 2, u = '') => isFinite(x) ? (x >= 0 ? ' ' : '') + x.toFixed(n) + u : '—';
+
+// analisi della geometria attiva che non dipende dal volante (rifatta solo se cambia la geometria)
+const Analisi = {
+  chiave: '', dati: null,
+  calcola() {
+    const geo = Modello.geom(st.tipo);
+    const chiave = JSON.stringify([geo, st.l, st.bers, st.mMax]);
+    if (chiave === this.chiave) return this.dati;
+    const curva = Modello.spazzata(geo, 40.5 * D2R);
+    const err = Ottimizzatore.erroreFitto(geo, st.bers, st.mMax, curva);
+    const gJ = Math.atan(st.t / (2 * st.l)) * R2D;
+    const errJ = Ottimizzatore.erroreFitto({ ...geo, g0: gJ * D2R }, st.bers, st.mMax);
+    const g2 = Modello.gammaSecondoOrdine(geo, epsBersaglio(), st.l);
+    const err2 = isFinite(g2) ? Ottimizzatore.erroreFitto({ ...geo, g0: g2 * D2R }, st.bers, st.mMax) : { rms: NaN, max: NaN };
+    const [KL] = Modello.fusi(geo), [thL] = Modello.riposo(geo), TL0 = Modello.punta(geo, KL, thL, 0);
+    const lungh = geo.tipo === 'quad' ? 2 * TL0[1] : Modello.crem(geo, 0, [0, 0]).c;
+    this.dati = { geo, curva, err, e0: Modello.eps0(geo, st.l), gJ, errJ, g2, err2, lungh,
+                  dmds: geo.tipo === 'crem' ? Modello.dmds0(geo) : NaN,
+                  xI: geo.g0 > 1e-6 ? -(geo.t / 2) / Math.tan(geo.g0) : NaN };
+    this.chiave = chiave;
+    return this.dati;
+  },
+};
+
+// ===========================================================================
+// TELA: una vista dall'alto con zoom e spostamento. x in alto, y a sinistra.
+// ===========================================================================
+function arcoPx(g, cx, cy, a0, a1, rpx, col, w = 1.8, punta = true) {
+  // arco orientato da a0 ad a1 (angoli del veicolo, antiorari sullo schermo)
+  const s0 = -(a0 + Math.PI / 2), s1 = -(a1 + Math.PI / 2), antior = s1 < s0;
+  g.save(); g.strokeStyle = col; g.lineWidth = w;
+  g.beginPath(); g.arc(cx, cy, rpx, s0, s1, antior); g.stroke();
+  if (punta && Math.abs(s1 - s0) * rpx > 7) {
+    const ex = cx + rpx * Math.cos(s1), ey = cy + rpx * Math.sin(s1);
+    const ang = s1 + (antior ? -Math.PI / 2 : Math.PI / 2), h = 8;
+    g.fillStyle = col; g.beginPath(); g.moveTo(ex, ey);
+    g.lineTo(ex - h * Math.cos(ang - 0.4), ey - h * Math.sin(ang - 0.4));
+    g.lineTo(ex - h * Math.cos(ang + 0.4), ey - h * Math.sin(ang + 0.4));
+    g.closePath(); g.fill();
+  }
+  g.restore();
+}
+class Tela {
+  constructor(id) {
+    this.cv = $(id); this.g = this.cv.getContext('2d');
+    this.W = 0; this.H = 0; this.dpr = 1;
+    this.k = 300; this.ox = 0; this.oy = 0;        // px per metro e origine in px
+    this.punti = () => [];                          // punti da tenere in vista con «inquadra»
+    this.margini = [44, 24, 30, 24];                // alto, destra, basso, sinistra (px)
+    this.disegna = () => {};
+    this.toccata = false;                           // l'utente ha zoomato o spostato
+  }
+  P(x, y) { return [this.ox - y * this.k, this.oy - x * this.k]; }
+  ridimensiona() {
+    this.dpr = window.devicePixelRatio || 1;
+    const r = this.cv.getBoundingClientRect();
+    this.W = r.width; this.H = r.height;
+    this.cv.width = Math.max(1, Math.round(this.W * this.dpr)); this.cv.height = Math.max(1, Math.round(this.H * this.dpr));
+    if (!this.toccata) this.inquadra(false);
+  }
+  inquadra(ridisegna = true) {
+    const pts = this.punti();
+    if (!pts.length || this.W < 10 || this.H < 10) return;
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const [mt, mr, mb, ml] = this.margini, Wu = this.W - ml - mr, Hu = this.H - mt - mb;
+    this.k = Math.max(4, Math.min(Wu / Math.max(1e-3, y1 - y0), Hu / Math.max(1e-3, x1 - x0)));
+    this.ox = ml + Wu / 2 + 0.5 * (y0 + y1) * this.k;
+    this.oy = mt + Hu / 2 + 0.5 * (x0 + x1) * this.k;
+    this.toccata = false;
+    if (ridisegna) this.disegna();
+  }
+  pulisci(passo) {
+    const g = this.g;
+    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    g.fillStyle = COL.fondo; g.fillRect(0, 0, this.W, this.H);
+    const s = passo * this.k;
+    if (s < 6) return;
+    g.save(); g.strokeStyle = 'rgba(255,255,255,0.04)'; g.lineWidth = 1;
+    for (let X = ((this.ox % s) + s) % s; X < this.W; X += s) { g.beginPath(); g.moveTo(X, 0); g.lineTo(X, this.H); g.stroke(); }
+    for (let Y = ((this.oy % s) + s) % s; Y < this.H; Y += s) { g.beginPath(); g.moveTo(0, Y); g.lineTo(this.W, Y); g.stroke(); }
+    g.restore();
+  }
+  linea(a, b, col, w = 1, dash = null, cap = 'butt') {
+    const g = this.g; g.save(); g.strokeStyle = col; g.lineWidth = w; g.lineCap = cap; if (dash) g.setLineDash(dash);
+    g.beginPath(); g.moveTo(...this.P(...a)); g.lineTo(...this.P(...b)); g.stroke(); g.restore();
+  }
+  poligono(pts, riempi, bordo = null, w = 1) {
+    const g = this.g; g.save(); g.beginPath(); g.moveTo(...this.P(...pts[0]));
+    pts.slice(1).forEach(p => g.lineTo(...this.P(...p))); g.closePath();
+    if (riempi) { g.fillStyle = riempi; g.fill(); }
+    if (bordo) { g.strokeStyle = bordo; g.lineWidth = w; g.stroke(); }
+    g.restore();
+  }
+  freccia(a, b, col, w = 2, h = 9) {
+    const g = this.g, [x0, y0] = this.P(...a), [x1, y1] = this.P(...b), ang = Math.atan2(y1 - y0, x1 - x0);
+    g.save(); g.strokeStyle = col; g.lineWidth = w;
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - 0.8 * h * Math.cos(ang), y1 - 0.8 * h * Math.sin(ang)); g.stroke();
+    g.fillStyle = col; g.beginPath(); g.moveTo(x1, y1);
+    g.lineTo(x1 - h * Math.cos(ang - 0.38), y1 - h * Math.sin(ang - 0.38));
+    g.lineTo(x1 - h * Math.cos(ang + 0.38), y1 - h * Math.sin(ang + 0.38));
+    g.closePath(); g.fill(); g.restore();
+  }
+  disco(a, r, riempi, bordo = null, w = 2) {
+    const g = this.g, [x, y] = this.P(...a);
+    g.save(); g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI);
+    if (riempi) { g.fillStyle = riempi; g.fill(); }
+    if (bordo) { g.strokeStyle = bordo; g.lineWidth = w; g.stroke(); }
+    g.restore();
+  }
+  testo(s, a, col = '#ddd', align = 'center', base = 'middle', size = 12, fondo = false, dx = 0, dy = 0) {
+    const [X, Y] = this.P(...a);
+    testoPx(this.g, s, X + dx, Y + dy, col, align, base, size, fondo);
+  }
+  ruota(c, d, col, L = 0.64, Wd = 0.23, riempi = '#2b2b2b') {
+    const h = [Math.cos(d), Math.sin(d)], n = [-Math.sin(d), Math.cos(d)];
+    const pts = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a, b]) =>
+      [c[0] + a * L / 2 * h[0] + b * Wd / 2 * n[0], c[1] + a * L / 2 * h[1] + b * Wd / 2 * n[1]]);
+    this.poligono(pts, riempi, col, 2);
+  }
+  arco(c, a0, a1, rpx, col, w = 1.8, punta = true) { arcoPx(this.g, ...this.P(...c), a0, a1, rpx, col, w, punta); }
+  init() {
+    const cv = this.cv;
+    let presa = null;
+    cv.addEventListener('wheel', e => {
+      e.preventDefault();
+      const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+      const f = Math.exp(-e.deltaY * 0.0012), k1 = Math.min(40000, Math.max(4, this.k * f)), fz = k1 / this.k;
+      this.k = k1; this.ox = mx - (mx - this.ox) * fz; this.oy = my - (my - this.oy) * fz;
+      this.toccata = true; this.disegna();
+    }, { passive: false });
+    cv.addEventListener('pointerdown', e => {
+      cv.setPointerCapture(e.pointerId);
+      presa = { x: e.clientX, y: e.clientY, ox: this.ox, oy: this.oy };
+      cv.classList.add('trascina');
+    });
+    cv.addEventListener('pointermove', e => {
+      if (!presa) return;
+      this.ox = presa.ox + e.clientX - presa.x; this.oy = presa.oy + e.clientY - presa.y;
+      this.toccata = true; this.disegna();
+    });
+    const fine = () => { presa = null; cv.classList.remove('trascina'); };
+    cv.addEventListener('pointerup', fine); cv.addEventListener('pointercancel', fine);
+    cv.addEventListener('dblclick', () => this.inquadra());
+  }
+}
+function testoPx(g, s, x, y, col = '#ddd', align = 'center', base = 'middle', size = 12, fondo = false) {
+  g.save(); g.font = `${size}px Segoe UI, sans-serif`; g.textAlign = align; g.textBaseline = base;
+  if (fondo) {
+    const w = g.measureText(s).width + 6, h = size + 4;
+    let bx = x - w / 2; if (align === 'left') bx = x - 3; if (align === 'right') bx = x - w + 3;
+    let by = y - h / 2; if (base === 'top') by = y - 2; if (base === 'bottom') by = y - h + 2;
+    g.fillStyle = 'rgba(26,26,46,0.85)'; g.fillRect(bx, by, w, h);
+  }
+  g.fillStyle = col; g.fillText(s, x, y); g.restore();
+}
+
+const TM = new Tela('mecc'), TV = new Tela('veic');
+let CFG = null;     // configurazione corrente del meccanismo (dipende dal volante)
+
+// ===========================================================================
+// VISTA DEL MECCANISMO
+// ===========================================================================
+const Meccanismo = {
+  E: 0.09,           // distanza del centro ruota dall'asse di sterzo
+  coloriRuote() {
+    const sinistra = CFG ? 0.5 * (CFG.dL + CFG.dR) >= 0 : true;
+    return sinistra ? [COL.inner, COL.outer] : [COL.outer, COL.inner];
+  },
+  punti() {
+    // ruote (con le etichette degli angoli), bracci e, per la cremagliera, pignone e piantone
+    const geo = Modello.geom(st.tipo), t = geo.t, xs = [-0.42, 0.48, geo.lato * (geo.b + 0.06)];
+    if (geo.tipo === 'crem') xs.push(geo.lato * geo.xc + 0.06, geo.lato * geo.xc - 0.48);
+    return [[Math.min(...xs), t / 2 + 0.32], [Math.max(...xs), -t / 2 - 0.32]];
+  },
+  disegna() {
+    const T = TM;
+    if (!T.W || !CFG) return;
+    T.pulisci(0.1);
+    const geo = Modello.geom(st.tipo), t = geo.t, lato = geo.lato;
+    const [KL, KR] = Modello.fusi(geo), [thL, thR] = Modello.riposo(geo);
+    const TL0 = Modello.punta(geo, KL, thL, 0), TR0 = Modello.punta(geo, KR, thR, 0);
+    const [col11, col12] = this.coloriRuote(), cfg = CFG;
+    const pxm = T.k;
+
+    // mezzeria e retta dei fusi
+    T.linea([-1.2, 0], [1.2, 0], 'rgba(220,220,220,0.22)', 1, [10, 4, 2, 4]);
+    T.linea(KL, KR, 'rgba(200,200,200,0.28)', 1, [4, 4]);
+    T.testo('mezzeria', [0.95, 0], 'rgba(220,220,220,0.45)', 'left', 'middle', 11, false, 6, 0);
+
+    // posizione di marcia rettilinea (tratteggio): bracci, barra o tiranti
+    T.linea(KL, TL0, 'rgba(255,209,102,0.40)', 2, [4, 3]);
+    T.linea(KR, TR0, 'rgba(255,209,102,0.40)', 2, [4, 3]);
+    if (geo.tipo === 'quad') T.linea(TL0, TR0, 'rgba(124,196,255,0.30)', 2, [4, 3]);
+    else {
+      const xc = lato * geo.xc;
+      T.linea([xc, geo.w / 2], TL0, 'rgba(124,196,255,0.30)', 2, [4, 3]);
+      T.linea([xc, -geo.w / 2], TR0, 'rgba(124,196,255,0.30)', 2, [4, 3]);
+    }
+    // prolungamento dei bracci a riposo, verso la mezzeria
+    if (Math.abs(geo.g0) > 1e-4) {
+      for (const [K, th] of [[KL, thL], [KR, thR]]) {
+        const u = [Math.cos(th), Math.sin(th)], verso = lato < 0 ? 1 : -1;
+        T.linea(K, [K[0] + verso * 1.1 * u[0], K[1] + verso * 1.1 * u[1]], 'rgba(255,209,102,0.22)', 1, [2, 4]);
+      }
+    }
+    // ruote (semitrasparenti: sotto si vedono fusi e bracci), traccia del piano medio e retta parallela a x
+    const ruote = [[KL, cfg.dL, 1, col11, '11'], [KR, cfg.dR, -1, col12, '12']], centri = [];
+    for (const [K, d, s, col] of ruote) {
+      const c = [K[0] - s * this.E * Math.sin(d), K[1] + s * this.E * Math.cos(d)];
+      const Lr = Math.max(0.55, 70 / pxm), h = [Math.cos(d), Math.sin(d)];
+      T.linea(c, [c[0] + Lr, c[1]], 'rgba(230,230,230,0.5)', 1, [1.5, 3]);
+      T.linea([c[0] - 0.45 * h[0], c[1] - 0.45 * h[1]], [c[0] + Lr * h[0], c[1] + Lr * h[1]], col, 1.3, [9, 3, 2, 3]);
+      T.ruota(c, d, col, 0.64, 0.23, 'rgba(43,43,43,0.55)');
+      centri.push(c);
+    }
+    // cremagliera, scatola, pignone e tiranti, oppure barra di accoppiamento
+    if (geo.tipo === 'crem') this.cremagliera(geo, cfg);
+    else T.linea(cfg.TL, cfg.TR, COL.tie, 4.5, null, 'round');
+    // fusi (dal centro dell'asse di sterzo al centro ruota) e bracci
+    ruote.forEach(([K], i) => T.linea(K, centri[i], '#9aa3b5', 5, null, 'round'));
+    T.linea(KL, cfg.TL, COL.arm, 5, null, 'round');
+    T.linea(KR, cfg.TR, COL.arm, 5, null, 'round');
+    for (const p of [cfg.TL, cfg.TR]) T.disco(p, 4, '#fff');
+    for (const K of [KL, KR]) T.disco(K, 6, COL.fondo, '#ddd', 2);
+    // angoli di sterzo delle ruote
+    ruote.forEach(([, d, , col, kq], i) => {
+      if (Math.abs(d) < 1e-4) return;
+      const c = centri[i], rd = Math.max(0.40 * pxm, 44);
+      T.arco(c, 0, d, rd, col, 1.8);
+      const [X, Y] = T.P(...c), a = -(d + 0.20 * Math.sign(d) + Math.PI / 2);
+      testoPx(T.g, `δ${pedice(kq)} = ${(d * R2D).toFixed(2)}°`, X + (rd + 4) * Math.cos(a), Y + (rd + 4) * Math.sin(a),
+        col, 'center', 'bottom', 12, true);
+    });
+    // gamma_0 sul fuso sinistro: dall'asse x (verso i bracci) al braccio a riposo
+    const ref = lato < 0 ? Math.PI : 0, Lref = Math.max(geo.b * 1.25, 46 / pxm);
+    T.linea(KL, [KL[0] + Lref * Math.cos(ref), KL[1]], 'rgba(230,230,230,0.7)', 1, [1.5, 3]);
+    if (Math.abs(geo.g0) > 0.2 * D2R) {
+      const rg = Math.max(0.62 * geo.b * pxm, 30);
+      T.arco(KL, ref, thL, rg, COL.arm, 1.6);
+      const am = 0.5 * (ref + thL), [X, Y] = T.P(...KL);
+      testoPx(T.g, `γ₀ = ${(geo.g0 * R2D).toFixed(1)}°`, X - (rg + 16) * Math.sin(am), Y - (rg + 16) * Math.cos(am),
+        COL.arm, 'center', 'middle', 12, true);
+    }
+    // comando del quadrilatero sul fuso sinistro
+    if (geo.tipo === 'quad') {
+      const [X, Y] = T.P(...KL);
+      arcoPx(T.g, X, Y, -2.2, -0.4, 17, COL.mecc, 2);
+      T.testo('comando: δ₁₁ = τ₁δᵥ', [KL[0] - 0.42, KL[1] + this.E], COL.mecc, 'center', 'top', 11, true);
+    }
+    // etichette
+    const meta = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    T.testo('braccio b', meta(KR, cfg.TR), COL.arm, 'right', 'middle', 11, true, -10, 0);
+    T.testo('fuso', KR, '#c9d0dc', 'left', 'middle', 11, true, 12, lato < 0 ? -12 : 12);
+    if (geo.tipo === 'quad') T.testo('barra di accoppiamento', meta(cfg.TL, cfg.TR), COL.tie, 'center', lato < 0 ? 'top' : 'bottom', 11, true, 0, lato < 0 ? 8 : -8);
+    else T.testo('tirante', meta(cfg.JR, cfg.TR), COL.tie, 'center', lato < 0 ? 'top' : 'bottom', 11, true, 0, lato < 0 ? 8 : -8);
+    if (cfg.blocco) testoPx(T.g, 'fine corsa: il meccanismo non si chiude oltre questo angolo', T.W / 2, T.H - 52, COL.mecc, 'center', 'middle', 13, true);
+  },
+  // cremagliera (si sposta di s), scatola fissa, pignone visto di fianco con l'impronta dell'elica
+  cremagliera(geo, cfg) {
+    const T = TM, xc = geo.lato * geo.xc, s = cfg.s, hr = 0.0125;
+    const yh = Math.max(0.09, geo.w / 2 - 0.11);
+    // scatola
+    T.poligono([[xc - 0.024, yh], [xc + 0.024, yh], [xc + 0.024, -yh], [xc - 0.024, -yh]], 'rgba(184,192,208,0.14)', 'rgba(184,192,208,0.55)', 1);
+    // asta della cremagliera, con tacche ogni 4 cm che si muovono con lei
+    const yA = geo.w / 2 + s, yB = -geo.w / 2 + s;
+    T.poligono([[xc - hr, yA], [xc + hr, yA], [xc + hr, yB], [xc - hr, yB]], '#7f889b', '#cfd6e3', 1.2);
+    for (let q = -geo.w / 2 + 0.03; q <= geo.w / 2 - 0.03 + 1e-9; q += 0.04) T.linea([xc - hr, q + s], [xc + hr, q + s], 'rgba(30,34,48,0.75)', 1.5);
+    T.testo('cremagliera', [xc, yA], COL.rack, 'left', 'middle', 11, true, 12, geo.lato < 0 ? 14 : -14);
+    // pignone: cilindro con l'asse lungo x, visto da un piano parallelo all'asse (ingrandito se serve)
+    const rv = Math.max(cfg.rp, 8 / T.k), ingr = rv / cfg.rp;
+    this.pignone(T.g, (x, y) => T.P(xc + x, y), rv, 4.4 * rv, cfg.theta);
+    // piantone verso il volante
+    T.linea([xc - 2.2 * rv, 0], [xc - 2.2 * rv - 0.30, 0], 'rgba(200,205,215,0.75)', 3, null, 'round');
+    T.testo('piantone (dal volante)', [xc - 2.2 * rv - 0.30, 0], '#c9d0dc', 'center', 'top', 11, true, 0, 6);
+    T.testo(ingr > 1.05 ? `pignone (×${ingr.toFixed(1)})` : 'pignone', [xc + 2.2 * rv, 0], COL.rack, 'center', 'bottom', 11, true, 0, -4);
+    // tiranti e snodi interni
+    T.linea(cfg.JL, cfg.TL, COL.tie, 4, null, 'round');
+    T.linea(cfg.JR, cfg.TR, COL.tie, 4, null, 'round');
+    for (const p of [cfg.JL, cfg.JR]) T.disco(p, 4.5, '#fff', COL.rack, 1.5);
+  },
+  // disegna un pignone elicoidale: asse lungo x, raggio r, lunghezza L, rotazione theta attorno a +x.
+  // map(x, y) porta le coordinate locali (x lungo l'asse, y trasversale) sullo schermo.
+  pignone(g, map, r, L, theta, z = 7, psi = 25 * D2R) {
+    const [a1, b1] = map(L / 2, r), [a2, b2] = map(-L / 2, -r);
+    const X0 = Math.min(a1, a2), X1 = Math.max(a1, a2), Y0 = Math.min(b1, b2), Y1 = Math.max(b1, b2);
+    g.save();
+    const grad = g.createLinearGradient(X0, 0, X1, 0);
+    grad.addColorStop(0, '#2e3442'); grad.addColorStop(0.45, '#c9ced8'); grad.addColorStop(0.55, '#c9ced8'); grad.addColorStop(1, '#2e3442');
+    g.fillStyle = grad; g.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
+    g.beginPath(); g.rect(X0, Y0, X1 - X0, Y1 - Y0); g.clip();
+    // denti: x = (r / tan psi)(phi + theta - 2 pi k / z), y = r sin phi, metà visibile phi in [-pi/2, pi/2]
+    const A = L * Math.tan(psi) / (2 * r), k0 = Math.floor((theta - Math.PI / 2 - A) * z / (2 * Math.PI)) - 1;
+    const k1 = Math.ceil((theta + Math.PI / 2 + A) * z / (2 * Math.PI)) + 1;
+    for (let kk = k0; kk <= k1; kk++) {
+      for (const [col, lw, dphi] of [['rgba(25,28,36,0.85)', 2.2, 0], ['rgba(255,255,255,0.35)', 1, 0.07]]) {
+        g.strokeStyle = col; g.lineWidth = lw; g.beginPath();
+        let su = false;
+        for (let i = 0; i <= 40; i++) {
+          const phi = -Math.PI / 2 + Math.PI * i / 40, x = r / Math.tan(psi) * (phi + dphi + theta - 2 * Math.PI * kk / z);
+          const [X, Y] = map(x, r * Math.sin(phi));
+          if (Math.abs(x) > L / 2 + 1e-9) { su = false; continue; }
+          if (!su) { g.moveTo(X, Y); su = true; } else g.lineTo(X, Y);
+        }
+        g.stroke();
+      }
+    }
+    g.restore();
+    g.save(); g.strokeStyle = '#e6e9ef'; g.lineWidth = 1.2; g.strokeRect(X0, Y0, X1 - X0, Y1 - Y0); g.restore();
+  },
+};
+
+// ===========================================================================
+// DETTAGLIO: pignone e cremagliera in scala vera, ingranamento coerente
+// ===========================================================================
+const Dettaglio = {
+  spostato: false,
+  // finche' l'utente non la sposta, la finestra sta nel meccanismo, fra le due ruote, dalla parte
+  // opposta alla cremagliera: in alto se la cremagliera e' dietro l'assale, in basso se e' davanti
+  posiziona() {
+    const box = $('dett'), C = $('center').getBoundingClientRect(), hM = $('mecc-wrap').offsetHeight;
+    const bw = box.offsetWidth || 264, bh = box.offsetHeight || 196;        // nascosta: misure nominali
+    let x = parseFloat(box.style.left) || 10, y = parseFloat(box.style.top) || 0;
+    if (!this.spostato) {
+      x = (C.width - bw) / 2;
+      y = st.crem.lato < 0 ? 40 : hM - bh - 30;
+    }
+    box.style.left = Math.max(0, Math.min(C.width - bw, x)) + 'px';
+    box.style.top = Math.max(0, Math.min(C.height - bh, y)) + 'px';
+    box.style.bottom = 'auto';
+  },
+  disegna() {
+    const box = $('dett');
+    box.style.display = st.tipo === 'crem' ? '' : 'none';
+    if (st.tipo !== 'crem' || box.classList.contains('ridotto') || !CFG) return;
+    const c = $('dett-cv'), dpr = window.devicePixelRatio || 1, w = 264, h = 168;
+    c.width = w * dpr; c.height = h * dpr;
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = '#0e142a'; g.fillRect(0, 0, w, h);
+    const rp = CFG.rp, kd = 24 / rp, s = CFG.s, z = 7, psi = 25 * D2R;
+    const cx = w / 2, cy = h / 2;
+    const map = (x, y) => [cx - y * kd, cy - x * kd];          // x locale lungo l'asse del pignone
+    // cremagliera (sotto al pignone): fascia orizzontale, denti inclinati che si muovono con s
+    const hr = 1.65 * rp, p = 2 * Math.PI * rp / z;
+    const [, ya] = map(hr, 0), [, yb] = map(-hr, 0);
+    const gr = g.createLinearGradient(0, ya, 0, yb);
+    gr.addColorStop(0, '#5d6678'); gr.addColorStop(0.5, '#9aa3b4'); gr.addColorStop(1, '#5d6678');
+    g.fillStyle = gr; g.fillRect(0, ya, w, yb - ya);
+    g.save(); g.beginPath(); g.rect(0, ya, w, yb - ya); g.clip();
+    const yMax = w / (2 * kd) + hr * Math.tan(psi) + p;
+    for (let j = Math.floor((-yMax - s) / p); j <= Math.ceil((yMax - s) / p); j++) {
+      const y0 = s + j * p;
+      for (const [col, lw, dy] of [['rgba(30,34,46,0.9)', 2.2, 0], ['rgba(230,234,240,0.45)', 1, 0.12 * p]]) {
+        g.strokeStyle = col; g.lineWidth = lw; g.beginPath();
+        g.moveTo(...map(-hr, y0 + dy + Math.tan(psi) * hr)); g.lineTo(...map(hr, y0 + dy - Math.tan(psi) * hr)); g.stroke();
+      }
+    }
+    g.restore();
+    // pignone sopra la cremagliera
+    Meccanismo.pignone(g, map, rp, 4.4 * rp, CFG.theta, z, psi);
+    // freccia del moto della cremagliera
+    if (Math.abs(s) > 2e-4) {
+      const verso = s > 0 ? -1 : 1, Y = yb + 9;
+      g.save(); g.strokeStyle = COL.rack; g.fillStyle = COL.rack; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(cx - 40 * verso, Y); g.lineTo(cx + 40 * verso, Y); g.stroke();
+      g.beginPath(); g.moveTo(cx + 46 * verso, Y); g.lineTo(cx + 36 * verso, Y - 5); g.lineTo(cx + 36 * verso, Y + 5); g.closePath(); g.fill();
+      g.restore();
+    }
+    testoPx(g, `pignone: r_p = ${(rp * 1000).toFixed(1)} mm, ${z} denti, elica 25°, ruota di δᵥ`,
+      6, 9, '#dfe4ec', 'left', 'middle', 10.5, true);
+    testoPx(g, `cremagliera: s = r_p δᵥ = ${(s * 1000).toFixed(1)} mm ${s > 1e-4 ? '(verso sinistra)' : s < -1e-4 ? '(verso destra)' : ''}`,
+      6, h - 8, COL.rack, 'left', 'middle', 10.5, true);
+  },
+  init() {
+    const box = $('dett'), testa = $('dett-testa');
+    $('dett-riduci').addEventListener('click', e => {
+      e.stopPropagation();
+      const r = box.classList.toggle('ridotto');
+      $('dett-riduci').innerHTML = r ? '&#9656;' : '&#9662;';
+      this.disegna();
+    });
+    let presa = null;
+    testa.addEventListener('pointerdown', e => {
+      if (e.target.id === 'dett-riduci') return;
+      const rb = box.getBoundingClientRect(), rp = box.parentElement.getBoundingClientRect();
+      presa = { dx: e.clientX - rb.left, dy: e.clientY - rb.top, rp };
+      testa.setPointerCapture(e.pointerId);
+    });
+    testa.addEventListener('pointermove', e => {
+      if (!presa) return;
+      this.spostato = true;
+      const { rp } = presa, bw = box.offsetWidth, bh = box.offsetHeight;
+      const x = Math.min(rp.width - bw, Math.max(0, e.clientX - rp.left - presa.dx));
+      const y = Math.min(rp.height - bh, Math.max(0, e.clientY - rp.top - presa.dy));
+      box.style.left = x + 'px'; box.style.top = y + 'px';
+    });
+    const fine = () => { presa = null; };
+    testa.addEventListener('pointerup', fine); testa.addEventListener('pointercancel', fine);
+  },
+};
+
+// ===========================================================================
+// VISTA DEL VEICOLO: normali alle ruote anteriori, assale posteriore, bracci
+// (stessa terna del meccanismo: assale anteriore in x = 0, posteriore in x = -l)
+// ===========================================================================
+const Veicolo = {
+  intersezione(y0, d, l) { return Math.abs(Math.sin(d)) < 1e-6 ? Infinity : y0 + l * Math.cos(d) / Math.sin(d); },
+  // inquadratura simmetrica rispetto alla mezzeria: curve a destra e a sinistra stanno entrambe in vista
+  punti() {
+    const l = st.l, t = st.t;
+    let Y = t / 2 + 0.4;
+    if (CFG) {
+      const ys = [this.intersezione(t / 2, CFG.dL, l), this.intersezione(-t / 2, CFG.dR, l),
+                  Modello.ackermann(0.5 * (CFG.dL + CFG.dR), l, t).R];
+      for (const y of ys) if (isFinite(y) && Math.abs(y) < 25) Y = Math.max(Y, Math.abs(y) + 0.5);
+    }
+    return [[-l - 0.9, Y], [1.0, -Y]];
+  },
+  disegna() {
+    const T = TV;
+    if (!T.W || !CFG) return;
+    T.pulisci(1);
+    const l = st.l, t = st.t, geo = Modello.geom(st.tipo), an = Analisi.calcola();
+    const [col11, col12] = Meccanismo.coloriRuote();
+    const lungo = (T.W + T.H) / T.k + 60;
+    // retta dell'assale posteriore, mezzeria, cassa e assali
+    T.linea([-l, -lungo], [-l, lungo], 'rgba(220,220,220,0.5)', 1, [10, 4, 2, 4]);
+    T.linea([-l - 1.2, 0], [1.4, 0], 'rgba(220,220,220,0.22)', 1, [10, 4, 2, 4]);
+    const bw = t / 2 + 0.18;
+    T.poligono([[0.95, bw], [0.95, -bw], [-l - 0.85, -bw], [-l - 0.85, bw]], 'rgba(78,168,255,0.06)', 'rgba(120,170,255,0.5)', 1.3);
+    T.linea([0, t / 2], [0, -t / 2], 'rgba(200,200,200,0.45)', 2);
+    T.linea([-l, t / 2], [-l, -t / 2], 'rgba(200,200,200,0.45)', 2);
+    const latoC = 0.5 * (CFG.dL + CFG.dR) >= 0 ? 1 : -1;            // C a sinistra (+y) in curva a sinistra
+    const etich = (s, x, col) => T.testo(s, [x, 0], col, latoC > 0 ? 'right' : 'left', 'middle', 10.5, true, latoC > 0 ? -9 : 9, 0);
+    const scritte = [];
+    // bracci prolungati (a ruote dritte) e punti notevoli sulla mezzeria
+    const [KL, KR] = Modello.fusi(geo);
+    if (isFinite(an.xI) && an.xI > -3 * l) {
+      for (const K of [KL, KR]) T.linea(K, [an.xI, 0], 'rgba(255,209,102,0.55)', 1.2, [3, 4]);
+      T.disco([an.xI, 0], 5, COL.arm);
+      scritte.push(() => etich(`incontro dei bracci: ${(-an.xI).toFixed(2)} m = ${(-an.xI / l).toFixed(2)} l`, an.xI, COL.arm));
+    } else {
+      scritte.push(() => etich(Math.abs(geo.g0) < 1e-4 ? 'bracci paralleli: si incontrano all\'infinito'
+                                                       : 'bracci divergenti: si incontrano davanti', -0.45 * l, COL.arm));
+    }
+    T.disco([-l, 0], 4, COL.fondo, '#f8f8f2', 1.6);
+    scritte.push(() => etich('regola di Jeantaud: centro dell\'assale posteriore', -l, '#f8f8f2'));
+    if (isFinite(an.g2) && an.g2 > 0.05) {
+      const x2 = -(t / 2) / Math.tan(an.g2 * D2R);
+      if (x2 > -3 * l) {
+        T.disco([x2, 0], 4, COL.fondo, COL.target, 1.6);
+        scritte.push(() => etich(`2° ordine (ε₀ = ${epsBersaglio()})`, x2, COL.target));
+      }
+    }
+    scritte.push(() => T.testo('assale posteriore', [-l, latoC * (t / 2 + 0.45)], 'rgba(220,220,220,0.65)', latoC > 0 ? 'right' : 'left', 'top', 11, false, 0, 6));
+    // normali delle ruote anteriori fino alla retta dell'assale posteriore
+    const y11 = this.intersezione(t / 2, CFG.dL, l), y12 = this.intersezione(-t / 2, CFG.dR, l);
+    for (const [y0, d, yI, col] of [[t / 2, CFG.dL, y11, col11], [-t / 2, CFG.dR, y12, col12]]) {
+      if (isFinite(yI)) { T.linea([0, y0], [-l, yI], col, 1.3, [6, 4]); T.disco([-l, yI], 4.5, col); }
+      else { const n = [-Math.sin(d), Math.cos(d)]; T.linea([-40 * n[0], y0 - 40 * n[1]], [40 * n[0], y0 + 40 * n[1]], col, 1.3, [6, 4]); }
+    }
+    // punto di Ackermann a pari angolo medio
+    const m = 0.5 * (CFG.dL + CFG.dR), RA = Modello.ackermann(m, l, t).R;
+    if (isFinite(RA)) {
+      T.disco([-l, RA], 8, null, COL.ack, 2);
+      T.testo('Ackermann (stesso δ₁)', [-l, RA], COL.ack, 'center', 'bottom', 11, true, 0, -12);
+    }
+    if (isFinite(y11) && isFinite(y12)) {
+      const ym = 0.5 * (y11 + y12);
+      T.testo(`normali distanti ${Math.abs(y11 - y12).toFixed(2)} m`, [-l, ym], '#dfe4ec', 'center', 'top', 11, true, 0, 14);
+      // avviso sul bordo se i punti d'incontro sono fuori vista
+      const [X] = T.P(-l, ym);
+      if (X < 0 || X > T.W) {
+        const Yr = T.P(-l, 0)[1];
+        testoPx(T.g, X < 0 ? '← normali e C fuori vista: zoom indietro' : 'normali e C fuori vista: zoom indietro →',
+          X < 0 ? 8 : T.W - 8, Yr - 16, '#dfe4ec', X < 0 ? 'left' : 'right', 'middle', 11, true);
+      }
+    }
+    // ruote
+    T.ruota([0, t / 2], CFG.dL, col11, 0.6, 0.22); T.ruota([0, -t / 2], CFG.dR, col12, 0.6, 0.22);
+    T.ruota([-l, t / 2], 0, '#9aa0b4', 0.6, 0.22); T.ruota([-l, -t / 2], 0, '#9aa0b4', 0.6, 0.22);
+    scritte.forEach(f => f());
+  },
+};
+
+// ===========================================================================
+// PANNELLO DESTRO: formule, tabelle, grafici
+// ===========================================================================
+const Pannello = {
+  formule() {
+    if (!window.katex) return;
+    const r = (id, s) => katex.render(s, $(id), { displayMode: true, throwOnError: false });
+    r('f-ack', String.raw`\text{Ackermann esatto:}\;\; \cot\delta_{12} - \cot\delta_{11} = \frac{t_1}{l}`);
+    r('f-legge', String.raw`\delta_{11,12} = \delta_1 \pm \varepsilon\,\frac{t_1}{2l}\,\delta_1^2, \qquad \Delta := \delta_{11} - \delta_{12}`);
+    r('f-ls', String.raw`\begin{gathered}\min_{\boldsymbol p}\ \sum_{k=1}^{N} \big[\Delta_{\text{mecc}}(\delta_{1k}) - \Delta_{\text{bers}}(\delta_{1k})\big]^2 \\ \delta_{1k} = \tfrac{k}{N}\,\delta_{1,\max}\end{gathered}`);
+    r('f-quad', String.raw`\text{quadrilatero:}\;\; \varepsilon_0 = \frac{l\,\tan\gamma_0}{t_1 \mp 2b\sin\gamma_0}`);
+  },
+  aggiorna() {
+    const an = Analisi.calcola(), cfg = CFG, l = st.l, t = st.t;
+    $('f-quad').classList.toggle('spenta', st.tipo !== 'quad');
+    $('n-quad').style.display = st.tipo === 'quad' ? '' : 'none';
+    const m = 0.5 * (cfg.dL + cfg.dR), A = Modello.ackermann(m, l, t), B = Modello.bersaglio(st.bers, m, l, t);
+    const diff = (cfg.dL - cfg.dR) * R2D, ack = st.bers === 'ack';
+    const epsSec = Math.abs(m) > 0.2 * D2R ? (cfg.dL - cfg.dR) / (t / l * m * m) : NaN;
+    $('verso').textContent = m > 1e-9 ? 'sinistra (interna la 11)' : m < -1e-9 ? 'destra (interna la 12)' : '— (rettilineo)';
+    const g = x => fmt(x * R2D, 2, '°');
+    let ingresso = st.tipo === 'quad'
+      ? `<tr class="sep"><td>ingresso: &delta;<sub>11</sub> = &tau;<sub>1</sub>&delta;<sub>v</sub></td><td colspan="3" style="text-align:center">${fmt(tau() * st.dv, 2, '°')}</td></tr>`
+      : `<tr class="sep"><td>corsa della cremagliera s</td><td colspan="3" style="text-align:center">${fmt(cfg.s * 1000, 1, ' mm')}</td></tr>
+         <tr><td>rotazione del pignone = &delta;<sub>v</sub></td><td colspan="3" style="text-align:center">${fmt(st.dv, 0, '°')}</td></tr>`;
+    $('tab-angoli').innerHTML = `
+      <tr><th></th><th>meccanismo</th><th>Ackermann</th><th>${ack ? '' : nomeBersaglio(st.bers)}</th></tr>
+      <tr><td class="int">&delta;<sub>11</sub></td><td>${g(cfg.dL)}</td><td>${g(A.d11)}</td><td>${ack ? '' : g(B.d11)}</td></tr>
+      <tr><td class="est">&delta;<sub>12</sub></td><td>${g(cfg.dR)}</td><td>${g(A.d12)}</td><td>${ack ? '' : g(B.d12)}</td></tr>
+      <tr><td>&Delta; = &delta;<sub>11</sub> &minus; &delta;<sub>12</sub></td><td>${fmt(diff, 2, '°')}</td><td>${g(A.d11 - A.d12)}</td><td>${ack ? '' : g(B.d11 - B.d12)}</td></tr>
+      <tr><td>errore su &Delta; rispetto al bersaglio</td><td colspan="3" style="text-align:center">${fmt(diff - (B.d11 - B.d12) * R2D, 3, '°')}</td></tr>
+      <tr class="sep"><td>angolo medio &delta;<sub>1</sub></td><td colspan="3" style="text-align:center">${g(m)}</td></tr>
+      <tr><td>&epsilon; equivalente (secante)</td><td colspan="3" style="text-align:center">${fmt(epsSec, 2)}</td></tr>
+      ${ingresso}`;
+    // dimensionamento
+    const p = st[st.tipo], lib = st.liberi[st.tipo], ris = st.ris[st.tipo];
+    const alLim = k => st.auto && ris && ris.alLimite.includes(k);
+    const riga = (k, nome, val) => `<tr><td>${nome}${lib[k] ? ' <span class="lib">libero</span>' : ''}</td><td>${val}${alLim(k) ? ' <span class="lim">al limite</span>' : ''}</td></tr>`;
+    let righe = `
+      <tr><td>bersaglio</td><td>${nomeBersaglio(st.bers)}</td></tr>
+      <tr><td>intervallo e punti</td><td>|&delta;<sub>1</sub>| &le; ${st.mMax}&deg;, N = ${st.nPunti}</td></tr>
+      <tr class="sep"><td colspan="2" style="color:#9aa6b8">geometria ${st.auto ? '<b style="color:#b8f0c8">ottima</b>' : '<b style="color:#ffd1a1">a mano</b>'}</td></tr>
+      ${riga('g0', '&gamma;<sub>0</sub>', fmt(p.g0, 2, '°'))}
+      ${riga('b', 'b', fmt(p.b, 3, ' m'))}`;
+    if (st.tipo === 'crem') righe += riga('xc', '|x<sub>c</sub>|', fmt(p.xc, 3, ' m')) + riga('w', 'w', fmt(p.w, 3, ' m'));
+    righe += `
+      <tr><td>errore RMS sull'intervallo</td><td>${fmt(an.err.rms, 3, '°')}</td></tr>
+      <tr><td>errore massimo sull'intervallo</td><td>${fmt(an.err.max, 3, '°')}</td></tr>
+      <tr><td>&epsilon;<sub>0</sub> (angoli piccoli)</td><td>${fmt(an.e0, 3)}</td></tr>
+      <tr class="sep"><td colspan="2" style="color:#9aa6b8">confronto, con gli altri parametri fissi</td></tr>
+      <tr><td>Jeantaud, &gamma;<sub>0</sub> = ${an.gJ.toFixed(2)}&deg;</td><td>RMS ${fmt(an.errJ.rms, 3, '°')}</td></tr>
+      <tr><td>2&deg; ordine, &gamma;<sub>0</sub> = ${isFinite(an.g2) ? an.g2.toFixed(2) + '&deg;' : '—'}</td><td>RMS ${fmt(an.err2.rms, 3, '°')}</td></tr>
+      <tr class="sep"><td>${st.tipo === 'quad' ? 'barra di accoppiamento L<sub>b</sub>' : 'tiranti c'}</td><td>${fmt(an.lungh, 3, ' m')}</td></tr>`;
+    if (st.tipo === 'crem') righe += `<tr><td>pignone r<sub>p</sub> per 1/&tau;<sub>1</sub> = ${st.N}</td><td>${fmt(cfg.rp * 1000, 2, ' mm')}</td></tr>`;
+    if (st.auto && ris) righe += `<tr><td>valutazioni, tempo</td><td>${ris.nf}, ${ris.tempo.toFixed(0)} ms</td></tr>`;
+    $('tab-dim').innerHTML = righe;
+    Grafici.disegna(an);
+  },
+};
+
+const Grafici = {
+  asse(c) {
+    const r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (!r.width) return null;
+    c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+    return [g, r.width, r.height];
+  },
+  linea(g, pts, X, Y, col, wd, dash) {
+    g.save(); g.strokeStyle = col; g.lineWidth = wd; if (dash) g.setLineDash(dash);
+    g.beginPath(); let su = false;
+    for (const [x, y] of pts) {
+      if (!isFinite(y)) { su = false; continue; }
+      if (!su) { g.moveTo(X(x), Y(y)); su = true; } else g.lineTo(X(x), Y(y));
+    }
+    g.stroke(); g.restore();
+  },
+  disegna(an) {
+    const xm = 40, mx = 32, my = 16, ms = Ottimizzatore.punti(st.mMax, st.nPunti).map(v => v * R2D);
+    // Delta = delta_11 - delta_12 e' pari nell'angolo medio: in curva a destra vale come a sinistra
+    const mAtt = Math.abs(0.5 * (CFG.dL + CFG.dR)) * R2D, dAtt = (CFG.dL - CFG.dR) * R2D;
+    const bers = m => Modello.diffBersaglio(st.bers, m * D2R, st.l, st.t) * R2D;
+    const mecc = an.curva.map(([m, d]) => [m * R2D, d * R2D]);
+    const fondo = (g, w, h, X, Y, y0, y1, passoY) => {
+      g.fillStyle = 'rgba(199,125,255,0.08)'; g.fillRect(X(0), 4, X(st.mMax) - X(0), h - my - 4);
+      g.strokeStyle = 'rgba(255,255,255,0.08)'; g.lineWidth = 1;
+      for (let d = 0; d <= xm; d += 5) { g.beginPath(); g.moveTo(X(d), 4); g.lineTo(X(d), h - my); g.stroke(); }
+      for (let v = Math.ceil(y0 / passoY) * passoY; v <= y1 + 1e-9; v += passoY) { g.beginPath(); g.moveTo(mx, Y(v)); g.lineTo(w - 8, Y(v)); g.stroke(); }
+      g.strokeStyle = 'rgba(255,255,255,0.4)'; g.beginPath(); g.moveTo(mx, Y(0)); g.lineTo(w - 8, Y(0)); g.stroke();
+      g.fillStyle = '#99a'; g.font = '10px Segoe UI'; g.textAlign = 'center';
+      for (let d = 0; d <= xm; d += 10) g.fillText(d, X(d), h - 3);
+      g.textAlign = 'right';
+      for (let v = Math.ceil(y0 / passoY) * passoY; v <= y1 + 1e-9; v += passoY) g.fillText(+v.toFixed(2), mx - 4, Y(v) + 3);
+    };
+    // 1. Delta contro |delta_1|
+    let q = this.asse($('graf-diff'));
+    if (q) {
+      const [g, w, h] = q, y0 = -16, y1 = 16;
+      const X = d => mx + d / xm * (w - mx - 8), Y = v => 4 + (y1 - v) / (y1 - y0) * (h - my - 4);
+      fondo(g, w, h, X, Y, y0, y1, 4);
+      const xs = Array.from({ length: 161 }, (_, i) => i * xm / 160);
+      this.linea(g, [[0, 0], [xm, 0]], X, Y, COL.par, 1.5);
+      this.linea(g, xs.map(x => [x, Modello.diffBersaglio('ack', x * D2R, st.l, st.t) * R2D]), X, Y, COL.ack, st.bers === 'ack' ? 2.6 : 1.8);
+      if (st.bers !== 'ack') this.linea(g, xs.map(x => [x, bers(x)]), X, Y, COL.target, 2, [6, 3]);
+      this.linea(g, mecc, X, Y, COL.mecc, 2);
+      g.fillStyle = COL.target;
+      for (const m of ms) { g.beginPath(); g.arc(X(m), Y(bers(m)), 3.2, 0, 2 * Math.PI); g.fill(); }
+      if (mAtt <= xm) { g.fillStyle = COL.mecc; g.beginPath(); g.arc(X(mAtt), Y(dAtt), 4.5, 0, 2 * Math.PI); g.fill(); }
+      const fine = mecc[mecc.length - 1][0];
+      if (fine < xm - 0.5) { g.fillStyle = COL.mecc; g.font = '10px Segoe UI'; g.textAlign = 'left'; g.fillText('fine corsa', X(fine) + 4, Y(mecc[mecc.length - 1][1]) - 4); }
+    }
+    $('leg-bers').style.display = st.bers === 'ack' ? 'none' : '';
+    // 2. errore
+    q = this.asse($('graf-err'));
+    if (q) {
+      const [g, w, h] = q;
+      const err = mecc.map(([m, d]) => [m, d - bers(m)]);
+      let emax = 0;
+      for (const [m, e] of err) if (m <= st.mMax) emax = Math.max(emax, Math.abs(e));
+      const lim = Math.max(0.2, emax * 1.6), passo = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10].find(p => lim / p <= 4) || 10;
+      const y1 = Math.ceil(lim / passo) * passo, y0 = -y1;
+      const X = d => mx + d / xm * (w - mx - 8), Y = v => 4 + (y1 - Math.max(y0, Math.min(y1, v))) / (y1 - y0) * (h - my - 4);
+      fondo(g, w, h, X, Y, y0, y1, passo);
+      this.linea(g, err, X, Y, COL.mecc, 2);
+      g.fillStyle = COL.target;
+      for (const m of ms) {
+        const d = Modello.interpola(an.curva, m * D2R);
+        if (isFinite(d)) { g.beginPath(); g.arc(X(m), Y(d * R2D - bers(m)), 3.2, 0, 2 * Math.PI); g.fill(); }
+      }
+    }
+  },
+};
+
+// ===========================================================================
+// VOLANTE E MANOPOLA (come in sterzo_ackermann.html)
+// ===========================================================================
+function disegnaVolante() {
+  const c = $('volante'), dpr = window.devicePixelRatio || 1, s = 82;
+  c.width = s * dpr; c.height = s * dpr;
+  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, s, s); g.translate(s / 2, s / 2);
+  g.rotate(-st.dv * D2R);                       // dv > 0: volante a sinistra (antiorario)
+  g.strokeStyle = '#ddd'; g.lineWidth = 6; g.beginPath(); g.arc(0, 0, 33, 0, 2 * Math.PI); g.stroke();
+  g.lineWidth = 5;
+  g.beginPath(); g.moveTo(-31, 4); g.lineTo(31, 4); g.stroke();
+  g.beginPath(); g.moveTo(0, 4); g.lineTo(0, 31); g.stroke();
+  g.fillStyle = '#e94560'; g.beginPath(); g.arc(0, -33, 4.5, 0, 2 * Math.PI); g.fill();
+  g.fillStyle = '#555'; g.beginPath(); g.arc(0, 4, 9, 0, 2 * Math.PI); g.fill();
+}
+const Knob = {
+  min: 0.05, max: 1.0, a0: -135 * D2R, a1: 135 * D2R,
+  frazione() { return Math.log(st.anim.f / this.min) / Math.log(this.max / this.min); },
+  imposta(f) { st.anim.f = Math.min(this.max, Math.max(this.min, f)); this.disegna(); },
+  disegna() {
+    const c = $('knob'), dpr = window.devicePixelRatio || 1, s = 66;
+    c.width = s * dpr; c.height = s * dpr;
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, s, s);
+    const cx = s / 2, cy = s / 2, fr = this.frazione(), ang = this.a0 + fr * (this.a1 - this.a0);
+    const sc = a => a - Math.PI / 2;
+    for (let i = 0; i <= 10; i++) {
+      const a = sc(this.a0 + i / 10 * (this.a1 - this.a0));
+      g.strokeStyle = i / 10 <= fr + 1e-9 ? '#ffc857' : 'rgba(255,255,255,0.25)'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(cx + 28 * Math.cos(a), cy + 28 * Math.sin(a)); g.lineTo(cx + 32 * Math.cos(a), cy + 32 * Math.sin(a)); g.stroke();
+    }
+    g.strokeStyle = '#ffc857'; g.lineWidth = 3.5;
+    g.beginPath(); g.arc(cx, cy, 24, sc(this.a0), sc(ang)); g.stroke();
+    const grad = g.createRadialGradient(cx - 6, cy - 7, 3, cx, cy, 21);
+    grad.addColorStop(0, '#5b6478'); grad.addColorStop(1, '#22283a');
+    g.fillStyle = grad; g.beginPath(); g.arc(cx, cy, 20, 0, 2 * Math.PI); g.fill();
+    g.strokeStyle = '#8a93a8'; g.lineWidth = 1; g.stroke();
+    g.strokeStyle = '#ffc857'; g.lineWidth = 3; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(cx + 7 * Math.cos(sc(ang)), cy + 7 * Math.sin(sc(ang)));
+    g.lineTo(cx + 17 * Math.cos(sc(ang)), cy + 17 * Math.sin(sc(ang))); g.stroke();
+    $('knob-v').textContent = `${st.anim.f.toFixed(2)} Hz`;
+    $('amp-v').textContent = `${st.anim.amp}°`;
+  },
+  init() {
+    const c = $('knob'); let y0 = null, f0 = 0;
+    c.addEventListener('pointerdown', e => { y0 = e.clientY; f0 = this.frazione(); c.setPointerCapture(e.pointerId); });
+    c.addEventListener('pointermove', e => {
+      if (y0 === null) return;
+      const fr = Math.min(1, Math.max(0, f0 + (y0 - e.clientY) / 150));
+      this.imposta(this.min * Math.pow(this.max / this.min, fr));
+    });
+    c.addEventListener('pointerup', () => { y0 = null; });
+    c.addEventListener('wheel', e => { e.preventDefault(); this.imposta(st.anim.f * Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+    c.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { this.imposta(st.anim.f * 1.1); e.preventDefault(); }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { this.imposta(st.anim.f / 1.1); e.preventDefault(); }
+    });
+    c.addEventListener('dblclick', () => this.imposta(0.2));
+    this.disegna();
+  },
+};
+const Animazione = {
+  passo(now) {
+    if (!st.anim.on) return;
+    const dt = st.anim.tPrec ? (now - st.anim.tPrec) / 1000 : 0;
+    st.anim.tPrec = now;
+    st.anim.fase += 2 * Math.PI * st.anim.f * dt;
+    $('dv').value = Math.round(st.anim.amp * Math.sin(st.anim.fase));
+    Comandi.leggi();
+    requestAnimationFrame(t => this.passo(t));
+  },
+  commuta() {
+    st.anim.on = !st.anim.on;
+    $('play').classList.toggle('on', st.anim.on);
+    $('play').innerHTML = st.anim.on ? '&#10074;&#10074;' : '&#9654;';
+    if (st.anim.on) {
+      st.anim.fase = Math.asin(Math.max(-1, Math.min(1, st.dv / st.anim.amp)));
+      st.anim.tPrec = 0;
+      requestAnimationFrame(t => this.passo(t));
+    }
+  },
+};
+
+// ===========================================================================
+// COMANDI
+// ===========================================================================
+const PREF = { quad: 'q', crem: 'c' };
+const GEOM = { quad: ['b', 'g0'], crem: ['b', 'g0', 'xc', 'w'] };
+const FMT = { b: v => v.toFixed(3) + ' m', g0: v => v.toFixed(2) + '°', xc: v => v.toFixed(3) + ' m', w: v => v.toFixed(3) + ' m' };
+const Comandi = {
+  timer: null,
+  leggi() {
+    for (const tipo of ['quad', 'crem']) for (const k of GEOM[tipo]) {
+      const id = `${PREF[tipo]}-${k}`;
+      st[tipo][k] = parseFloat($(id).value);
+      $(id + '-v').textContent = FMT[k](st[tipo][k]);
+    }
+    st.dv = parseFloat($('dv').value); st.N = parseFloat($('N').value);
+    st.l = parseFloat($('l').value); st.t = parseFloat($('t').value);
+    st.mMax = parseFloat($('mmax').value); st.nPunti = parseInt($('npunti').value, 10);
+    $('dv-v').textContent = st.dv.toFixed(0) + '°';
+    $('N-v').textContent = '1/' + st.N.toFixed(1).replace('.0', '');
+    $('l-v').textContent = st.l.toFixed(2) + ' m'; $('t-v').textContent = st.t.toFixed(2) + ' m';
+    $('mmax-v').textContent = st.mMax.toFixed(0) + '°'; $('npunti-v').textContent = st.nPunti;
+    // vincolo: snodi interni della cremagliera dentro la carreggiata
+    const wMax = st.t - 0.40;
+    $('c-w').max = wMax.toFixed(3);
+    if (st.crem.w > wMax) { st.crem.w = wMax; $('c-w').value = wMax; $('c-w-v').textContent = FMT.w(wMax); }
+    this.aggiorna();
+  },
+  chiaveVista: '',
+  aggiorna() {
+    CFG = Modello.configurazione(Modello.geom(st.tipo), st.dv, tau());
+    const chiave = JSON.stringify([st.tipo, st[st.tipo], st.l, st.t]);
+    if (chiave !== this.chiaveVista) {
+      this.chiaveVista = chiave;
+      if (!TM.toccata) TM.inquadra(false);
+      if (!TV.toccata) TV.inquadra(false);
+    }
+    Dettaglio.posiziona();
+    this.stato();
+    disegnaVolante();
+    Meccanismo.disegna(); Veicolo.disegna(); Dettaglio.disegna();
+    Pannello.aggiorna();
+  },
+  stato() {
+    document.querySelectorAll('.card').forEach(c => c.classList.toggle('attiva', c.dataset.tipo === st.tipo));
+    for (const tipo of ['quad', 'crem'])
+      document.querySelectorAll(`#${PREF[tipo]}-lato button`).forEach(b => b.classList.toggle('on', +b.dataset.v === st[tipo].lato));
+    document.querySelectorAll('#bers button').forEach(b => b.classList.toggle('on', String(st.bers) === b.dataset.v));
+    // caselle dei parametri liberi del meccanismo attivo
+    const lib = st.liberi[st.tipo], box = $('liberi'), html = Object.keys(lib).map(k =>
+      `<label><input type="checkbox" data-k="${k}" ${lib[k] ? 'checked' : ''}><span>${{ g0: 'γ<sub>0</sub>', b: 'b', xc: '|x<sub>c</sub>|', w: 'w' }[k]}</span></label>`).join('');
+    if (box.dataset.tipo !== st.tipo || box.innerHTML === '') { box.innerHTML = html; box.dataset.tipo = st.tipo; }
+    else box.querySelectorAll('input').forEach(i => i.checked = lib[i.dataset.k]);
+    // stato del dimensionamento
+    const ris = st.ris[st.tipo], an = Analisi.calcola(), nota = $('nota-dim');
+    const nomiLib = Object.keys(lib).filter(k => lib[k]).map(k => Ottimizzatore.NOMI[k]).join(', ') || 'nessuno';
+    if (st.auto && ris) {
+      nota.className = 'note ok';
+      nota.innerHTML = `Geometria ottima per <b>${nomeBersaglio(st.bers)}</b> fino a ${st.mMax}&deg; con ${st.nPunti} punti; ` +
+        `liberi: ${nomiLib}. Errore RMS ${an.err.rms.toFixed(3)}&deg;, massimo ${an.err.max.toFixed(3)}&deg;.` +
+        (ris.alLimite.length ? ` <b>Al limite:</b> ${ris.alLimite.map(k => Ottimizzatore.NOMI[k]).join(', ')} (vincolo attivo).` : '') +
+        ` Bastano pochi punti in pi&ugrave; dei parametri liberi; oltre una decina la soluzione non cambia pi&ugrave;.`;
+    } else {
+      nota.className = 'note attiva';
+      nota.innerHTML = `Geometria modificata a mano: ${nomeBersaglio(st.bers)} resta solo come confronto (grafici e tabella). ` +
+        `&laquo;Dimensiona&raquo; riporta la geometria all'ottimo.`;
+    }
+    // note dei due riquadri
+    const qg = Modello.geom('quad'), Lb = qg.t + 2 * qg.lato * qg.b * Math.sin(qg.g0);   // t -+ 2 b sin(g0)
+    const xIq = qg.g0 > 1e-6 ? (qg.t / 2) / Math.tan(qg.g0) : NaN;
+    $('q-nota').innerHTML = `Barra di accoppiamento L<sub>b</sub> = ${Lb.toFixed(3)} m; &epsilon;<sub>0</sub> = ${(st.l * Math.tan(qg.g0) / Lb).toFixed(3)}. ` +
+      (isFinite(xIq) ? `I bracci prolungati si incontrano sulla mezzeria a ${xIq.toFixed(2)} m dall'assale anteriore (${(xIq / st.l).toFixed(2)} l).`
+                     : qg.g0 < -1e-6 ? 'Bracci divergenti: anti-Ackermann.' : 'Bracci paralleli: parallelogramma, &delta;<sub>11</sub> = &delta;<sub>12</sub>.');
+    const cg = Modello.geom('crem'), c0 = Modello.crem(cg, 0, [0, 0]), rp = tau() / Modello.dmds0(cg);
+    $('c-nota').innerHTML = `Tiranti c = ${c0 ? c0.c.toFixed(3) : '—'} m; pignone r<sub>p</sub> = ${(rp * 1000).toFixed(2)} mm per avere ` +
+      `1/&tau;<sub>1</sub> = ${st.N} a ruote dritte; corsa per &plusmn;540&deg;: &plusmn;${(rp * 3 * Math.PI * 1000).toFixed(0)} mm.`;
+    // volante
+    const m = 0.5 * (CFG.dL + CFG.dR);
+    $('dv-lett').textContent = `${st.dv.toFixed(0)}°`;
+    $('dm-lett').textContent = `${(m * R2D).toFixed(2)}°`;
+    $('ingresso-lett').innerHTML = st.tipo === 'quad'
+      ? `&delta;<sub>11</sub> = &tau;<sub>1</sub>&delta;<sub>v</sub>, &tau;<sub>1</sub> = 1/${st.N.toFixed(1).replace('.0', '')}`
+      : `s = ${(CFG.s * 1000).toFixed(1)} mm, &tau;<sub>1</sub> = 1/${st.N.toFixed(1).replace('.0', '')}`;
+    // legenda del meccanismo
+    $('mecc-leg').innerHTML = `
+      <div><i style="background:${COL.arm}"></i>bracci (solidali ai fusi)</div>
+      <div><i style="background:${COL.tie}"></i>${st.tipo === 'quad' ? 'barra di accoppiamento' : 'tiranti'}</div>
+      ${st.tipo === 'crem' ? `<div><i style="background:${COL.rack}"></i>cremagliera, scatola e pignone</div>` : ''}
+      <div><i style="background:${COL.inner}"></i>ruota interna &nbsp;<i style="background:${COL.outer}"></i>esterna</div>
+      <div style="color:#9aa6b8">tratteggio: posizione a ruote dritte</div>`;
+  },
+  ottimizza() {
+    const tipo = st.tipo, lib = Object.keys(st.liberi[tipo]).filter(k => st.liberi[tipo][k]);
+    if (!lib.length) { st.ris[tipo] = null; return; }
+    const r = Ottimizzatore.dimensiona(tipo, lib, st.bers, st.mMax, st.nPunti);
+    for (const k of lib) { $(`${PREF[tipo]}-${k}`).value = r.p[k]; }
+    st.ris[tipo] = r;
+  },
+  ottimizzaDopo() {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => { if (st.auto) { this.ottimizza(); this.leggi(); } }, 140);
+  },
+  // gamma_0 preimpostati di un riquadro
+  preset(tipo, p) {
+    const geo = Modello.geom(tipo);
+    let v = 0;
+    if (p === 'jeantaud') v = Math.atan(st.t / (2 * st.l)) * R2D;
+    if (p === 'secondo') { v = Modello.gammaSecondoOrdine(geo, epsBersaglio(), st.l); if (!isFinite(v)) return; }
+    $(`${PREF[tipo]}-g0`).value = v.toFixed(2);
+    st.auto = false;
+    this.leggi();
+  },
+  init() {
+    // geometria a mano
+    for (const tipo of ['quad', 'crem']) for (const k of GEOM[tipo])
+      $(`${PREF[tipo]}-${k}`).addEventListener('input', () => { st.auto = false; this.leggi(); });
+    document.querySelectorAll('.mini[data-pre] button').forEach(b => b.addEventListener('click', () => {
+      this.preset(b.parentElement.dataset.pre === 'q' ? 'quad' : 'crem', b.dataset.p);
+    }));
+    // riquadri e sottocasi
+    document.querySelectorAll('.card-testa').forEach(h => h.addEventListener('click', () => {
+      const tipo = h.parentElement.dataset.tipo;
+      if (tipo === st.tipo) return;
+      st.tipo = tipo;
+      if (st.auto || !st.ris[tipo]) { st.auto = true; this.ottimizza(); }
+      this.leggi(); TM.inquadra(); TV.inquadra();
+    }));
+    for (const tipo of ['quad', 'crem'])
+      document.querySelectorAll(`#${PREF[tipo]}-lato button`).forEach(b => b.addEventListener('click', () => {
+        st[tipo].lato = +b.dataset.v;
+        if (st.auto) this.ottimizza();
+        this.leggi(); TM.inquadra();
+      }));
+    // bersaglio e minimi quadrati
+    document.querySelectorAll('#bers button').forEach(b => b.addEventListener('click', () => {
+      st.bers = b.dataset.v === 'ack' ? 'ack' : +b.dataset.v;
+      st.auto = true; this.ottimizza(); this.leggi();
+    }));
+    $('dimensiona').addEventListener('click', () => { st.auto = true; this.ottimizza(); this.leggi(); });
+    $('liberi').addEventListener('change', e => {
+      if (!e.target.dataset.k) return;
+      st.liberi[st.tipo][e.target.dataset.k] = e.target.checked;
+      if (st.auto) this.ottimizza();
+      this.leggi();
+    });
+    for (const id of ['mmax', 'npunti', 'l', 't']) $(id).addEventListener('input', () => { this.leggi(); if (st.auto) this.ottimizzaDopo(); });
+    // volante
+    for (const id of ['dv', 'N']) $(id).addEventListener('input', () => this.leggi());
+    $('play').addEventListener('click', () => Animazione.commuta());
+    $('dv-0').addEventListener('click', () => {
+      if (st.anim.on) Animazione.commuta();
+      $('dv').value = 0; this.leggi();
+    });
+    $('mecc-inq').addEventListener('click', () => TM.inquadra());
+    $('veic-inq').addEventListener('click', () => TV.inquadra());
+  },
+};
+
+// separatori trascinabili: pannelli laterali e spartizione fra le due viste
+const Separatori = {
+  init() {
+    for (const [idR, idP, verso] of [['rz-sx', 'left-panel', 1], ['rz-dx', 'right-panel', -1]]) {
+      const rz = $(idR), pan = $(idP);
+      let x0 = null, w0 = 0;
+      rz.addEventListener('pointerdown', e => {
+        if (pan.classList.contains('chiuso')) return;
+        x0 = e.clientX; w0 = pan.getBoundingClientRect().width;
+        rz.setPointerCapture(e.pointerId); rz.classList.add('attivo');
+      });
+      rz.addEventListener('pointermove', e => {
+        if (x0 === null) return;
+        pan.style.width = Math.max(300, Math.min(window.innerWidth * 0.45, w0 + verso * (e.clientX - x0))) + 'px';
+        ridimensiona();
+      });
+      const fine = () => { x0 = null; rz.classList.remove('attivo'); };
+      rz.addEventListener('pointerup', fine); rz.addEventListener('pointercancel', fine);
+      rz.addEventListener('dblclick', () => { pan.classList.toggle('chiuso'); ridimensiona(); });
+    }
+    const rz = $('rz-c'), sopra = $('mecc-wrap'), sotto = $('veic-wrap');
+    let y0 = null, h0 = 0;
+    rz.addEventListener('pointerdown', e => {
+      y0 = e.clientY; h0 = sopra.getBoundingClientRect().height;
+      rz.setPointerCapture(e.pointerId); rz.classList.add('attivo');
+    });
+    rz.addEventListener('pointermove', e => {
+      if (y0 === null) return;
+      const H = $('center').getBoundingClientRect().height;
+      sopra.style.flexBasis = Math.max(160, Math.min(H - 60, h0 + e.clientY - y0)) + 'px';
+      sotto.classList.remove('chiuso');
+      ridimensiona();
+    });
+    const fine = () => { y0 = null; rz.classList.remove('attivo'); };
+    rz.addEventListener('pointerup', fine); rz.addEventListener('pointercancel', fine);
+    rz.addEventListener('dblclick', () => {
+      const chiudi = !sotto.classList.contains('chiuso');
+      sotto.classList.toggle('chiuso', chiudi);
+      sopra.style.flexBasis = chiudi ? 'calc(100% - 6px)' : '60%';
+      ridimensiona();
+    });
+  },
+};
+
+function ridimensiona() {
+  TM.ridimensiona(); TV.ridimensiona();
+  Dettaglio.posiziona();
+  Comandi.aggiorna();
+}
+
+TM.punti = () => Meccanismo.punti(); TM.disegna = () => { Meccanismo.disegna(); };
+TM.margini = [44, 60, 30, 60];
+TV.punti = () => Veicolo.punti();    TV.disegna = () => { Veicolo.disegna(); };
+TV.margini = [44, 90, 30, 90];
+window.addEventListener('resize', ridimensiona);
+window.addEventListener('load', () => {
+  Pannello.formule();
+  Comandi.init(); Knob.init(); Dettaglio.init(); Separatori.init(); TM.init(); TV.init();
+  Comandi.ottimizza();         // apre gia' dimensionato per il bersaglio (Ackermann esatto)
+  Comandi.leggi(); ridimensiona();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legge di sterzo e Ackermann</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --panel: #16213e;
+  --accent: #0f3460;
+  --text: #e0e0e0;
+  --muted: #9aa6b8;
+  --highlight: #e94560;
+  --inner: #ff9f43;     /* ruota interna */
+  --outer: #2ec4b6;     /* ruota esterna */
+  --vel: #4ea8ff;
+  --knob: #ffc857;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg); color: var(--text);
+  display: flex; height: 100vh; overflow: hidden;
+}
+.panel {
+  background: var(--panel); padding: 10px; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: 8px;
+}
+#left-panel  { width: 350px; flex: 0 0 auto; }
+#right-panel { width: 360px; flex: 0 0 auto; }
+#left-panel.chiuso, #right-panel.chiuso { width: 0 !important; padding: 0; overflow: hidden; }
+.resizer {
+  flex: 0 0 6px; cursor: col-resize; background: var(--accent); position: relative;
+  transition: background .15s;
+}
+.resizer:hover, .resizer.attivo { background: var(--highlight); }
+.resizer::after {
+  content: '\22EE'; position: absolute; top: 50%; left: -2px; transform: translateY(-50%);
+  color: #8fa0c0; font-size: 12px; pointer-events: none;
+}
+#center { flex: 1; position: relative; min-width: 320px; }
+#vista { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; }
+#vista.sopra-c { cursor: move; }
+#vista.trascina { cursor: grabbing; }
+#hint {
+  position: absolute; left: 10px; bottom: 8px; font-size: .68em; color: #8899aa;
+  background: rgba(22,33,62,.85); padding: 3px 8px; border-radius: 5px; pointer-events: none;
+}
+#inquadra {
+  position: absolute; right: 10px; top: 10px; background: rgba(22,33,62,.9); color: #dde;
+  border: 1px solid #4a5a80; border-radius: 5px; font-size: .74em; padding: 4px 9px; cursor: pointer;
+}
+#inquadra:hover { border-color: var(--highlight); }
+
+/* intestazione e sezioni */
+.title { text-align: center; line-height: 1.3; }
+.title .t1 { font-size: 1em; font-weight: 700; color: var(--highlight); }
+.title .t2 { font-size: .72em; color: #bbb; }
+.title .t3 { font-size: .52em; color: #666; }
+.section { background: var(--accent); border-radius: 8px; padding: 7px 10px 8px; }
+.section-title {
+  font-size: .68em; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: #aab; margin-bottom: 6px;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.section-title .num { font-family: Consolas, monospace; color: #ccd; letter-spacing: 0; text-transform: none; }
+.sub { font-size: .7em; color: var(--muted); margin: 6px 0 3px; }
+.note { font-size: .68em; color: var(--muted); line-height: 1.45; }
+.note.attiva { color: #ffd1a1; }
+
+/* righe con cursore */
+.riga { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.riga label { flex: 0 0 92px; font-size: .76em; text-align: right; }
+.riga input[type="range"] { flex: 1; min-width: 0; accent-color: var(--highlight); }
+.riga .val { flex: 0 0 64px; font-size: .74em; font-family: Consolas, monospace; color: #dde; text-align: right; }
+input[type="range"]:disabled { opacity: .35; }
+button.zero {
+  flex: 0 0 auto; background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 9px;
+  font-size: .66em; padding: 1px 7px; cursor: pointer;
+}
+button.zero:hover { border-color: var(--highlight); }
+#legenda {
+  position: absolute; left: 10px; top: 10px; background: rgba(22,33,62,.88); border-radius: 6px;
+  padding: 6px 9px; font-size: .68em; line-height: 1.6; pointer-events: none;
+}
+#dett {
+  position: absolute; left: 10px; bottom: 34px; width: 300px; height: 336px;
+  background: rgba(14,20,42,.94); border: 1px solid #3b5384; border-radius: 8px; overflow: hidden;
+}
+#dett .dett-testa {
+  display: flex; justify-content: space-between; align-items: center; padding: 5px 8px;
+  font-size: .7em; font-weight: 700; letter-spacing: .5px; color: #aab; text-transform: uppercase;
+}
+#dett .seg { border-radius: 5px; }
+#dett .seg button { padding: 2px 8px; font-size: 1em; }
+#dett-cv { position: absolute; left: 0; top: 30px; width: 300px; height: 306px; }
+#dett.ridotto { height: 30px; }
+#dett.ridotto #dett-cv { display: none; }
+#legenda i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+/* segmented control */
+.seg { display: flex; border-radius: 6px; overflow: hidden; border: 1px solid #4a5a80; }
+.seg button {
+  flex: 1; border: none; border-right: 1px solid #4a5a80; background: #1d2d52; color: #dde;
+  font-size: .72em; font-weight: 600; padding: 5px 6px; cursor: pointer;
+}
+.seg button:last-child { border-right: none; }
+.seg button.on { background: var(--highlight); color: #fff; }
+.seg button:disabled { opacity: .35; cursor: not-allowed; }
+
+/* cursore di epsilon con i tre scatti */
+#eps-box { margin-top: 8px; }
+#eps-box .testa { display: flex; justify-content: space-between; align-items: baseline; font-size: .76em; }
+#eps-box .testa b { font-family: Consolas, monospace; font-weight: 600; color: #fff; }
+#eps { width: 100%; accent-color: var(--highlight); margin: 4px 0 2px; }
+.scatti { display: flex; justify-content: space-between; }
+.scatti button {
+  background: none; border: 1px solid #4a5a80; color: #cdd; border-radius: 12px;
+  font-size: .66em; padding: 2px 8px; cursor: pointer; display: inline-flex; gap: 5px; align-items: center;
+}
+.scatti button i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #cdd; display: inline-block; }
+.scatti button.on { border-color: var(--highlight); color: #fff; }
+.scatti button.on i { background: var(--highlight); border-color: var(--highlight); }
+.scatti button:disabled { opacity: .35; cursor: not-allowed; }
+
+/* volante e manopola */
+#volante-box { display: flex; align-items: center; gap: 10px; }
+#volante { width: 82px; height: 82px; flex: 0 0 82px; }
+.lettura { font-family: Consolas, monospace; line-height: 1.5; }
+.lettura .grande { font-size: 1.15em; color: #fff; }
+.lettura .piccola { font-size: .78em; color: var(--muted); }
+#anim-box {
+  display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 6px 8px;
+  border-radius: 8px; background: rgba(255,200,87,.07); border: 1px solid rgba(255,200,87,.35);
+}
+#knob { width: 66px; height: 66px; flex: 0 0 66px; cursor: ns-resize; touch-action: none; }
+#knob:focus { outline: 2px solid rgba(255,200,87,.6); outline-offset: 2px; border-radius: 50%; }
+#anim-box .lab { font-size: .7em; color: #ffd98a; line-height: 1.4; }
+#anim-box .lab b { font-family: Consolas, monospace; color: #fff; font-size: 1.15em; }
+#play {
+  margin-left: auto; width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--knob);
+  background: rgba(255,200,87,.12); color: var(--knob); font-size: 1.1em; cursor: pointer;
+}
+#play.on { background: var(--knob); color: #1a1a2e; }
+
+/* caselle e pulsanti piccoli */
+.chk { font-size: .74em; display: flex; align-items: center; gap: 6px; margin: 4px 0; cursor: pointer; }
+.chk input { accent-color: var(--highlight); }
+.mini { display: flex; gap: 4px; margin: 2px 0 4px 98px; }
+.mini button {
+  background: #1d2d52; border: 1px solid #4a5a80; color: #cdd; border-radius: 4px;
+  font-size: .66em; padding: 2px 6px; cursor: pointer;
+}
+.mini button:hover { border-color: var(--highlight); }
+.mini button:disabled { opacity: .35; cursor: not-allowed; }
+
+/* pannello destro */
+.formula { text-align: center; font-size: .8em; padding: 2px 0; border-radius: 6px; transition: opacity .2s; }
+.formula.spenta { opacity: .3; }
+table.valori { width: 100%; border-collapse: collapse; font-size: .76em; }
+table.valori th { text-align: right; color: var(--muted); font-weight: 600; padding: 2px 4px; font-size: .9em; }
+table.valori th:first-child { text-align: left; }
+table.valori td { padding: 2px 4px; font-family: Consolas, monospace; text-align: right; }
+table.valori td:first-child { font-family: 'Segoe UI', sans-serif; text-align: left; color: #cdd; }
+table.valori tr.sep td { border-top: 1px solid rgba(255,255,255,.12); padding-top: 4px; }
+.int { color: var(--inner); } .est { color: var(--outer); }
+#grafico { width: 100%; height: 220px; background: rgba(0,0,0,.25); border-radius: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .68em; margin-top: 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ====================================================================== -->
+<div id="left-panel" class="panel">
+  <div class="title">
+    <div class="t1">Legge di sterzo e Ackermann</div>
+    <div class="t2">Prof. M. Gabiccini &mdash; Dinamica del Veicolo</div>
+    <div class="t3">&copy; 2026 Tutti i diritti riservati</div>
+  </div>
+
+  <!-- 1. legge di sterzo -->
+  <div class="section">
+    <div class="section-title">1 &middot; Legge di sterzo</div>
+    <div class="seg" id="modo">
+      <button data-v="guiggiani" class="on">Legge al 2&deg; ordine (&epsilon;)</button>
+      <button data-v="esatto">Ackermann esatto</button>
+    </div>
+    <div id="eps-box">
+      <div class="testa"><span>coefficiente di Ackermann &epsilon;</span><b id="eps-v">1.00</b></div>
+      <input type="range" id="eps" min="-1" max="1" step="0.01" value="1">
+      <div class="scatti" id="scatti">
+        <button data-e="-1"><i></i>&minus;1 anti-Ackermann</button>
+        <button data-e="0"><i></i>0 parallelo</button>
+        <button data-e="1"><i></i>1 Ackermann</button>
+      </div>
+    </div>
+    <div class="riga" style="margin-top:8px"><label>&delta;<sub>1</sub><sup>0</sup> statica:</label>
+      <input type="range" id="toe" min="-2" max="2" step="0.05" value="0"><span class="val" id="toe-v"></span>
+      <button class="zero" id="toe-0" title="convergenza statica nulla">0</button></div>
+    <div class="note" id="nota-legge"></div>
+  </div>
+
+  <!-- 2. volante -->
+  <div class="section">
+    <div class="section-title">2 &middot; Volante</div>
+    <div id="volante-box">
+      <canvas id="volante"></canvas>
+      <div class="lettura">
+        <div class="grande">&delta;<sub>v</sub> = <span id="dv-lett"></span></div>
+        <div class="piccola">&tau;<sub>1</sub>&delta;<sub>v</sub> = <span id="dm-lett"></span> (angolo medio)</div>
+        <div class="piccola">&tau;<sub>1</sub> = <span id="tau-lett"></span></div>
+      </div>
+    </div>
+    <div class="riga"><label>&delta;<sub>v</sub> volante:</label>
+      <input type="range" id="dv" min="-540" max="540" step="1" value="360"><span class="val" id="dv-v"></span>
+      <button class="zero" id="dv-0" title="volante dritto: ruote dritte">0</button></div>
+    <div class="riga"><label>1/&tau;<sub>1</sub> rapporto:</label>
+      <input type="range" id="N" min="10" max="30" step="0.5" value="20"><span class="val" id="N-v"></span></div>
+    <div id="anim-box">
+      <canvas id="knob" tabindex="0" title="trascina in su o in gi&ugrave;, rotella o frecce"></canvas>
+      <div class="lab">velocit&agrave; dell'animazione<br><b id="knob-v"></b><br>sterzate avanti e indietro &plusmn;<span id="amp-v"></span></div>
+      <button id="play" title="avvia o ferma l'animazione">&#9654;</button>
+    </div>
+  </div>
+
+  <!-- 3. veicolo -->
+  <div class="section">
+    <div class="section-title">3 &middot; Veicolo</div>
+    <div class="riga"><label>passo l:</label>
+      <input type="range" id="l" min="1.5" max="3.6" step="0.01" value="2.70"><span class="val" id="l-v"></span></div>
+    <div class="riga"><label>carreggiata t<sub>1</sub>:</label>
+      <input type="range" id="t" min="1.0" max="2.0" step="0.01" value="1.55"><span class="val" id="t-v"></span></div>
+    <div class="riga"><label>semipasso a<sub>1</sub>:</label>
+      <input type="range" id="a1" min="0.5" max="2.5" step="0.01" value="1.20"><span class="val" id="a1-v"></span></div>
+  </div>
+
+  <!-- 4. centro di velocita' -->
+  <div class="section">
+    <div class="section-title">4 &middot; Centro di velocit&agrave; C</div>
+    <label class="chk"><input type="checkbox" id="mostra-c"> mostra C e le velocit&agrave; dei centri ruota</label>
+    <div class="seg" id="c-modo">
+      <button data-v="cinematico" title="derive tutte nulle: solo con Ackermann esatto e senza convergenza statica">C cinematico</button>
+      <button data-v="mano" class="on">C a mano</button>
+    </div>
+    <div class="sub">coordinate di C nella terna {x, y} con origine in G</div>
+    <div class="riga"><label>S:</label>
+      <input type="range" id="S" min="-5" max="5" step="0.01" value="-1.5"><span class="val" id="S-v"></span></div>
+    <div class="mini" id="S-scatti">
+      <button data-s="post">S = &minus;a<sub>2</sub></button>
+      <button data-s="G">S = 0</button>
+      <button data-s="ant">S = a<sub>1</sub></button>
+    </div>
+    <div class="riga"><label>R:</label>
+      <input type="range" id="R" min="-40" max="40" step="0.05" value="8"><span class="val" id="R-v"></span></div>
+    <label class="chk"><input type="checkbox" id="mostra-alfa"> angoli di deriva come archi orientati</label>
+    <label class="chk"><input type="checkbox" id="mostra-quote"> quote di C nella terna {x, y} solidale al veicolo</label>
+    <div class="note" id="nota-c"></div>
+  </div>
+</div>
+
+<div class="resizer" id="rz-sx" title="trascina per allargare o stringere; doppio clic: chiudi o riapri il pannello"></div>
+
+<!-- ====================================================================== -->
+<div id="center">
+  <canvas id="vista"></canvas>
+  <button id="inquadra" title="mette in vista veicolo, C e punti d'incontro delle normali">&#8982; inquadra</button>
+  <div id="legenda">
+    <div><i style="background:#ff9f43"></i>&delta;<sub>ij</sub>: da x al piano medio (colore della ruota)</div>
+    <div><i style="background:#4ea8ff"></i>velocit&agrave; dei centri ruota e &beta;&#770;<sub>ij</sub>: da x alla velocit&agrave;</div>
+    <div><i style="background:#ff5c8a"></i>&alpha;<sub>ij</sub>: dalla velocit&agrave; al piano medio</div>
+    <div><i style="background:#ff4d4d"></i>velocit&agrave; di G</div>
+    <div><i style="background:#c77dff"></i>coordinate S, R di C da G</div>
+    <div style="color:#9aa6b8">angoli positivi in verso antiorario</div>
+  </div>
+  <div id="dett">
+    <div class="dett-testa"><span id="dett-titolo" style="cursor:pointer" title="clic: riduci o riapri">&#9662; Dettaglio ruota</span>
+      <span class="seg" id="dett-ruota"><button data-r="11" class="on">11</button><button data-r="12">12</button><button data-r="21">21</button><button data-r="22">22</button></span>
+    </div>
+    <canvas id="dett-cv"></canvas>
+  </div>
+  <div id="hint">rotella: zoom &middot; trascina lo sfondo: sposta &middot; trascina C: sposta il centro &middot; doppio clic: inquadra</div>
+</div>
+
+<div class="resizer" id="rz-dx" title="trascina per allargare o stringere; doppio clic: chiudi o riapri il pannello"></div>
+
+<!-- ====================================================================== -->
+<div id="right-panel" class="panel">
+  <div class="section">
+    <div class="section-title">Legge di sterzo</div>
+    <div class="formula" id="f-guiggiani"></div>
+    <div class="formula" id="f-esatto"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Angoli <span class="num">curva a <span id="verso"></span></span></div>
+    <table class="valori" id="tab-angoli"></table>
+  </div>
+  <div class="section" id="sez-c">
+    <div class="section-title">Centro C e derive</div>
+    <table class="valori" id="tab-c"></table>
+  </div>
+  <div class="section">
+    <div class="section-title">Convergenza dinamica</div>
+    <div class="sub" style="margin-top:0">&delta;<sub>11</sub> &minus; &delta;<sub>12</sub> [&deg;] in funzione dell'angolo medio &tau;<sub>1</sub>&delta;<sub>v</sub> [&deg;]</div>
+    <canvas id="grafico"></canvas>
+    <div class="legend">
+      <span><i style="background:#f8f8f2"></i>Ackermann esatto</span>
+      <span><i style="background:#e94560"></i>legge attuale</span>
+      <span><i style="background:#4ea8ff"></i>parallelo</span>
+    </div>
+  </div>
+  <div class="note">Vista dall'alto: x in avanti (in alto), y a sinistra, terna {x, y} con origine in G.
+    Tratteggio arancio e verde: le normali ai piani medi delle ruote anteriori fino alla retta dell'assale posteriore;
+    cerchio bianco: il punto di Ackermann per lo stesso angolo medio. &delta;<sub>11</sub> &minus; &delta;<sub>12</sub> &gt; 0 vuol dire toe-out.</div>
+</div>
+
+<script>
+'use strict';
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const $ = id => document.getElementById(id);
+
+// ===========================================================================
+// MODELLO (funzioni pure). Terna di calcolo: origine al centro dell'assale
+// posteriore, x in avanti, y a sinistra; G in (a2, 0).
+// ===========================================================================
+const Modello = {
+  // R > t/2 per cui la media degli angoli esatti di Ackermann vale |dm|
+  raggioAckermann(dm, l, t) {
+    const a = Math.abs(dm);
+    if (a < 1e-9) return Infinity;
+    const media = R => 0.5 * (Math.atan(l / (R - t / 2)) + Math.atan(l / (R + t / 2)));
+    let lo = t / 2 + 1e-9, hi = 1e7;
+    if (media(lo) <= a) return t / 2 + 1e-6;
+    for (let i = 0; i < 200; i++) { const m = Math.sqrt(lo * hi); if (media(m) > a) lo = m; else hi = m; }
+    return 0.5 * (lo + hi);
+  },
+  // angoli esatti di Ackermann [d11, d12] e R con segno (positivo a sinistra)
+  ackermann(dm, l, t) {
+    if (Math.abs(dm) < 1e-9) return { d11: 0, d12: 0, R: Infinity };
+    const R = this.raggioAckermann(dm, l, t);
+    const din = Math.atan(l / (R - t / 2)), dout = Math.atan(l / (R + t / 2));
+    return dm > 0 ? { d11: din, d12: dout, R } : { d11: -dout, d12: -din, R: -R };
+  },
+  // legge di sterzo attuale: angoli delle due ruote anteriori (rad)
+  sterzo(dm, p) {
+    const toe = p.toe * D2R;
+    if (p.modo === 'esatto') {
+      const a = this.ackermann(dm, p.l, p.t);
+      return { d11: a.d11 - toe, d12: a.d12 + toe };
+    }
+    const q = p.eps * p.t / (2 * p.l) * dm * dm;
+    return { d11: -toe + dm + q, d12: toe + dm - q };
+  },
+  // ordinata in cui la normale della ruota anteriore (x = l) incontra x = 0
+  intersezione(y0, d, l) {
+    return Math.abs(Math.sin(d)) < 1e-6 ? Infinity : y0 + l * Math.cos(d) / Math.sin(d);
+  },
+  // cinematica della cassa con centro C = (xC, yC), u = 1 in G
+  derive(C, ang, p) {
+    const a2 = p.l - p.a1, R = C[1], S = C[0] - a2;
+    const u = 1, r = u / R, v = -S * r;
+    const vel = Q => [u - r * Q[1], v + r * (Q[0] - a2)];
+    const ruote = {
+      '11': { P: [p.l, p.t / 2], d: ang.d11 }, '12': { P: [p.l, -p.t / 2], d: ang.d12 },
+      '21': { P: [0, p.t / 2], d: 0 },         '22': { P: [0, -p.t / 2], d: 0 },
+    };
+    for (const k in ruote) {
+      const w = vel(ruote[k].P), m = Math.hypot(w[0], w[1]);
+      ruote[k].v = [w[0] / m, w[1] / m];
+      ruote[k].beta = Math.atan2(w[1], w[0]);
+      ruote[k].alfa = Math.atan2(Math.sin(ruote[k].d - ruote[k].beta), Math.cos(ruote[k].d - ruote[k].beta));
+    }
+    return { S, R, beta: Math.atan2(v, u), ruote };
+  },
+};
+
+// ===========================================================================
+// STATO
+// ===========================================================================
+const st = {
+  modo: 'guiggiani', eps: 1, toe: 0,
+  dv: 360, N: 20,
+  l: 2.70, t: 1.55, a1: 1.20,
+  mostraC: false, cModo: 'mano', S: -1.5, R: 8, mostraAlfa: false, mostraQuote: false,
+  vista: { zoom: 1, px: 0, py: 0 },
+  anim: { on: false, f: 0.2, fase: 0, tPrec: 0, amp: 480 },
+};
+const a2 = () => st.l - st.a1;
+const pedice = s => s.replace(/\d/g, c => '₀₁₂₃₄₅₆₇₈₉'[+c]);
+const dm = () => st.dv / st.N * D2R;
+// la legge e' cinematicamente compatibile con derive nulle solo se e' Ackermann esatto senza convergenza
+const cinematicoPossibile = () => st.modo === 'esatto' && Math.abs(st.toe) < 1e-9;
+function centroC() {
+  if (st.cModo === 'cinematico') {
+    const R = Modello.ackermann(dm(), st.l, st.t).R;
+    return isFinite(R) ? [0, R] : null;
+  }
+  return [a2() + st.S, st.R];
+}
+
+// ===========================================================================
+// VISTA PRINCIPALE
+// ===========================================================================
+const cv = $('vista'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+const k = () => Math.min(W / 16, H / 6.8) * st.vista.zoom;           // px per metro
+const orig = () => [W * 0.64 + st.vista.px, H * 0.72 + st.vista.py];
+function P(x, y) { const [ox, oy] = orig(), s = k(); return [ox - y * s, oy - x * s]; }
+function inv(X, Y) { const [ox, oy] = orig(), s = k(); return [(oy - Y) / s, (ox - X) / s]; }
+
+const Disegno = {
+  linea(a, b, col, w = 1, dash = null) {
+    ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = w; if (dash) ctx.setLineDash(dash);
+    ctx.beginPath(); ctx.moveTo(...P(...a)); ctx.lineTo(...P(...b)); ctx.stroke(); ctx.restore();
+  },
+  puntaFreccia(x1, y1, ang, col, h = 9) {
+    ctx.save(); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - h * Math.cos(ang - 0.38), y1 - h * Math.sin(ang - 0.38));
+    ctx.lineTo(x1 - h * Math.cos(ang + 0.38), y1 - h * Math.sin(ang + 0.38));
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  },
+  freccia(a, b, col, w = 2, h = 9) {
+    const [x0, y0] = P(...a), [x1, y1] = P(...b), ang = Math.atan2(y1 - y0, x1 - x0);
+    ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1 - 0.8 * h * Math.cos(ang), y1 - 0.8 * h * Math.sin(ang)); ctx.stroke();
+    ctx.restore(); this.puntaFreccia(x1, y1, ang, col, h);
+  },
+  quota(a, b, testo, col = '#c9d3e3', lato = 1) {
+    // quota fra a e b (terna del veicolo), con frecce alle due estremita'
+    const [x0, y0] = P(...a), [x1, y1] = P(...b), ang = Math.atan2(y1 - y0, x1 - x0);
+    ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.restore();
+    this.puntaFreccia(x1, y1, ang, col, 8); this.puntaFreccia(x0, y0, ang + Math.PI, col, 8);
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, nx = -Math.sin(ang) * lato, ny = Math.cos(ang) * lato;
+    this.testo(testo, [mx + 11 * nx, my + 11 * ny], col, 'center', 'middle', 12, true);
+  },
+  testo(s, [x, y], col = '#ddd', align = 'center', base = 'middle', size = 12, fondo = false) {
+    ctx.save(); ctx.font = `${size}px Segoe UI, sans-serif`; ctx.textAlign = align; ctx.textBaseline = base;
+    if (fondo) {
+      const w = ctx.measureText(s).width + 6, h = size + 4;
+      let bx = x - w / 2; if (align === 'left') bx = x - 3; if (align === 'right') bx = x - w + 3;
+      let by = y - h / 2; if (base === 'top') by = y - 2; if (base === 'bottom') by = y - h + 2;
+      ctx.fillStyle = 'rgba(26,26,46,0.85)'; ctx.fillRect(bx, by, w, h);
+    }
+    ctx.fillStyle = col; testoCappello(ctx, s, x, y); ctx.restore();
+  },
+  disco([x, y], r, riempi, bordo = null, w = 2) {
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
+    if (riempi) { ctx.fillStyle = riempi; ctx.fill(); }
+    if (bordo) { ctx.strokeStyle = bordo; ctx.lineWidth = w; ctx.stroke(); }
+    ctx.restore();
+  },
+  ruota(c, d, col) {
+    const L = 0.64, Wd = 0.23, h = [Math.cos(d), Math.sin(d)], n = [-Math.sin(d), Math.cos(d)];
+    const pts = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a, b]) =>
+      P(c[0] + a * L / 2 * h[0] + b * Wd / 2 * n[0], c[1] + a * L / 2 * h[1] + b * Wd / 2 * n[1]));
+    ctx.save(); ctx.fillStyle = '#2b2b2b'; ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(...pts[0]); pts.slice(1).forEach(p => ctx.lineTo(...p)); ctx.closePath();
+    ctx.fill(); ctx.stroke(); ctx.restore();
+  },
+  // arco orientato da a0 ad a1 (direzioni nella terna del veicolo), raggio in px
+  arcoOrientato(c, a0, a1, rpx, col, w = 1.8) { arcoPx(ctx, ...P(...c), a0, a1, rpx, col, w); },
+};
+// scrive un testo su un contesto: "β̂" (beta con cappello combinato) diventa
+// beta piu' un cappello disegnato a mano, perche' l'accento combinato nel canvas
+// si legge male
+function testoCappello(g, s, x, y) {
+  const parti = s.split('β̂');
+  if (parti.length === 1) { g.fillText(s, x, y); return; }
+  const piano = parti.join('β');
+  const wTot = g.measureText(piano).width;
+  let x0 = x;
+  if (g.textAlign === 'center') x0 = x - wTot / 2;
+  else if (g.textAlign === 'right' || g.textAlign === 'end') x0 = x - wTot;
+  const salva = g.textAlign; g.textAlign = 'left';
+  g.fillText(piano, x0, y);
+  const fs = parseFloat(g.font) || 12;
+  let pre = '';
+  for (let i = 0; i < parti.length - 1; i++) {
+    pre += parti[i];
+    const xb = x0 + g.measureText(pre).width, wb = g.measureText('β').width;
+    const yh = g.textBaseline === 'middle' ? y - 0.62 * fs : g.textBaseline === 'bottom' ? y - 1.12 * fs : y - 0.12 * fs;
+    g.save(); g.lineWidth = Math.max(1, fs / 12); g.strokeStyle = g.fillStyle;
+    g.beginPath(); g.moveTo(xb + 0.18 * wb, yh + 0.18 * fs); g.lineTo(xb + 0.55 * wb, yh); g.lineTo(xb + 0.92 * wb, yh + 0.18 * fs); g.stroke();
+    g.restore();
+    pre += 'β';
+  }
+  g.textAlign = salva;
+}
+// arco orientato su un contesto qualunque, centro (cx, cy) in px; angoli del veicolo
+// (da x verso y, antiorari sullo schermo perche' x e' in alto e y a sinistra)
+function arcoPx(g, cx, cy, a0, a1, rpx, col, w = 1.8) {
+  const s0 = -(a0 + Math.PI / 2), s1 = -(a1 + Math.PI / 2);     // angoli di schermo
+  const antior = s1 < s0;
+  g.save(); g.strokeStyle = col; g.lineWidth = w;
+  g.beginPath(); g.arc(cx, cy, rpx, s0, s1, antior); g.stroke();
+  if (Math.abs(s1 - s0) * rpx > 7) {
+    const ex = cx + rpx * Math.cos(s1), ey = cy + rpx * Math.sin(s1);
+    const ang = s1 + (antior ? -Math.PI / 2 : Math.PI / 2), h = 8;
+    g.fillStyle = col; g.beginPath(); g.moveTo(ex, ey);
+    g.lineTo(ex - h * Math.cos(ang - 0.4), ey - h * Math.sin(ang - 0.4));
+    g.lineTo(ex - h * Math.cos(ang + 0.4), ey - h * Math.sin(ang + 0.4));
+    g.closePath(); g.fill();
+  }
+  g.restore();
+}
+
+function disegna() {
+  if (!W) return;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, W, H);
+  const s = k(), l = st.l, t = st.t, A2 = a2();
+  const G = [A2, 0];
+
+  // griglia di 1 m
+  const [ox, oy] = orig();
+  ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+  for (let gx = ((ox % s) + s) % s; gx < W; gx += s) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
+  for (let gy = ((oy % s) + s) % s; gy < H; gy += s) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+  ctx.restore();
+
+  const ang = Modello.sterzo(dm(), st);
+  const sinistra = dm() >= 0;
+  const col11 = sinistra ? '#ff9f43' : '#2ec4b6', col12 = sinistra ? '#2ec4b6' : '#ff9f43';
+  const F11 = [l, t / 2], F12 = [l, -t / 2], R21 = [0, t / 2], R22 = [0, -t / 2];
+
+  // retta dell'assale posteriore e asse del veicolo
+  const lungo = (W + H) / s + Math.abs(st.vista.px / s) + 10;
+  Disegno.linea([0, -lungo], [0, lungo], 'rgba(220,220,220,0.5)', 1, [10, 4, 2, 4]);
+  Disegno.linea([-1.3, 0], [l + 1.5, 0], 'rgba(220,220,220,0.22)', 1, [10, 4, 2, 4]);
+
+  // cassa e assali
+  const c0 = P(-0.85, 0.92), c1 = P(l + 0.95, -0.92);
+  ctx.save(); ctx.fillStyle = 'rgba(78,168,255,0.07)'; ctx.strokeStyle = 'rgba(120,170,255,0.55)'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(c0[0], c0[1], c1[0] - c0[0], c1[1] - c0[1], 9 * st.vista.zoom);
+  else ctx.rect(c0[0], c0[1], c1[0] - c0[0], c1[1] - c0[1]);
+  ctx.fill(); ctx.stroke(); ctx.restore();
+  Disegno.linea(F11, F12, 'rgba(200,200,200,0.45)', 2);
+  Disegno.linea(R21, R22, 'rgba(200,200,200,0.45)', 2);
+
+  // normali delle ruote anteriori fino alla retta dell'assale posteriore
+  const y11 = Modello.intersezione(t / 2, ang.d11, l), y12 = Modello.intersezione(-t / 2, ang.d12, l);
+  for (const [F, d, yI, col] of [[F11, ang.d11, y11, col11], [F12, ang.d12, y12, col12]]) {
+    if (isFinite(yI)) {
+      Disegno.linea(F, [0, yI], col, 1.3, [6, 4]);
+      Disegno.disco(P(0, yI), 4.5, col);
+    } else {
+      const n = [-Math.sin(d), Math.cos(d)];
+      Disegno.linea([F[0] - 40 * n[0], F[1] - 40 * n[1]], [F[0] + 40 * n[0], F[1] + 40 * n[1]], col, 1.3, [6, 4]);
+    }
+  }
+  // punto di Ackermann per lo stesso angolo medio: pieno se la legge e' davvero
+  // Ackermann, sbiadito altrimenti (dice solo dove sarebbe con Ackermann)
+  const RA = Modello.ackermann(dm(), l, t).R;
+  if (isFinite(RA)) {
+    const pA = P(0, RA), pieno = cinematicoPossibile();
+    ctx.save(); ctx.globalAlpha = pieno ? 1 : 0.32;
+    Disegno.disco(pA, 8, null, '#f8f8f2', 2);
+    Disegno.testo(pieno ? 'Ackermann' : 'qui con Ackermann', [pA[0], pA[1] - 13], '#f8f8f2', 'center', 'bottom', 11);
+    ctx.restore();
+  }
+
+  // terna {x, y} del veicolo in G
+  Disegno.freccia(G, [A2 + 0.75, 0], '#e8e8e8', 1.6, 8);
+  Disegno.freccia(G, [A2, 0.75], '#e8e8e8', 1.6, 8);
+  Disegno.testo('x', P(A2 + 0.86, 0), '#e8e8e8', 'center', 'middle', 13);
+  Disegno.testo('y', P(A2, 0.88), '#e8e8e8', 'center', 'middle', 13);
+  Disegno.disco(P(...G), 4, '#fff');
+  Disegno.testo('G', [P(...G)[0] + 7, P(...G)[1] + 7], '#fff', 'left', 'top', 12);
+
+  // centro di velocita', velocita', derive
+  const C = st.mostraC ? centroC() : null;
+  let der = null;
+  if (C) {
+    der = Modello.derive(C, ang, st);
+    const pC = P(...C);
+    for (const kq of ['11', '12', '21', '22']) Disegno.linea(C, der.ruote[kq].P, 'rgba(180,190,210,0.30)', 1, [2, 3]);
+    if (st.mostraQuote) {
+      // coordinate di C nella terna {x, y} con origine in G: due vettori in successione,
+      // S lungo x a partire da G, poi R parallelo a y dalla punta del primo fino a C
+      const COL = '#c77dff', piede = [C[0], 0];
+      if (Math.abs(der.S) > 0.03) {
+        Disegno.freccia(G, piede, COL, 2.2, 9);
+        const [mx, my] = P((G[0] + piede[0]) / 2, 0);
+        Disegno.testo(`S = ${der.S.toFixed(2)} m`, [mx + 8, my], COL, 'left', 'middle', 12, true);
+      }
+      Disegno.freccia(piede, C, COL, 2.2, 9);
+      const [rx, ry] = P(C[0], C[1] / 2);
+      Disegno.testo(`R = ${der.R.toFixed(2)} m`, [rx, ry - 8], COL, 'center', 'bottom', 12, true);
+    }
+    // C, trascinabile
+    const mano = st.cModo === 'mano';
+    Disegno.disco(pC, mano ? 9 : 6, mano ? 'rgba(233,69,96,0.25)' : '#1a1a2e', mano ? '#e94560' : '#fff', 2);
+    Disegno.disco(pC, 2.5, mano ? '#e94560' : '#fff');
+    Disegno.testo('C', [pC[0] - 12, pC[1] + 11], '#fff', 'right', 'top', 14);
+    // freccia sul bordo se C e' fuori vista
+    if (pC[0] < 0 || pC[0] > W || pC[1] < 0 || pC[1] > H) {
+      const cx = Math.min(W - 14, Math.max(14, pC[0])), cy = Math.min(H - 14, Math.max(14, pC[1]));
+      Disegno.testo('C fuori vista → zoom indietro', [cx, cy], '#e94560', cx < W / 2 ? 'left' : 'right', 'middle', 12, true);
+    }
+  }
+
+  // ruote, con la retta parallela a x (puntinata) e la traccia del piano medio (tratto e punto)
+  const ruote = [
+    { kq: '11', P: F11, d: ang.d11, col: col11 }, { kq: '12', P: F12, d: ang.d12, col: col12 },
+    { kq: '21', P: R21, d: 0, col: '#9aa0b4' },     { kq: '22', P: R22, d: 0, col: '#9aa0b4' },
+  ];
+  const Lr = Math.max(1.0, 78 / s);                           // rette di riferimento: almeno 78 px
+  for (const w of ruote) {
+    const anteriore = w.kq[0] === '1';
+    if (anteriore || (der && st.mostraAlfa)) {
+      Disegno.linea(w.P, [w.P[0] + Lr, w.P[1]], 'rgba(230,230,230,0.55)', 1, [1.5, 3]);
+      const h = [Math.cos(w.d), Math.sin(w.d)];
+      Disegno.linea([w.P[0] - 0.5 * h[0], w.P[1] - 0.5 * h[1]], [w.P[0] + Lr * h[0], w.P[1] + Lr * h[1]], w.col, 1.3, [9, 3, 2, 3]);
+    }
+    Disegno.ruota(w.P, w.d, w.col);
+  }
+
+  // velocita' dei centri ruota e di G (servono C)
+  if (der) {
+    for (const w of ruote) {
+      const r = der.ruote[w.kq];
+      Disegno.freccia(r.P, [r.P[0] + 1.25 * r.v[0], r.P[1] + 1.25 * r.v[1]], '#4ea8ff', 2);
+    }
+    const vG = [Math.cos(der.beta), Math.sin(der.beta)];
+    Disegno.freccia(G, [G[0] + 1.35 * vG[0], G[1] + 1.35 * vG[1]], '#ff4d4d', 2.6, 10);
+    const pv = P(G[0] + 1.5 * vG[0], G[1] + 1.5 * vG[1]);
+    Disegno.testo('v', [pv[0] - 3, pv[1] - 4], '#ff4d4d', 'center', 'bottom', 14);
+    Disegno.testo('G', [pv[0] + 5, pv[1] - 1], '#ff4d4d', 'center', 'bottom', 10);
+  }
+
+  // angoli orientati (positivi in verso antiorario): beta da x alla velocita',
+  // alfa dalla velocita' al piano medio, delta da x al piano medio
+  const raggio = m => Math.max(m * s, 62 * m / 1.2);         // in px, mai troppo piccolo
+  for (const w of ruote) {
+    const anteriore = w.kq[0] === '1', lato = w.P[1] > 0 ? 1 : -1;
+    if (anteriore && Math.abs(w.d) > 1e-4) {
+      const rd = raggio(1.2);
+      Disegno.arcoOrientato(w.P, 0, w.d, rd, w.col);
+      const [cx, cy] = P(...w.P), a = -(w.d + 0.22 * Math.sign(w.d) + Math.PI / 2);
+      Disegno.testo(`δ${pedice(w.kq)} = ${(w.d * R2D).toFixed(2)}°`,
+        [cx + (rd + 4) * Math.cos(a), cy + (rd + 4) * Math.sin(a)], w.col, 'center', 'bottom', 12, true);
+    }
+    if (der && st.mostraAlfa) {
+      const r = der.ruote[w.kq];
+      Disegno.arcoOrientato(w.P, 0, r.beta, raggio(0.55), '#4ea8ff');
+      Disegno.arcoOrientato(w.P, r.beta, w.d, raggio(0.88), '#ff5c8a');
+      const [tx, ty] = P(w.P[0], w.P[1] + lato * 0.45);
+      Disegno.testo(`α${pedice(w.kq)} = ${(r.alfa * R2D).toFixed(2)}°`,
+        [tx, ty - 8], '#ff5c8a', lato > 0 ? 'right' : 'left', 'middle', 12, true);
+      Disegno.testo(`β̂${pedice(w.kq)} = ${(r.beta * R2D).toFixed(2)}°`,
+        [tx, ty + 9], '#4ea8ff', lato > 0 ? 'right' : 'left', 'middle', 11, true);
+    }
+  }
+
+  Dettaglio.disegna(ang, der, col11, col12);
+  Pannello.aggiorna(ang, y11, y12, RA, der);
+}
+
+// ===========================================================================
+// DETTAGLIO DI UNA RUOTA: angoli veri, in grande (come la figura della slide)
+// ===========================================================================
+const Dettaglio = {
+  ruota: '11',
+  disegna(ang, der, col11, col12) {
+    const c = $('dett-cv'), dpr = window.devicePixelRatio || 1, w = 300, h = 306;
+    c.width = w * dpr; c.height = h * dpr;
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    const kq = this.ruota, ant = kq[0] === '1';
+    const d = kq === '11' ? ang.d11 : kq === '12' ? ang.d12 : 0;
+    const col = kq === '11' ? col11 : kq === '12' ? col12 : '#9aa0b4';
+    const cx = w * 0.60, cy = h * 0.66;
+    const pt = (a, L) => [cx + L * Math.cos(-(a + Math.PI / 2)), cy + L * Math.sin(-(a + Math.PI / 2))];
+    const seg = (p, q, colore, lw, dash) => {
+      g.save(); g.strokeStyle = colore; g.lineWidth = lw; if (dash) g.setLineDash(dash);
+      g.beginPath(); g.moveTo(...p); g.lineTo(...q); g.stroke(); g.restore();
+    };
+    const scritta = (s, [x, y], colore, size = 12, align = 'left') => {
+      g.save(); g.font = `${size}px Segoe UI, sans-serif`; g.fillStyle = colore; g.textAlign = align;
+      g.textBaseline = 'middle'; testoCappello(g, s, x, y); g.restore();
+    };
+    // retta parallela a x e traccia del piano medio
+    seg([cx, cy + 40], pt(0, 165), 'rgba(230,230,230,0.6)', 1, [2, 3]);
+    scritta('x', pt(0, 175), '#e8e8e8', 13, 'center');
+    seg(pt(d + Math.PI, 95), pt(d, 165), col, 1.4, [9, 3, 2, 3]);
+    // ruota
+    const hh = [Math.cos(d), Math.sin(d)], nn = [-Math.sin(d), Math.cos(d)];
+    const vert = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a, b]) => {
+      const vx = a * 52 * hh[0] + b * 17 * nn[0], vy = a * 52 * hh[1] + b * 17 * nn[1];
+      return [cx - vy, cy - vx];
+    });
+    g.save(); g.fillStyle = '#2b2b2b'; g.strokeStyle = col; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(...vert[0]); vert.slice(1).forEach(p => g.lineTo(...p)); g.closePath(); g.fill(); g.stroke(); g.restore();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(cx, cy, 3, 0, 2 * Math.PI); g.fill();
+    // angoli
+    const righe = [];
+    if (ant) {
+      arcoPx(g, cx, cy, 0, d, 132, col, 2.2);
+      scritta('δ', pt(d + 0.16 * Math.sign(d), 132), col, 14, 'center');
+      righe.push([`δ${pedice(kq)} = ${(d * R2D).toFixed(2)}°`, col]);
+    } else {
+      righe.push([`δ${pedice(kq)} = 0 (non sterza)`, col]);
+    }
+    if (der) {
+      const r = der.ruote[kq], b = r.beta;
+      seg([cx, cy], pt(b, 150), '#4ea8ff', 2.4);
+      const [ax, ay] = pt(b, 150), sa = -(b + Math.PI / 2);
+      g.fillStyle = '#4ea8ff'; g.beginPath(); g.moveTo(ax, ay);
+      g.lineTo(ax - 10 * Math.cos(sa - 0.38), ay - 10 * Math.sin(sa - 0.38));
+      g.lineTo(ax - 10 * Math.cos(sa + 0.38), ay - 10 * Math.sin(sa + 0.38)); g.closePath(); g.fill();
+      const [vx, vy] = pt(b, 150);
+      scritta(`v${pedice(kq)}`, [vx + 12, vy + 6], '#4ea8ff', 12, 'left');
+      arcoPx(g, cx, cy, 0, b, 64, '#4ea8ff', 2.2);
+      scritta('β̂', pt(b / 2, 50), '#4ea8ff', 13, 'center');
+      arcoPx(g, cx, cy, b, d, 98, '#ff5c8a', 2.6);
+      scritta('α', pt((b + d) / 2, 110), '#ff5c8a', 14, 'center');
+      righe.push([`β̂${pedice(kq)} = ${(b * R2D).toFixed(2)}°`, '#4ea8ff']);
+      righe.push([`α${pedice(kq)} = δ − β̂ = ${(r.alfa * R2D).toFixed(2)}°`, '#ff5c8a']);
+    } else {
+      righe.push(['mostra C per vedere velocità e deriva', '#9aa6b8']);
+    }
+    righe.forEach(([s, colore], i) => scritta(s, [10, 14 + 17 * i], colore, 12));
+    const nome = { '11': 'anteriore sinistra', '12': 'anteriore destra', '21': 'posteriore sinistra', '22': 'posteriore destra' }[kq];
+    const ruolo = Math.abs(dm()) < 1e-9 ? '' : ((kq[1] === '1') === (dm() > 0) ? ', interna' : ', esterna');
+    scritta(`ruota ${kq}: ${nome}${ruolo} · angoli veri`, [10, h - 12], '#9aa6b8', 11);
+  },
+  init() {
+    $('dett-titolo').addEventListener('click', () => {
+      const r = $('dett').classList.toggle('ridotto');
+      $('dett-titolo').innerHTML = (r ? '&#9656;' : '&#9662;') + ' Dettaglio ruota';
+    });
+    document.querySelectorAll('#dett-ruota button').forEach(b => b.addEventListener('click', () => {
+      this.ruota = b.dataset.r;
+      document.querySelectorAll('#dett-ruota button').forEach(x => x.classList.toggle('on', x === b));
+      disegna();
+    }));
+  },
+};
+
+// ===========================================================================
+// PANNELLI
+// ===========================================================================
+const fmt = (x, n = 2, u = '') => isFinite(x) ? (x >= 0 ? ' ' : '') + x.toFixed(n) + u : '—';
+const Pannello = {
+  formule() {
+    if (!window.katex) return;
+    katex.render(String.raw`\begin{aligned}\delta_{11} &= -\delta_1^0 + \tau_1\delta_v + \varepsilon\,\tfrac{t_1}{2l}\,(\tau_1\delta_v)^2\\ \delta_{12} &= \phantom{-}\delta_1^0 + \tau_1\delta_v - \varepsilon\,\tfrac{t_1}{2l}\,(\tau_1\delta_v)^2\end{aligned}`,
+      $('f-guiggiani'), { displayMode: true, throwOnError: false });
+    katex.render(String.raw`\text{Ackermann esatto:}\;\; \cot\delta_{12} - \cot\delta_{11} = \frac{t_1}{l}`,
+      $('f-esatto'), { displayMode: true, throwOnError: false });
+  },
+  aggiorna(ang, y11, y12, RA, der) {
+    $('f-guiggiani').classList.toggle('spenta', st.modo !== 'guiggiani');
+    $('f-esatto').classList.toggle('spenta', st.modo !== 'esatto');
+    const A = Modello.ackermann(dm(), st.l, st.t);
+    const diff = (ang.d11 - ang.d12) * R2D, diffA = (A.d11 - A.d12) * R2D;
+    const cot = (Math.abs(ang.d11) > 1e-6 && Math.abs(ang.d12) > 1e-6) ? 1 / Math.tan(ang.d12) - 1 / Math.tan(ang.d11) : NaN;
+    $('verso').textContent = dm() > 1e-9 ? 'sinistra (interna la 11)' : dm() < -1e-9 ? 'destra (interna la 12)' : '— (rettilineo)';
+    $('tab-angoli').innerHTML = `
+      <tr><th></th><th>legge attuale</th><th>Ackermann esatto</th></tr>
+      <tr><td>angolo medio &tau;<sub>1</sub>&delta;<sub>v</sub></td><td colspan="2" style="text-align:center">${fmt(dm() * R2D, 2, '°')}</td></tr>
+      <tr><td class="int">&delta;<sub>11</sub></td><td>${fmt(ang.d11 * R2D, 2, '°')}</td><td>${fmt(A.d11 * R2D, 2, '°')}</td></tr>
+      <tr><td class="est">&delta;<sub>12</sub></td><td>${fmt(ang.d12 * R2D, 2, '°')}</td><td>${fmt(A.d12 * R2D, 2, '°')}</td></tr>
+      <tr><td>&delta;<sub>11</sub> &minus; &delta;<sub>12</sub></td><td>${fmt(diff, 2, '°')}</td><td>${fmt(diffA, 2, '°')}</td></tr>
+      <tr class="sep"><td>cot &delta;<sub>12</sub> &minus; cot &delta;<sub>11</sub></td><td>${fmt(cot, 3)}</td><td>t<sub>1</sub>/l = ${(st.t / st.l).toFixed(3)}</td></tr>
+      <tr><td>R di Ackermann</td><td colspan="2" style="text-align:center">${isFinite(A.R) ? fmt(A.R, 2, ' m') : '∞'}</td></tr>
+      <tr><td>normali sull'assale post.</td><td colspan="2" style="text-align:center">${(isFinite(y11) && isFinite(y12)) ? 'distanti ' + fmt(Math.abs(y11 - y12), 2, ' m') : 'parallele'}</td></tr>`;
+    $('sez-c').style.display = der ? '' : 'none';
+    if (der) {
+      const r = der.ruote, magg = Math.abs(r['11'].alfa) - Math.abs(r['12'].alfa);
+      $('tab-c').innerHTML = `
+        <tr><td>S</td><td>${fmt(der.S, 2, ' m')}</td></tr>
+        <tr><td>R</td><td>${fmt(der.R, 2, ' m')}</td></tr>
+        <tr><td>assetto del veicolo &beta;</td><td>${fmt(der.beta * R2D, 2, '°')}</td></tr>
+        <tr class="sep"><td class="int">&alpha;<sub>11</sub></td><td>${fmt(r['11'].alfa * R2D, 2, '°')}</td></tr>
+        <tr><td class="est">&alpha;<sub>12</sub></td><td>${fmt(r['12'].alfa * R2D, 2, '°')}</td></tr>
+        <tr><td>&alpha;<sub>21</sub></td><td>${fmt(r['21'].alfa * R2D, 2, '°')}</td></tr>
+        <tr><td>&alpha;<sub>22</sub></td><td>${fmt(r['22'].alfa * R2D, 2, '°')}</td></tr>
+        <tr class="sep"><td>deriva anteriore maggiore</td><td>${Math.abs(magg) < 1e-6 ? 'uguali' : (magg > 0 ? 'ruota 11' : 'ruota 12')}</td></tr>`;
+    }
+    Grafico.disegna();
+  },
+};
+
+const Grafico = {
+  cv: $('grafico'),
+  disegna() {
+    const c = this.cv, r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (!r.width) return;
+    c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+    const g = c.getContext('2d'), w = r.width, h = r.height;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    const xm = 40, ym = 16, mx = 30, my = 14;
+    const X = d => mx + (d + xm) / (2 * xm) * (w - mx - 8);
+    const Y = v => (h - my) / 2 - v / ym * ((h - my) / 2 - 8);
+    g.strokeStyle = 'rgba(255,255,255,0.08)'; g.lineWidth = 1;
+    for (let d = -40; d <= 40; d += 10) { g.beginPath(); g.moveTo(X(d), 4); g.lineTo(X(d), h - my); g.stroke(); }
+    for (let v = -15; v <= 15; v += 5) { g.beginPath(); g.moveTo(mx, Y(v)); g.lineTo(w - 8, Y(v)); g.stroke(); }
+    g.strokeStyle = 'rgba(255,255,255,0.4)';
+    g.beginPath(); g.moveTo(mx, Y(0)); g.lineTo(w - 8, Y(0)); g.stroke();
+    g.beginPath(); g.moveTo(X(0), 4); g.lineTo(X(0), h - my); g.stroke();
+    g.fillStyle = '#99a'; g.font = '10px Segoe UI'; g.textAlign = 'center';
+    for (let d = -40; d <= 40; d += 20) g.fillText(d, X(d), h - 2);
+    g.textAlign = 'right';
+    for (let v = -15; v <= 15; v += 5) g.fillText(v, mx - 4, Y(v) + 3);
+    const curva = (f, col, wd, dash) => {
+      g.save(); g.strokeStyle = col; g.lineWidth = wd; if (dash) g.setLineDash(dash);
+      g.beginPath(); let nuovo = true;
+      for (let d = -xm; d <= xm + 1e-9; d += 0.5) {
+        const v = f(d * D2R);
+        if (!isFinite(v) || Math.abs(v) > ym * 1.2) { nuovo = true; continue; }
+        if (nuovo) { g.moveTo(X(d), Y(v)); nuovo = false; } else g.lineTo(X(d), Y(v));
+      }
+      g.stroke(); g.restore();
+    };
+    curva(() => 0, '#4ea8ff', 1.5);
+    curva(x => { const a = Modello.ackermann(x, st.l, st.t); return (a.d11 - a.d12) * R2D; }, '#f8f8f2', 2);
+    curva(x => { const a = Modello.sterzo(x, st); return (a.d11 - a.d12) * R2D; }, '#e94560', 2, [6, 3]);
+    const a = Modello.sterzo(dm(), st), v = (a.d11 - a.d12) * R2D, d = dm() * R2D;
+    if (Math.abs(d) <= xm && Math.abs(v) <= ym) { g.fillStyle = '#e94560'; g.beginPath(); g.arc(X(d), Y(v), 4.5, 0, 2 * Math.PI); g.fill(); }
+  },
+};
+
+// ===========================================================================
+// VOLANTE E MANOPOLA
+// ===========================================================================
+function disegnaVolante() {
+  const c = $('volante'), dpr = window.devicePixelRatio || 1, s = 82;
+  c.width = s * dpr; c.height = s * dpr;
+  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, s, s); g.translate(s / 2, s / 2);
+  g.rotate(-st.dv * D2R);                       // dv > 0: volante a sinistra (antiorario)
+  g.strokeStyle = '#ddd'; g.lineWidth = 6; g.beginPath(); g.arc(0, 0, 33, 0, 2 * Math.PI); g.stroke();
+  g.lineWidth = 5;
+  g.beginPath(); g.moveTo(-31, 4); g.lineTo(31, 4); g.stroke();
+  g.beginPath(); g.moveTo(0, 4); g.lineTo(0, 31); g.stroke();
+  g.fillStyle = '#e94560'; g.beginPath(); g.arc(0, -33, 4.5, 0, 2 * Math.PI); g.fill();
+  g.fillStyle = '#555'; g.beginPath(); g.arc(0, 4, 9, 0, 2 * Math.PI); g.fill();
+}
+
+// manopola rotante: frequenza dell'animazione su scala logaritmica
+const Knob = {
+  min: 0.05, max: 1.0, a0: -135 * D2R, a1: 135 * D2R,
+  frazione() { return Math.log(st.anim.f / this.min) / Math.log(this.max / this.min); },
+  imposta(f) { st.anim.f = Math.min(this.max, Math.max(this.min, f)); this.disegna(); },
+  disegna() {
+    const c = $('knob'), dpr = window.devicePixelRatio || 1, s = 66;
+    c.width = s * dpr; c.height = s * dpr;
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, s, s);
+    const cx = s / 2, cy = s / 2, fr = this.frazione(), ang = this.a0 + fr * (this.a1 - this.a0);
+    const sc = a => a - Math.PI / 2;                       // 0 = in alto
+    // tacche
+    for (let i = 0; i <= 10; i++) {
+      const a = sc(this.a0 + i / 10 * (this.a1 - this.a0));
+      g.strokeStyle = i / 10 <= fr + 1e-9 ? '#ffc857' : 'rgba(255,255,255,0.25)'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(cx + 28 * Math.cos(a), cy + 28 * Math.sin(a)); g.lineTo(cx + 32 * Math.cos(a), cy + 32 * Math.sin(a)); g.stroke();
+    }
+    // corona del valore
+    g.strokeStyle = '#ffc857'; g.lineWidth = 3.5;
+    g.beginPath(); g.arc(cx, cy, 24, sc(this.a0), sc(ang)); g.stroke();
+    // corpo della manopola
+    const grad = g.createRadialGradient(cx - 6, cy - 7, 3, cx, cy, 21);
+    grad.addColorStop(0, '#5b6478'); grad.addColorStop(1, '#22283a');
+    g.fillStyle = grad; g.beginPath(); g.arc(cx, cy, 20, 0, 2 * Math.PI); g.fill();
+    g.strokeStyle = '#8a93a8'; g.lineWidth = 1; g.stroke();
+    // indice
+    g.strokeStyle = '#ffc857'; g.lineWidth = 3; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(cx + 7 * Math.cos(sc(ang)), cy + 7 * Math.sin(sc(ang)));
+    g.lineTo(cx + 17 * Math.cos(sc(ang)), cy + 17 * Math.sin(sc(ang))); g.stroke();
+    $('knob-v').textContent = `${st.anim.f.toFixed(2)} Hz`;
+    $('amp-v').textContent = `${st.anim.amp}°`;
+  },
+  init() {
+    const c = $('knob'); let y0 = null, f0 = 0;
+    c.addEventListener('pointerdown', e => { y0 = e.clientY; f0 = this.frazione(); c.setPointerCapture(e.pointerId); });
+    c.addEventListener('pointermove', e => {
+      if (y0 === null) return;
+      const fr = Math.min(1, Math.max(0, f0 + (y0 - e.clientY) / 150));
+      this.imposta(this.min * Math.pow(this.max / this.min, fr));
+    });
+    c.addEventListener('pointerup', () => { y0 = null; });
+    c.addEventListener('wheel', e => { e.preventDefault(); this.imposta(st.anim.f * Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+    c.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { this.imposta(st.anim.f * 1.1); e.preventDefault(); }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { this.imposta(st.anim.f / 1.1); e.preventDefault(); }
+    });
+    c.addEventListener('dblclick', () => this.imposta(0.2));
+    this.disegna();
+  },
+};
+
+const Animazione = {
+  passo(now) {
+    if (!st.anim.on) return;
+    const dt = st.anim.tPrec ? (now - st.anim.tPrec) / 1000 : 0;
+    st.anim.tPrec = now;
+    st.anim.fase += 2 * Math.PI * st.anim.f * dt;
+    $('dv').value = Math.round(st.anim.amp * Math.sin(st.anim.fase));
+    Comandi.leggi();
+    requestAnimationFrame(t => this.passo(t));
+  },
+  commuta() {
+    st.anim.on = !st.anim.on;
+    $('play').classList.toggle('on', st.anim.on);
+    $('play').innerHTML = st.anim.on ? '&#10074;&#10074;' : '&#9654;';
+    if (st.anim.on) {
+      // parte dal valore attuale del volante, senza salti
+      st.anim.fase = Math.asin(Math.max(-1, Math.min(1, st.dv / st.anim.amp)));
+      st.anim.tPrec = 0;
+      requestAnimationFrame(t => this.passo(t));
+    }
+  },
+};
+
+// ===========================================================================
+// COMANDI
+// ===========================================================================
+const FORMATI = {
+  eps: v => v.toFixed(2), toe: v => v.toFixed(2) + '°', dv: v => v.toFixed(0) + '°',
+  N: v => '1/' + v.toFixed(1).replace('.0', ''), l: v => v.toFixed(2) + ' m', t: v => v.toFixed(2) + ' m',
+  a1: v => v.toFixed(2) + ' m', S: v => v.toFixed(2) + ' m', R: v => v.toFixed(2) + ' m',
+};
+const Comandi = {
+  leggi() {
+    for (const id in FORMATI) {
+      st[id] = parseFloat($(id).value);
+      const out = $(id + '-v'); if (out) out.textContent = FORMATI[id](st[id]);
+    }
+    // vincoli
+    $('a1').max = (st.l - 0.3).toFixed(2);
+    if (st.a1 > st.l - 0.3) { st.a1 = st.l - 0.3; $('a1').value = st.a1; }
+    if (Math.abs(st.R) < 0.3) st.R = st.R < 0 ? -0.3 : 0.3;
+    if (st.cModo === 'cinematico' && !cinematicoPossibile()) this.cModo('mano', false);
+    this.stato();
+    disegnaVolante(); disegna();
+  },
+  stato() {
+    // legge
+    document.querySelectorAll('#modo button').forEach(b => b.classList.toggle('on', b.dataset.v === st.modo));
+    const esatto = st.modo === 'esatto';
+    $('eps').disabled = esatto;
+    document.querySelectorAll('#scatti button').forEach(b => {
+      b.disabled = esatto;
+      b.classList.toggle('on', !esatto && Math.abs(st.eps - parseFloat(b.dataset.e)) < 1e-9);
+    });
+    $('eps-v').textContent = esatto ? '—' : st.eps.toFixed(2);
+    $('nota-legge').innerHTML = esatto
+      ? 'Ackermann esatto: le due normali anteriori si incontrano sempre sulla retta dell\'assale posteriore. &epsilon; non serve.'
+      : `Legge al 2&deg; ordine con &epsilon; = ${st.eps.toFixed(2)}` +
+        (Math.abs(st.eps - 1) < 1e-9 ? ': coincide con Ackermann per angoli piccoli.' :
+         Math.abs(st.eps) < 1e-9 ? ': sterzo parallelo.' :
+         Math.abs(st.eps + 1) < 1e-9 ? ': anti-Ackermann.' : ` (intermedia: ${Math.round(Math.abs(st.eps) * 100)}% ${st.eps > 0 ? 'Ackermann' : 'anti-Ackermann'}).`);
+    // volante
+    $('dv-lett').textContent = `${st.dv.toFixed(0)}°`;
+    $('dm-lett').textContent = `${(st.dv / st.N).toFixed(2)}°`;
+    $('tau-lett').textContent = `1/${st.N.toFixed(1).replace('.0', '')}`;
+    // centro di velocita'
+    const possibile = cinematicoPossibile();
+    document.querySelector('#c-modo [data-v="cinematico"]').disabled = !possibile;
+    document.querySelectorAll('#c-modo button').forEach(b => b.classList.toggle('on', b.dataset.v === st.cModo));
+    const mano = st.cModo === 'mano';
+    $('S').disabled = $('R').disabled = !mano || !st.mostraC;
+    document.querySelectorAll('#S-scatti button').forEach(b => b.disabled = !mano || !st.mostraC);
+    $('mostra-alfa').disabled = $('mostra-quote').disabled = !st.mostraC;
+    const nota = $('nota-c');
+    if (possibile) {
+      nota.className = 'note';
+      nota.innerHTML = 'Ackermann esatto senza convergenza statica: con ruote rigide (derive nulle) C sta sulla retta dell\'assale ' +
+        'posteriore, alla distanza di Ackermann. &laquo;C cinematico&raquo; lo mette l&igrave;: tutte le derive sono nulle.';
+    } else {
+      nota.className = 'note attiva';
+      nota.innerHTML = 'La legge attuale non &egrave; cinematicamente compatibile con derive tutte nulle: nessun C le annulla insieme. ' +
+        'La posizione di C dipende allora dalla dinamica (forze e derive dei pneumatici): spostalo a mano, ' +
+        'con i cursori o trascinandolo nel disegno, e guarda come cambiano le derive.';
+    }
+  },
+  cModo(v, ridisegna = true) {
+    if (v === 'cinematico' && !cinematicoPossibile()) return;
+    if (v === 'mano' && st.cModo !== 'mano') {
+      // il C a mano parte da dove era quello cinematico (o dall'assale posteriore)
+      const R = Modello.ackermann(dm(), st.l, st.t).R;
+      $('S').value = (-a2()).toFixed(2);
+      $('R').value = (isFinite(R) ? Math.max(-40, Math.min(40, R)) : 8).toFixed(2);
+    }
+    st.cModo = v;
+    if (ridisegna) this.leggi();
+  },
+  init() {
+    for (const id in FORMATI) $(id).addEventListener('input', () => this.leggi());
+    document.querySelectorAll('#modo button').forEach(b => b.addEventListener('click', () => { st.modo = b.dataset.v; this.leggi(); }));
+    document.querySelectorAll('#scatti button').forEach(b => b.addEventListener('click', () => { $('eps').value = b.dataset.e; this.leggi(); }));
+    document.querySelectorAll('#c-modo button').forEach(b => b.addEventListener('click', () => {
+      if (!st.mostraC) { st.mostraC = true; $('mostra-c').checked = true; }
+      this.cModo(b.dataset.v);
+    }));
+    document.querySelectorAll('#S-scatti button').forEach(b => b.addEventListener('click', () => {
+      $('S').value = { post: -a2(), G: 0, ant: st.a1 }[b.dataset.s].toFixed(2); this.leggi();
+    }));
+    $('mostra-c').addEventListener('change', e => { st.mostraC = e.target.checked; this.leggi(); });
+    $('mostra-alfa').addEventListener('change', e => { st.mostraAlfa = e.target.checked; this.leggi(); });
+    $('mostra-quote').addEventListener('change', e => { st.mostraQuote = e.target.checked; this.leggi(); });
+    $('play').addEventListener('click', () => Animazione.commuta());
+    $('toe-0').addEventListener('click', () => { $('toe').value = 0; this.leggi(); });
+    $('dv-0').addEventListener('click', () => {
+      if (st.anim.on) Animazione.commuta();               // ferma l'animazione prima di raddrizzare
+      $('dv').value = 0; this.leggi();
+    });
+  },
+};
+
+// ===========================================================================
+// INTERAZIONE CON LA VISTA: zoom, spostamento, trascinamento di C
+// ===========================================================================
+const Vista = {
+  presa: null,
+  // zoom e spostamento che mettono in vista veicolo, C e punti d'incontro delle normali
+  inquadra() {
+    const l = st.l, t = st.t, pts = [[-0.9, 1.0], [l + 1.7, -1.0], [-0.9, -(t / 2 + 1.6)]];
+    const ang = Modello.sterzo(dm(), st);
+    for (const y of [Modello.intersezione(t / 2, ang.d11, l), Modello.intersezione(-t / 2, ang.d12, l)])
+      if (isFinite(y) && Math.abs(y) < 30) pts.push([0, y]);
+    const RA = Modello.ackermann(dm(), l, t).R;
+    if (isFinite(RA) && Math.abs(RA) < 30) pts.push([0, RA]);
+    const C = st.mostraC ? centroC() : null;
+    if (C && Math.abs(C[1]) < 40) pts.push(C, [C[0] - 0.6, C[1]]);
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const base = Math.min(W / 16, H / 6.8);
+    const kt = Math.min((W - 140) / Math.max(1, y1 - y0), (H - 110) / Math.max(1, x1 - x0));
+    st.vista.zoom = Math.min(8, Math.max(0.12, kt / base));
+    const s = k(), xc = (x0 + x1) / 2, yc = (y0 + y1) / 2;
+    st.vista.px = W / 2 + yc * s - W * 0.64;
+    st.vista.py = H / 2 + 10 + xc * s - H * 0.72;
+    disegna();
+  },
+  vicinoC(X, Y) {
+    if (!st.mostraC) return false;
+    const C = centroC(); if (!C) return false;
+    const [cx, cy] = P(...C);
+    return Math.hypot(X - cx, Y - cy) < 14;
+  },
+  init() {
+    cv.addEventListener('wheel', e => {
+      e.preventDefault();
+      const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+      const [ox, oy] = orig(), z0 = st.vista.zoom;
+      st.vista.zoom = Math.min(8, Math.max(0.12, z0 * Math.exp(-e.deltaY * 0.0012)));
+      const fz = st.vista.zoom / z0;
+      st.vista.px = mx - W * 0.64 - (mx - ox) * fz;
+      st.vista.py = my - H * 0.72 - (my - oy) * fz;
+      disegna();
+    }, { passive: false });
+    cv.addEventListener('pointerdown', e => {
+      const r = cv.getBoundingClientRect(), X = e.clientX - r.left, Y = e.clientY - r.top;
+      cv.setPointerCapture(e.pointerId);
+      if (this.vicinoC(X, Y)) {
+        if (st.cModo !== 'mano') Comandi.cModo('mano');
+        this.presa = { tipo: 'C' };
+      } else {
+        this.presa = { tipo: 'vista', x: e.clientX, y: e.clientY, px: st.vista.px, py: st.vista.py };
+      }
+      cv.classList.add('trascina');
+    });
+    cv.addEventListener('pointermove', e => {
+      const r = cv.getBoundingClientRect(), X = e.clientX - r.left, Y = e.clientY - r.top;
+      if (!this.presa) { cv.classList.toggle('sopra-c', this.vicinoC(X, Y)); return; }
+      if (this.presa.tipo === 'vista') {
+        st.vista.px = this.presa.px + e.clientX - this.presa.x;
+        st.vista.py = this.presa.py + e.clientY - this.presa.y;
+        disegna();
+      } else {
+        const [x, y] = inv(X, Y);
+        $('S').value = Math.max(-5, Math.min(5, x - a2())).toFixed(2);
+        $('R').value = Math.max(-40, Math.min(40, y)).toFixed(2);
+        Comandi.leggi();
+      }
+    });
+    const fine = () => { this.presa = null; cv.classList.remove('trascina'); };
+    cv.addEventListener('pointerup', fine);
+    cv.addEventListener('pointercancel', fine);
+    cv.addEventListener('dblclick', () => this.inquadra());
+    $('inquadra').addEventListener('click', () => this.inquadra());
+  },
+};
+
+// separatori trascinabili fra i pannelli laterali e il disegno
+const Separatori = {
+  init() {
+    const coppie = [['rz-sx', 'left-panel', 1], ['rz-dx', 'right-panel', -1]];
+    for (const [idR, idP, verso] of coppie) {
+      const rz = $(idR), pan = $(idP);
+      let x0 = null, w0 = 0;
+      rz.addEventListener('pointerdown', e => {
+        if (pan.classList.contains('chiuso')) return;
+        x0 = e.clientX; w0 = pan.getBoundingClientRect().width;
+        rz.setPointerCapture(e.pointerId); rz.classList.add('attivo');
+      });
+      rz.addEventListener('pointermove', e => {
+        if (x0 === null) return;
+        const wn = Math.max(300, Math.min(window.innerWidth * 0.45, w0 + verso * (e.clientX - x0)));
+        pan.style.width = wn + 'px';
+        ridimensiona();
+      });
+      const fine = () => { x0 = null; rz.classList.remove('attivo'); };
+      rz.addEventListener('pointerup', fine); rz.addEventListener('pointercancel', fine);
+      rz.addEventListener('dblclick', () => { pan.classList.toggle('chiuso'); ridimensiona(); });
+    }
+  },
+};
+
+function ridimensiona() {
+  DPR = window.devicePixelRatio || 1;
+  const r = cv.getBoundingClientRect();
+  W = r.width; H = r.height;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  disegna();
+}
+
+window.addEventListener('resize', ridimensiona);
+window.addEventListener('load', () => {
+  Pannello.formule();
+  Comandi.init(); Knob.init(); Vista.init(); Dettaglio.init(); Separatori.init();
+  Comandi.leggi(); ridimensiona(); Vista.inquadra();
+});
+</script>
+</body>
+</html>
