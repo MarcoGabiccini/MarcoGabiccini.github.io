@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="author" content="Prof. Marco Gabiccini">
+<meta name="copyright" content="&copy; 2026 Prof. Marco Gabiccini. Tutti i diritti riservati.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schema CLIK ridondante</title>
+<!-- FILE GENERATO da Dispensa_latex/strumenti/schema_clik/visualizzatore.py a partire da visualizzatore_modello.html: modificare il modello, non questo file -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/elkjs@0.9.3/lib/elk.bundled.js"></script>
+<style>
+:root {
+  --bg: #1a1a2e; --panel: #16213e; --accent: #0f3460; --text: #e0e0e0; --muted: #9aa6b8;
+  --hl: #e94560; --monte: #4ea8ff; --valle: #7bd88f; --nodo: #18213b; --loop: #ff9f43;
+  --t-riferimento: #ffd166; --t-cinematica: #4ea8ff; --t-controllo: #2ec4b6; --t-inversa: #a78bfa;
+  --t-nucleo: #ff9f43; --t-obiettivo: #7bd88f; --t-somma: #c9d2e3; --t-integrazione: #ff6b81;
+  --stato: #48cae4; --ingresso: #e0b84a; --dato: #ffd98a; --der: #ff5a76;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text);
+  display: flex; height: 100vh; overflow: hidden; }
+/* la barra di scorrimento ha sempre il suo posto: comparendo non stringe i grafici */
+.panel { background: var(--panel); padding: 10px; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: 8px;
+  scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: #3b5384 transparent; }
+#sx { width: 250px; flex: 0 0 auto; }
+#graf { width: 330px; flex: 0 0 auto; container-type: inline-size; }
+#dx { width: 320px; flex: 0 0 auto; }
+#sx.chiuso, #dx.chiuso, #graf.chiuso { width: 0 !important; padding: 0; overflow: hidden; scrollbar-gutter: auto; }
+/* pannello destro chiuso: il separatore diventa una linguetta che lo riapre */
+#rz-dx.linguetta { flex-basis: 18px; cursor: pointer; }
+#rz-dx.linguetta::after { content: '\00AB'; left: 3px; font-size: 15px; color: #dde; }
+.chiudi-pan { background: none; border: 1px solid #4a5a80; color: #dde; border-radius: 4px; cursor: pointer;
+  font-size: 1.1em; line-height: 1; padding: 0 6px 2px; text-transform: none; letter-spacing: 0; }
+.chiudi-pan:hover { border-color: var(--hl); color: #fff; }
+.resizer { flex: 0 0 6px; cursor: col-resize; background: var(--accent); position: relative; transition: background .15s; }
+.resizer:hover, .resizer.attivo { background: var(--hl); }
+.resizer::after { content: '\22EE'; position: absolute; top: 50%; left: -2px; transform: translateY(-50%);
+  color: #8fa0c0; font-size: 12px; pointer-events: none; }
+.title { text-align: center; line-height: 1.3; }
+.title .t1 { font-size: 1em; font-weight: 700; color: var(--hl); }
+.title .t2 { font-size: .72em; color: #bbb; }
+.title .t3 { font-size: .52em; color: #666; }
+.section { background: var(--accent); border-radius: 8px; padding: 7px 10px 8px; }
+.section-title { font-size: .68em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: #aab; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: baseline; }
+.section-title .q { text-transform: none; letter-spacing: 0; font-weight: 600; color: #ffd1a1; }
+.note { font-size: .71em; color: var(--muted); line-height: 1.45; }
+.note b { color: #dfe6f5; }
+.riga { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+.riga label { flex: 0 0 46px; font-size: .78em; text-align: right; }
+.riga input[type=range] { flex: 1; min-width: 0; accent-color: var(--hl); }
+.riga .val { flex: 0 0 58px; font-size: .74em; font-family: Consolas, monospace; text-align: right; color: #dde; }
+.chk { font-size: .76em; display: flex; align-items: center; gap: 6px; margin: 3px 0; cursor: pointer; }
+.chk input { accent-color: var(--hl); }
+.bottoni { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.bottoni button { background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 5px;
+  font-size: .72em; padding: 3px 8px; cursor: pointer; }
+.bottoni button:hover { border-color: var(--hl); }
+.seg { display: flex; border-radius: 6px; overflow: hidden; border: 1px solid #4a5a80; margin: 3px 0; }
+.seg button { flex: 1; border: none; border-right: 1px solid #4a5a80; background: #1d2d52; color: #dde;
+  font-size: .74em; font-weight: 600; padding: 5px 6px; cursor: pointer; }
+.seg button:last-child { border-right: none; }
+.seg button.on { background: var(--hl); color: #fff; }
+.avviso { font-size: .72em; line-height: 1.45; margin-top: 4px; }
+.avviso:empty { display: none; }
+.ok { color: var(--valle) !important; } .warn { color: var(--loop) !important; } .male { color: #ff8a8a !important; }
+
+/* centro: lo schema a blocchi */
+#centro { flex: 1; position: relative; overflow: hidden; min-width: 280px; background:
+  radial-gradient(circle, rgba(255,255,255,.035) 1px, transparent 1px) 0 0 / 22px 22px, var(--bg); cursor: grab; }
+#centro.trascina { cursor: grabbing; }
+#mondo { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+#archi, #scie { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+#archi path.arco { fill: none; stroke: #7d8aa8; stroke-width: 1.4; }
+#archi path.arco.stato { stroke: var(--stato); }
+#archi path.arco.ingresso { stroke: var(--ingresso); }
+#archi path.arco.der { stroke: var(--der); }
+#archi path.arco.mat { stroke-width: 4.4; }
+#archi path.dentro { fill: none; stroke: var(--bg); stroke-width: 1.6; pointer-events: none; }
+#archi path.arco.monte { stroke: var(--monte); }
+#archi path.arco.valle { stroke: var(--valle); }
+#archi path.arco.spento, #archi path.dentro.spento { opacity: .12; }
+#archi path.arco.hover { stroke: #fff; opacity: 1; }
+#archi path.retro { fill: none; stroke: var(--der); stroke-width: 1.5; stroke-dasharray: 6 4; opacity: .8; }
+#archi text.zeta { fill: var(--der); font-size: 12px; font-weight: 700; font-family: 'Cambria Math', 'Times New Roman', serif; }
+#archi path.hit { fill: none; stroke: transparent; stroke-width: 10; pointer-events: stroke; cursor: help; }
+#etichette { position: absolute; left: 0; top: 0; pointer-events: none; }
+#etichette .et { position: absolute; font-size: 11px; color: #cfd8ea; background: rgba(26,26,46,.82);
+  padding: 0 3px; border-radius: 3px; line-height: 1.25; transform: translate(-50%, -100%); white-space: nowrap; }
+#etichette .et.spento { opacity: .15; }
+#scie circle, #scie rect { filter: drop-shadow(0 0 4px currentColor); }
+.nodo { --tc: #aab4c8; position: absolute; background: color-mix(in srgb, var(--tc) 15%, var(--nodo));
+  border: 1.5px solid color-mix(in srgb, var(--tc) 55%, #3a4766); border-left: 6px solid var(--tc);
+  border-radius: 7px; padding: 2px 7px 3px; cursor: pointer; user-select: none; white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35); transition: opacity .15s, box-shadow .15s; }
+.nodo .testa { font-size: 9.5px; color: var(--tc); display: flex; gap: 5px; align-items: center; font-weight: 600; }
+.nodo .testa .n { color: #9aa6b8; font-weight: 400; }
+.nodo .pill { color: #fff; font-weight: 700; cursor: pointer; padding: 0 5px; border-radius: 8px; font-size: 9px;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); }
+.nodo .pill:first-of-type { margin-left: auto; }
+.nodo .pill:hover { background: var(--hl); border-color: var(--hl); }
+.nodo .usc { font-size: 13.5px; color: #fff; }
+.nodo .usc.testo { font-size: 11px; color: #cfd8ea; }
+.nodo .val { font-size: 10px; font-family: Consolas, monospace; color: var(--dato); }
+.nodo .val div + div { margin-top: 1px; }
+.nodo .val .nm { color: #9aa6b8; }
+table.mini { border-collapse: collapse; margin: 2px 0 1px; }
+table.mini td { font-size: 9px; font-family: Consolas, monospace; color: var(--dato); padding: 0 3px; text-align: right;
+  border-left: 1px solid rgba(255,217,138,.35); border-right: 1px solid rgba(255,217,138,.35); }
+table.mini td + td { border-left: none; }
+table.mini td:not(:last-child) { border-right: none; }
+.nodo.gruppo { box-shadow: 3px 3px 0 -1px color-mix(in srgb, var(--tc) 15%, var(--nodo)), 3px 3px 0 0 color-mix(in srgb, var(--tc) 55%, #3a4766), 0 2px 6px rgba(0,0,0,.35); }
+.nodo.t-riferimento { --tc: var(--t-riferimento); }
+.nodo.t-cinematica { --tc: var(--t-cinematica); }
+.nodo.t-controllo { --tc: var(--t-controllo); }
+.nodo.t-inversa { --tc: var(--t-inversa); }
+.nodo.t-nucleo { --tc: var(--t-nucleo); }
+.nodo.t-obiettivo { --tc: var(--t-obiettivo); }
+.nodo.t-somma { --tc: var(--t-somma); }
+.nodo.t-integrazione { --tc: var(--t-integrazione); border-radius: 4px; border-left-width: 1.5px; }
+.nodo.fase { --tc: #8fa0c0; border-radius: 12px; padding: 6px 12px; }
+.nodo.fase .usc { font-size: 12px; }
+.nodo.operazione .usc::after { content: 'funzione'; margin-left: 6px; font-size: 8.5px; font-weight: 700; color: var(--t-inversa);
+  border: 1px solid var(--t-inversa); border-radius: 3px; padding: 0 3px; vertical-align: middle; font-family: 'Segoe UI', sans-serif; }
+.nodo.somma { border-radius: 50%; border-left-width: 1.5px; width: 46px; height: 46px; padding: 0; display: flex;
+  flex-direction: column; align-items: center; justify-content: center; }
+.nodo.somma .usc { font-size: 17px; }
+.nodo.somma .testa, .nodo.somma .val { display: none; }
+.nodo.somma .piu { position: absolute; font-size: 10px; font-weight: 700; color: #fff; }
+.nodo.sorgente { --tc: var(--stato); border-radius: 16px; border-left-width: 1.5px; padding: 3px 12px; }
+.nodo.sorgente.ingresso { --tc: var(--ingresso); border-radius: 4px 16px 16px 4px; }
+.nodo.sorgente.ritardo { --tc: var(--der); border-radius: 4px; border-left-width: 1.5px; }
+.nodo.sorgente.ritardo .usc .z { color: var(--der); font-weight: 700; margin-right: 6px; font-family: 'Cambria Math', serif; }
+.nodo.sel { box-shadow: 0 0 0 3px #fff, 0 2px 8px rgba(0,0,0,.4); }
+.nodo.monte { box-shadow: 0 0 0 2.5px var(--monte); }
+.nodo.valle { box-shadow: 0 0 0 2.5px var(--valle); }
+.nodo.spento { opacity: .2; }
+.nodo.implicito { outline: 2px dashed var(--loop); outline-offset: 3px; }
+.nodo.sparo { animation: sparo .55s ease-out; }
+@keyframes sparo { 0% { filter: brightness(2.2); transform: scale(1.06); } 100% { filter: none; transform: none; } }
+.nodo.vecchio .val { opacity: .35; }
+.nodo.fresco .val { color: #fff; text-shadow: 0 0 6px var(--dato); }
+.nodo.fresco table.mini td { color: #fff; }
+.nodo:hover { filter: brightness(1.2) drop-shadow(0 0 7px rgba(255,255,255,.5)); z-index: 3; }
+#tooltip { position: absolute; pointer-events: none; background: rgba(10,14,30,.95); border: 1px solid #4a5a80;
+  border-radius: 6px; padding: 4px 8px; font-size: 12px; display: none; z-index: 10; white-space: nowrap; }
+#barra { position: absolute; right: 10px; top: 10px; z-index: 6; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  justify-content: flex-end; background: rgba(22,33,62,.92); border: 1px solid #3b5384; border-radius: 8px; padding: 5px 7px; }
+#barra .et { font-size: .68em; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+#barra .seg { margin: 0; }
+#barra .seg button { font-size: .72em; padding: 3px 8px; }
+#barra > button { background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 5px; font-size: .74em; padding: 3px 9px; cursor: pointer; }
+#barra > button:hover { border-color: var(--hl); }
+#barra > button.spento { color: #8f9bb0; }
+#leg { position: absolute; left: 10px; right: 10px; bottom: 8px; z-index: 6; background: rgba(22,33,62,.94);
+  border: 1px solid #3b5384; border-radius: 8px; padding: 4px 9px 5px; font-size: .68em; }
+#leg .tit { font-weight: 700; color: #cdd; cursor: pointer; display: inline-flex; gap: 6px; margin-right: 8px; }
+#leg.ridotta .corpo { display: none !important; }
+#leg .fila { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; }
+#leg .fila + .fila { margin-top: 3px; padding-top: 3px; border-top: 1px solid rgba(255,255,255,.1); }
+#leg .voce { display: inline-flex; align-items: center; gap: 5px; }
+#leg .voce.tipo { cursor: pointer; border-radius: 4px; padding: 1px 4px; }
+#leg .voce.tipo:hover, #leg .voce.tipo.on { background: rgba(255,255,255,.09); }
+#leg .voce.tipo.on { outline: 1px solid #fff; }
+#leg i { width: 15px; height: 10px; border-radius: 3px; display: inline-block; flex: 0 0 15px; }
+#leg i.pal { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; }
+#leg i.qua { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 1px; }
+#leg .nota { color: var(--muted); }
+#stato-layout { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); color: var(--muted); font-size: .9em; }
+#misura { position: absolute; left: -10000px; top: 0; visibility: hidden; }
+
+/* colonna dei grafici e comandi del passo */
+.cmd6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 4px; }
+.cmd6 button { background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 5px; font-size: .72em; padding: 5px 3px; cursor: pointer; }
+.cmd6 button:hover { border-color: var(--hl); }
+.cmd6 button.on { background: var(--hl); color: #fff; font-weight: 700; border-color: var(--hl); }
+.cmd6 button.primo { font-weight: 700; font-size: .78em; padding: 6px 3px; }
+.cmd6 .c2 { grid-column: span 2; } .cmd6 .c3 { grid-column: span 3; } .cmd6 .c6 { grid-column: span 6; }
+.vel { display: grid; grid-template-columns: 92px 1fr 46px; gap: 6px; align-items: center; font-size: .72em; margin: 5px 0 2px; }
+.vel input { accent-color: var(--hl); min-width: 0; }
+.vel .v { font-family: Consolas, monospace; color: #dde; text-align: right; }
+/* stato e racconto ad altezza fissa: durante la simulazione il riquadro non cambia altezza */
+.stato-anim { font-size: .74em; color: #fff; margin-top: 5px; font-family: Consolas, monospace;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+details.racconto { margin-top: 3px; }
+details.racconto > summary { cursor: pointer; font-size: .68em; color: var(--muted); list-style: none; }
+details.racconto > summary::-webkit-details-marker { display: none; }
+details.racconto > summary::before { content: '▸ '; color: var(--hl); }
+details.racconto[open] > summary::before { content: '▾ '; }
+.testo-anim { font-size: .73em; color: #ffd1a1; margin-top: 2px; height: 8.2em; overflow-y: auto; line-height: 1.45;
+  scrollbar-width: thin; scrollbar-color: #3b5384 transparent; }
+canvas.graf { width: 100%; display: block; background: rgba(0,0,0,.25); border-radius: 6px; }
+/* lo spazio operativo prende tutta l'altezza che resta nella colonna: chiudendo i giunti
+   o H cresce; con rotella e trascinamento si fanno zoom e pan */
+.riempi { flex: 1 0 auto; display: flex; flex-direction: column; }
+#c-op { flex: 1 1 0; min-height: 230px; cursor: grab; touch-action: none; }
+#c-op.presa { cursor: grabbing; }
+#c-giunti { height: 210px; } #c-he { height: 132px; }
+.coppia { display: flex; flex-direction: column; gap: 8px; }
+.coppia details.sez > summary { justify-content: flex-start; }
+/* colonna larga (pannello destro chiuso): comandi su una riga, racconto più basso,
+   giunti e H affiancati sotto lo spazio operativo */
+@container (min-width: 560px) {
+  .cmd6 { grid-template-columns: 1.3fr 1.3fr 1fr 1fr 1fr; }
+  .cmd6 .c2, .cmd6 .c3 { grid-column: span 1; }
+  .testo-anim { height: 4.8em; }
+  .coppia { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  #c-giunti, #c-he { height: 172px; }
+}
+.leg-graf { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 4px; font-size: .68em; color: var(--muted); }
+.leg-graf span { display: inline-flex; align-items: center; gap: 4px; }
+.leg-graf i { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
+
+/* pannello destro */
+.tex { text-align: center; font-size: .8em; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+.sub { font-size: .74em; font-weight: 700; color: #dfe6f5; margin: 10px 0 3px; }
+table.vals { width: 100%; border-collapse: collapse; font-size: .74em; }
+table.vals td { padding: 3px 4px; border-bottom: 1px solid rgba(255,255,255,.07); vertical-align: middle; }
+table.vals td.num { text-align: right; color: var(--dato); }
+table.vals td.num .katex { font-size: .95em; }
+.verifica { font-size: .72em; margin: 3px 0; line-height: 1.5; }
+details.sez > summary { list-style: none; cursor: pointer; font-size: .68em; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: #aab; display: flex; justify-content: space-between; align-items: baseline; }
+details.sez > summary::-webkit-details-marker { display: none; }
+details.sez > summary::before { content: '▸'; margin-right: 6px; color: var(--hl); }
+details.sez[open] > summary::before { content: '▾'; }
+details.sez[open] > summary { margin-bottom: 6px; }
+.onde { width: 100%; border-collapse: collapse; font-size: .74em; margin: 4px 0; }
+.onde td { padding: 3px 4px; border-bottom: 1px solid rgba(255,255,255,.07); vertical-align: middle; }
+.onde td.n { color: #8fa0c0; font-family: Consolas, monospace; width: 46px; white-space: nowrap; }
+.onde .lg { display: inline-block; margin: 1px 5px 1px 0; padding: 0 5px; border-radius: 6px; background: rgba(255,255,255,.06); }
+.onde .lg.q { background: rgba(72,202,228,.18); }
+</style>
+</head>
+<body>
+
+<div id="sx" class="panel">
+  <div class="title">
+    <div class="t1">CLIK ridondante: schema a blocchi</div>
+    <div class="t2">Braccio RRR planare · Prof. M. Gabiccini &mdash; Meccanica dei Robot</div>
+    <div class="t3">&copy; 2026 Tutti i diritti riservati</div>
+  </div>
+  <div class="section">
+    <div class="section-title">1 · Istante iniziale</div>
+    <div id="cur-iniziale"></div>
+    <div class="note" id="nota-iniziale"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">2 · Moto prescritto</div>
+    <div id="cur-moto"></div>
+    <div class="note">L'estremità deve percorrere una circonferenza di centro \(c\) e raggio \(\rho\), in senso antiorario, partendo dall'angolo \(\varphi_0\).</div>
+  </div>
+  <div class="section">
+    <div class="section-title">3 · Legge e integrazione</div>
+    <div id="cur-legge"></div>
+    <div class="avviso" id="avviso-kh"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">4 · Braccio</div>
+    <div id="cur-braccio"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">5 · Fine-corsa</div>
+    <div id="cur-corse"></div>
+    <div class="note">Il centro corsa \(\bar q_i\) è il punto di mezzo: l'obiettivo secondario spinge ogni giunto verso il suo.</div>
+  </div>
+  <div class="section">
+    <div class="section-title">6 · Vista</div>
+    <label class="chk"><input type="checkbox" id="chk-valori" checked> valori nei blocchi</label>
+    <label class="chk"><input type="checkbox" id="chk-etichette" checked> nomi dei segnali sui fili</label>
+    <label class="chk"><input type="checkbox" id="chk-dip" checked> clic su un blocco: evidenzia monte e valle</label>
+    <label class="chk"><input type="checkbox" id="chk-impl"> con Eulero implicito: il loop che nascerebbe</label>
+    <div class="bottoni"><button id="b-default">valori iniziali</button></div>
+  </div>
+</div>
+
+<div class="resizer" id="rz-sx" title="trascina per allargare o stringere; doppio clic: chiudi o riapri"></div>
+
+<div id="centro">
+  <div id="mondo"><svg id="archi"></svg><div id="nodi"></div><div id="etichette"></div><svg id="scie"></svg></div>
+  <div id="tooltip"></div>
+  <div id="leg"></div>
+  <div id="barra">
+    <span class="et">dettaglio</span>
+    <div class="seg" id="seg-livello" title="quanto raggruppare: le fasi, i blocchi della Fig. 9.8, le singole equazioni">
+      <button data-l="0">fasi</button><button data-l="1" class="on">blocchi</button><button data-l="2">equazioni</button>
+    </div>
+    <button id="b-flusso" title="verso del flusso: dall'alto in basso oppure da sinistra a destra">&#8595; flusso</button>
+    <button id="b-riordina" title="rifà la disposizione dei blocchi (annulla gli spostamenti a mano)">&#10227; riordina</button>
+    <button id="b-inquadra" title="mette in vista tutto lo schema">&#8982; inquadra</button>
+    <button id="b-suoni" title="effetti sonori dei pallini: acceso o spento">&#128266; suoni</button>
+  </div>
+  <div id="stato-layout"></div>
+  <div id="misura"></div>
+</div>
+
+<div class="resizer" id="rz-graf" title="trascina per allargare o stringere; doppio clic: chiudi o riapri"></div>
+
+<div id="graf" class="panel">
+  <div class="section">
+    <div class="section-title">Il passo di integrazione <span class="q" id="passo-k"></span></div>
+    <div class="cmd6">
+      <button class="c3 primo" id="s-play" title="un passo dopo l'altro, con i pallini che portano i valori fra i blocchi">&#9654; simula</button>
+      <button class="c3 primo" id="s-reale" title="la simulazione in tempo reale, senza pallini: i grafici si riempiono">&#9193; tempo reale</button>
+      <button class="c2" id="s-micro" title="un'onda di equazioni: quelle che hanno già tutti gli ingressi">micro-step &#9654;</button>
+      <button class="c2" id="s-passo" title="un passo intero, animato: dalle sorgenti al ritardo">passo &#9654;&#9654;</button>
+      <button class="c2" id="s-reset" title="torna all'istante iniziale, k = 0">&#9198; k = 0</button>
+    </div>
+    <div class="vel"><span>velocità</span><input type="range" id="vel" min="-2" max="4" step="0.25" value="0"><span class="v" id="vel-v"></span></div>
+    <div class="stato-anim" id="s-stato"></div>
+    <details class="racconto" id="racconto" open>
+      <summary title="il racconto di ogni onda: si può chiudere">cosa succede in questo passo</summary>
+      <div class="testo-anim" id="s-testo"></div>
+    </details>
+  </div>
+  <div class="section riempi">
+    <div class="section-title">Spazio operativo <span class="q" id="op-e"></span></div>
+    <canvas class="graf" id="c-op" title="rotella: zoom · trascina: sposta · doppio clic: inquadratura automatica"></canvas>
+    <div class="leg-graf">
+      <span><i style="border-color:var(--ingresso); border-top-style:dashed"></i>circonferenza \(p_d\)</span>
+      <span><i style="border-color:var(--stato)"></i>percorso di \(p\)</span>
+      <span><i style="border-color:#e6ebf5; border-top-width:3px"></i>braccio in \(\bq_k\)</span>
+      <span class="ombra"><i style="border-color:#8f9bb0; border-top-style:dashed"></i>con \(k_0=0\)</span>
+      <span>rotella: zoom · trascina: sposta · doppio clic: inquadra</span>
+    </div>
+    <label class="chk"><input type="checkbox" id="chk-ombra" checked> confronto con \(k_0=0\): solo norma minima</label>
+  </div>
+  <div class="coppia">
+  <details class="section sez" id="sez-giunti" open>
+    <summary>Spazio dei giunti</summary>
+    <canvas class="graf" id="c-giunti"></canvas>
+    <div class="leg-graf">
+      <span><i style="border-color:#7bd88f; border-top-style:dotted"></i>centro corsa \(\bar q_i\)</span>
+      <span><i style="border-color:rgba(255,90,118,.7); border-top-width:6px"></i>oltre il fine-corsa</span>
+      <span class="ombra"><i style="border-color:#8f9bb0; border-top-style:dashed"></i>con \(k_0=0\)</span>
+    </div>
+  </details>
+  <details class="section sez" id="sez-he" open>
+    <summary>Obiettivo H(q) ed errore |e|</summary>
+    <canvas class="graf" id="c-he"></canvas>
+  </details>
+  </div>
+</div>
+
+<div class="resizer" id="rz-dx" title="trascina per allargare o stringere; doppio clic: chiudi verso destra"></div>
+
+<div id="dx" class="panel">
+  <div class="section">
+    <div class="section-title">Blocco selezionato <button class="chiudi-pan" id="b-chiudi-dx" title="chiude il pannello verso destra: lo spazio va ai grafici">&#187;</button></div>
+    <div id="dettaglio"></div>
+  </div>
+  <details class="section sez" id="sez-struttura" open>
+    <summary>Struttura delle equazioni <span class="q" id="str-n"></span></summary>
+    <div id="struttura"></div>
+  </details>
+</div>
+
+<script>
+'use strict';
+const DATI = {"tipi": {"riferimento": {"titolo": "Moto prescritto"}, "cinematica": {"titolo": "Cinematica: f(q) e J(q)"}, "controllo": {"titolo": "Errore e retroazione"}, "inversa": {"titolo": "Pseudo-inversa: velocità in ℛ(Jᵀ)"}, "nucleo": {"titolo": "Proiettore: automovimento in 𝒩(J)"}, "obiettivo": {"titolo": "Obiettivo secondario: centro corsa"}, "somma": {"titolo": "Somma dei due contributi"}, "integrazione": {"titolo": "Eulero in avanti"}}, "fasi": {"operativo": {"titolo": "Spazio operativo: riferimento, errore, velocità comandata", "breve": "Spazio operativo"}, "giunti": {"titolo": "Spazio dei giunti: inversione e automovimento", "breve": "Spazio dei giunti"}, "integra": {"titolo": "Integrazione", "breve": "Integrazione"}}, "blocchi": {"rif": {"fase": "operativo", "titolo": "Traiettoria assegnata", "breve": "Riferimento", "tex": "p_d(t)=c+\\rho\\begin{bmatrix}\\cos(\\omega t+\\varphi_0)\\\\ \\sin(\\omega t+\\varphi_0)\\end{bmatrix},\\qquad \\dot p_d(t)=\\rho\\,\\omega\\begin{bmatrix}-\\sin(\\omega t+\\varphi_0)\\\\ \\cos(\\omega t+\\varphi_0)\\end{bmatrix}", "nota": "La circonferenza prescritta, di centro \\(c\\) e raggio \\(\\rho\\), percorsa in senso antiorario con periodo \\(T=2\\pi/\\omega\\). Il blocco legge solo il tempo \\(t_k\\): non dipende dalla configurazione. Nel caso spaziale darebbe anche \\(Q_d\\) e \\(\\omega_d\\); qui il compito è la sola posizione (\\(m=2\\)).", "corto": "p_d,\\ \\dot p_d", "tipo": "riferimento", "eq": ["pd", "vd"]}, "fk": {"fase": "operativo", "titolo": "Cinematica diretta", "breve": "Cinematica diretta", "tex": "p=f(\\bq)", "nota": "La posizione dell'estremità \\(O_3\\) nella configurazione corrente \\(\\bq_k\\). Nel caso spaziale anche \\(R(\\bq)\\) e da questa il quaternione \\(Q\\); qui l'orientazione si trascura.", "corto": "p=f(\\bq)", "tipo": "cinematica", "eq": ["p"]}, "jac": {"fase": "giunti", "titolo": "Jacobiano", "breve": "Jacobiano", "tex": "J(\\bq)=\\frac{\\partial f}{\\partial \\bq}\\in\\mathbb{R}^{2\\times 3}", "nota": "Le righe \\(v_x, v_y\\) del Jacobiano geometrico: \\(m=2\\) righe, \\(n=3\\) colonne. Dipende dalla configurazione corrente; nello schema della dispensa è la linea tratteggiata che parte da \\(\\bq\\). Serve due volte: alla pseudo-inversa e al proiettore.", "corto": "J(\\bq)", "tipo": "cinematica", "eq": ["J"]}, "err": {"fase": "operativo", "titolo": "Errore di posizione", "breve": "Errore", "tex": "e=p_d-p", "nota": "Nel caso spaziale si aggiunge l'errore di orientazione \\(e_o\\), dal quaternione d'errore \\(Q_d\\,Q^*\\).", "corto": "e=p_d-p", "tipo": "controllo", "eq": ["e"]}, "vc": {"fase": "operativo", "titolo": "Velocità comandata", "breve": "Velocità comandata", "tex": "V_c=\\dot p_d+K\\,e", "nota": "Il twist comandato \\(V_c=V_d+Ke\\) della dispensa, ridotto alla velocità lineare: feedforward \\(\\dot p_d\\) più una correzione proporzionale all'errore, con \\(K=k\\,I_2\\). Con Eulero in avanti l'errore decade se \\(0<Kh<2\\); per \\(Kh=1\\) si annulla in un passo.", "corto": "V_c=\\dot p_d+K\\,e", "tipo": "controllo", "eq": ["Vc"]}, "jinv": {"fase": "giunti", "titolo": "Pseudo-inversa", "breve": "J⁺(q)", "tex": "J^{+}=J^{\\mathsf T}\\bigl(JJ^{\\mathsf T}\\bigr)^{-1},\\qquad \\dot{\\bq}_V=J^{+}V_c", "nota": "Una funzione numerica restituisce \\(J^{+}\\) dalla \\(J\\) della configurazione corrente: l'algoritmo qui non interessa (in pratica si risolve il sistema \\(2\\times2\\) \\((JJ^{\\mathsf T})\\,y=V_c\\), senza invertire). \\(J^{+}\\) serve due volte: per \\(\\dot{\\bq}_V\\) e per il proiettore \\(P\\). \\(\\dot{\\bq}_V\\) è la velocità dei giunti di norma minima che realizza \\(V_c\\), e sta in \\(\\mathcal R(J^{\\mathsf T})\\).", "corto": "J^{+}(\\bq)", "tipo": "inversa", "eq": ["Jp", "dqV"]}, "grad": {"fase": "giunti", "titolo": "Obiettivo secondario", "breve": "k₀∇H(q)", "tex": "H(\\bq)=-\\frac{1}{2n}\\sum_{i=1}^{n}\\Bigl(\\frac{q_i-\\bar q_i}{q_{iM}-q_{im}}\\Bigr)^{2},\\qquad \\dot{\\bq}_0=k_0\\,\\nabla H(\\bq)", "nota": "Distanza dai fine-corsa: \\(H\\) è massima, e vale zero, con ogni giunto a metà corsa, \\(\\bar q_i=\\tfrac12(q_{im}+q_{iM})\\). Il gradiente è la velocità dei giunti preferita: punta verso il centro corsa, ed è più forte per i giunti con la corsa più breve.", "corto": "k_0\\nabla H(\\bq)", "tipo": "obiettivo", "eq": ["gH", "dq0"]}, "proj": {"fase": "giunti", "titolo": "Proiettore nel nucleo", "breve": "P = I − J⁺J", "tex": "P=I_3-J^{+}J,\\qquad \\dot{\\bq}_N=P\\,\\dot{\\bq}_0", "nota": "\\(P\\) proietta \\(\\dot{\\bq}_0\\) sul nucleo \\(\\mathcal N(J)\\): resta solo la parte che non muove l'estremità, l'automovimento. Usa la \\(J\\) e la \\(J^{+}\\) della configurazione corrente, già calcolate: non si rifanno.", "corto": "P=I-J^{+}J", "tipo": "nucleo", "eq": ["P", "dqN"]}, "sum": {"fase": "giunti", "titolo": "Somma", "breve": "Somma", "tex": "\\dot{\\bq}=\\dot{\\bq}_V+\\dot{\\bq}_N=J^{+}V_c+\\bigl(I-J^{+}J\\bigr)\\,k_0\\nabla H", "nota": "La legge CLIK completa. Poiché \\(JJ^{+}=I\\) e \\(JP=0\\), \\(J\\dot{\\bq}=V_c\\): l'automovimento non disturba il compito. I due addendi sono ortogonali, \\(\\dot{\\bq}_V^{\\mathsf T}\\dot{\\bq}_N=0\\).", "corto": "\\Sigma", "tipo": "somma", "eq": ["dq"]}, "eul": {"fase": "integra", "titolo": "Eulero in avanti", "breve": "Eulero", "tex": "\\bq_{k+1}=\\bq_k+h\\,\\dot{\\bq}_k", "nota": "Un passo di Eulero in avanti dà la configurazione del passo dopo. Non torna subito indietro: passa dal ritardo \\(z^{-1}\\) e diventa la configurazione corrente al passo \\(k+1\\). Per questo nello schema non ci sono loop algebrici.", "corto": "\\bq_{k+1}=\\bq_k+h\\,\\dot{\\bq}", "tipo": "integrazione", "eq": ["qn"]}}, "variabili": {"t": {"tex": "t", "nome": "tempo del passo, t_k = k h", "unita": "s", "dim": [1, 1]}, "q": {"tex": "\\bq_k", "nome": "configurazione corrente q_k", "unita": "rad", "dim": [3, 1]}, "pd": {"tex": "p_{d}", "nome": "posizione desiderata", "unita": "m", "dim": [2, 1]}, "vd": {"tex": "\\dot{p}_d", "nome": "velocità desiderata", "unita": "m/s", "dim": [2, 1]}, "p": {"tex": "p", "nome": "posizione dell'estremità", "unita": "m", "dim": [2, 1]}, "J": {"tex": "J", "nome": "Jacobiano (righe v_x, v_y)", "unita": "m/rad", "dim": [2, 3]}, "e": {"tex": "e", "nome": "errore di posizione", "unita": "m", "dim": [2, 1]}, "Vc": {"tex": "V_{c}", "nome": "velocità comandata", "unita": "m/s", "dim": [2, 1]}, "Jp": {"tex": "J^{+}", "nome": "pseudo-inversa", "unita": "rad/m", "dim": [3, 2]}, "gH": {"tex": "\\nabla H", "nome": "gradiente dell'obiettivo secondario", "unita": "1/rad", "dim": [3, 1]}, "dq0": {"tex": "\\dot{\\bq}_0", "nome": "velocità dei giunti preferita", "unita": "rad/s", "dim": [3, 1]}, "P": {"tex": "P", "nome": "proiettore nel nucleo", "unita": "", "dim": [3, 3]}, "dqV": {"tex": "\\dot{\\bq}_V", "nome": "velocità per il compito, in R(J^T)", "unita": "rad/s", "dim": [3, 1]}, "dqN": {"tex": "\\dot{\\bq}_N", "nome": "automovimento, in N(J)", "unita": "rad/s", "dim": [3, 1]}, "dq": {"tex": "\\dot{\\bq}", "nome": "velocità dei giunti", "unita": "rad/s", "dim": [3, 1]}, "qn": {"tex": "\\bq_{k+1}", "nome": "configurazione del passo dopo", "unita": "rad", "dim": [3, 1]}}, "equazioni": [{"id": "pd", "blocco": "rif", "fase": "operativo", "tipo": "riferimento", "titolo": "posizione desiderata", "out": "pd", "ins": ["t"], "par": ["cx", "cy", "omega", "phi0", "rho"], "livello": 1, "tex": "p_{d}=\\begin{bmatrix}\\rho\\cos(\\omega t+\\varphi_0) + c_{x}\\\\\\rho\\sin(\\omega t+\\varphi_0) + c_{y}\\end{bmatrix}", "corto": "p_d(t)", "esplicita": true, "operazione": false}, {"id": "vd", "blocco": "rif", "fase": "operativo", "tipo": "riferimento", "titolo": "velocità desiderata", "out": "vd", "ins": ["t"], "par": ["omega", "phi0", "rho"], "livello": 1, "tex": "\\dot{p}_d=\\begin{bmatrix}- \\rho\\,\\omega\\sin(\\omega t+\\varphi_0)\\\\\\rho\\,\\omega\\cos(\\omega t+\\varphi_0)\\end{bmatrix}", "corto": "\\dot p_d(t)", "esplicita": true, "operazione": false}, {"id": "p", "blocco": "fk", "fase": "operativo", "tipo": "cinematica", "titolo": "cinematica diretta", "out": "p", "ins": ["q"], "par": ["l1", "l2", "l3"], "livello": 1, "tex": "p=\\begin{bmatrix}\\ell_{1} c_{1} + \\ell_{2} c_{12} + \\ell_{3} c_{123}\\\\\\ell_{1} s_{1} + \\ell_{2} s_{12} + \\ell_{3} s_{123}\\end{bmatrix}", "corto": "p=f(\\bq)", "esplicita": true, "operazione": false}, {"id": "J", "blocco": "jac", "fase": "giunti", "tipo": "cinematica", "titolo": "Jacobiano", "out": "J", "ins": ["q"], "par": ["l1", "l2", "l3"], "livello": 1, "tex": "J=\\begin{bmatrix}- \\ell_{1} s_{1} - \\ell_{2} s_{12} - \\ell_{3} s_{123} & - \\ell_{2} s_{12} - \\ell_{3} s_{123} & - \\ell_{3} s_{123}\\\\\\ell_{1} c_{1} + \\ell_{2} c_{12} + \\ell_{3} c_{123} & \\ell_{2} c_{12} + \\ell_{3} c_{123} & \\ell_{3} c_{123}\\end{bmatrix}", "corto": "J(\\bq)", "esplicita": true, "operazione": false}, {"id": "e", "blocco": "err", "fase": "operativo", "tipo": "controllo", "titolo": "errore", "out": "e", "ins": ["pd", "p"], "par": [], "livello": 2, "tex": "e=p_{d} - p", "corto": "e=p_{d} - p", "esplicita": false, "operazione": false}, {"id": "Vc", "blocco": "vc", "fase": "operativo", "tipo": "controllo", "titolo": "velocità comandata", "out": "Vc", "ins": ["vd", "e"], "par": ["K"], "livello": 3, "tex": "V_{c}=\\dot{p}_d + K e", "corto": "V_{c}=\\dot{p}_d + K e", "esplicita": false, "operazione": false}, {"id": "Jp", "blocco": "jinv", "fase": "giunti", "tipo": "inversa", "titolo": "pseudo-inversa", "out": "Jp", "ins": ["J"], "par": [], "livello": 2, "tex": "J^{+}=\\operatorname{pinv}\\!\\left(J\\right)", "corto": "J^{+}=\\operatorname{pinv}\\!\\left(J\\right)", "esplicita": false, "operazione": true}, {"id": "dqV", "blocco": "jinv", "fase": "giunti", "tipo": "inversa", "titolo": "velocità per il compito", "out": "dqV", "ins": ["Vc", "Jp"], "par": [], "livello": 4, "tex": "\\dot{\\bq}_V=J^{+} V_{c}", "corto": "\\dot{\\bq}_V=J^{+} V_{c}", "esplicita": false, "operazione": false}, {"id": "gH", "blocco": "grad", "fase": "giunti", "tipo": "obiettivo", "titolo": "gradiente di H", "out": "gH", "ins": ["q"], "par": ["q1M", "q1m", "q2M", "q2m", "q3M", "q3m"], "livello": 1, "tex": "\\nabla H=\\begin{bmatrix}-\\frac{q_1-\\bar q_1}{3\\,(q_{1M}-q_{1m})^2}\\\\-\\frac{q_2-\\bar q_2}{3\\,(q_{2M}-q_{2m})^2}\\\\-\\frac{q_3-\\bar q_3}{3\\,(q_{3M}-q_{3m})^2}\\end{bmatrix}", "corto": "\\nabla H(\\bq)", "esplicita": true, "operazione": false}, {"id": "dq0", "blocco": "grad", "fase": "giunti", "tipo": "obiettivo", "titolo": "velocità preferita", "out": "dq0", "ins": ["gH"], "par": ["k0"], "livello": 2, "tex": "\\dot{\\bq}_0=k_{0} \\nabla H", "corto": "\\dot{\\bq}_0=k_{0} \\nabla H", "esplicita": false, "operazione": false}, {"id": "P", "blocco": "proj", "fase": "giunti", "tipo": "nucleo", "titolo": "proiettore", "out": "P", "ins": ["J", "Jp"], "par": [], "livello": 3, "tex": "P=I_3 - J^{+} J", "corto": "P=I_3 - J^{+} J", "esplicita": false, "operazione": false}, {"id": "dqN", "blocco": "proj", "fase": "giunti", "tipo": "nucleo", "titolo": "automovimento", "out": "dqN", "ins": ["dq0", "P"], "par": [], "livello": 4, "tex": "\\dot{\\bq}_N=P \\dot{\\bq}_0", "corto": "\\dot{\\bq}_N=P \\dot{\\bq}_0", "esplicita": false, "operazione": false}, {"id": "dq", "blocco": "sum", "fase": "giunti", "tipo": "somma", "titolo": "somma", "out": "dq", "ins": ["dqV", "dqN"], "par": [], "livello": 5, "tex": "\\dot{\\bq}=\\dot{\\bq}_V + \\dot{\\bq}_N", "corto": "\\dot{\\bq}=\\dot{\\bq}_V + \\dot{\\bq}_N", "esplicita": false, "operazione": false}, {"id": "qn", "blocco": "eul", "fase": "integra", "tipo": "integrazione", "titolo": "passo di Eulero", "out": "qn", "ins": ["q", "dq"], "par": ["h"], "livello": 6, "tex": "\\bq_{k+1}=\\bq_k + h \\dot{\\bq}", "corto": "\\bq_{k+1}=\\bq_k + h \\dot{\\bq}", "esplicita": false, "operazione": false}], "parametri": [{"slug": "q01", "tex": "q_{1}(0)", "valore": -26, "lo": -180, "hi": 180, "passo": 1, "unita": "°", "gruppo": "iniziale", "gradi": true}, {"slug": "q02", "tex": "q_{2}(0)", "valore": 76, "lo": -180, "hi": 180, "passo": 1, "unita": "°", "gruppo": "iniziale", "gradi": true}, {"slug": "q03", "tex": "q_{3}(0)", "valore": 100, "lo": -180, "hi": 180, "passo": 1, "unita": "°", "gruppo": "iniziale", "gradi": true}, {"slug": "cx", "tex": "c_x", "valore": 0.5, "lo": -1, "hi": 1, "passo": 0.01, "unita": "m", "gruppo": "moto", "gradi": false}, {"slug": "cy", "tex": "c_y", "valore": 0.3, "lo": -1, "hi": 1, "passo": 0.01, "unita": "m", "gruppo": "moto", "gradi": false}, {"slug": "rho", "tex": "\\rho", "valore": 0.15, "lo": 0.02, "hi": 0.5, "passo": 0.01, "unita": "m", "gruppo": "moto", "gradi": false}, {"slug": "T", "tex": "T", "valore": 4.0, "lo": 1, "hi": 12, "passo": 0.5, "unita": "s", "gruppo": "moto", "gradi": false}, {"slug": "phi0", "tex": "\\varphi_0", "valore": -90, "lo": -180, "hi": 180, "passo": 5, "unita": "°", "gruppo": "moto", "gradi": true}, {"slug": "K", "tex": "K", "valore": 20, "lo": 0, "hi": 250, "passo": 1, "unita": "1/s", "gruppo": "legge", "gradi": false}, {"slug": "k0", "tex": "k_0", "valore": 10, "lo": 0, "hi": 100, "passo": 1, "unita": "", "gruppo": "legge", "gradi": false}, {"slug": "h", "tex": "h", "valore": 0.01, "lo": 0.002, "hi": 0.05, "passo": 0.001, "unita": "s", "gruppo": "legge", "gradi": false}, {"slug": "l1", "tex": "\\ell_1", "valore": 0.5, "lo": 0.1, "hi": 1, "passo": 0.01, "unita": "m", "gruppo": "braccio", "gradi": false}, {"slug": "l2", "tex": "\\ell_2", "valore": 0.35, "lo": 0.1, "hi": 1, "passo": 0.01, "unita": "m", "gruppo": "braccio", "gradi": false}, {"slug": "l3", "tex": "\\ell_3", "valore": 0.2, "lo": 0.05, "hi": 1, "passo": 0.01, "unita": "m", "gruppo": "braccio", "gradi": false}, {"slug": "q1m", "tex": "q_{1m}", "valore": -105, "lo": -180, "hi": 180, "passo": 5, "unita": "°", "gruppo": "corse", "gradi": true}, {"slug": "q1M", "tex": "q_{1M}", "valore": 55, "lo": -180, "hi": 180, "passo": 5, "unita": "°", "gruppo": "corse", "gradi": true}, {"slug": "q2m", "tex": "q_{2m}", "valore": 20, "lo": -180, "hi": 180, "passo": 5, "unita": "°", "gruppo": "corse", "gradi": true}, {"slug": "q2M", "tex": "q_{2M}", "valore": 170, "lo": -180, "hi": 180, "passo": 5, "unita": "°", "gruppo": "corse", "gradi": true}, {"slug": "q3m", "tex": "q_{3m}", "valore": -35, "lo": -180, "hi": 180, "passo": 5, "unita": "°", "gruppo": "corse", "gradi": true}, {"slug": "q3M", "tex": "q_{3M}", "valore": 115, "lo": -180, "hi": 180, "passo": 5, "unita": "°", "gruppo": "corse", "gradi": true}], "partex": {"q01": "q_{1}(0)", "q02": "q_{2}(0)", "q03": "q_{3}(0)", "cx": "c_x", "cy": "c_y", "rho": "\\rho", "T": "T", "phi0": "\\varphi_0", "K": "K", "k0": "k_0", "h": "h", "l1": "\\ell_1", "l2": "\\ell_2", "l3": "\\ell_3", "q1m": "q_{1m}", "q1M": "q_{1M}", "q2m": "q_{2m}", "q2M": "q_{2M}", "q3m": "q_{3m}", "q3M": "q_{3M}", "omega": "\\omega"}, "sorgenti": ["t", "q"], "stato": "q", "prossimo": "qn", "analisi": {"onde": [["pd", "vd", "p", "J", "gH"], ["e", "Jp", "dq0"], ["Vc", "P"], ["dqV", "dqN"], ["dq"], ["qn"]], "ciclo_ritardo": ["p", "J", "e", "Vc", "Jp", "dqV", "gH", "dq0", "P", "dqN", "dq", "qn"], "loop_implicito": ["p", "J", "e", "Vc", "Jp", "dqV", "gH", "dq0", "P", "dqN", "dq", "qn"], "leggono_q": ["p", "J", "gH", "qn"], "dipendono_da_q": ["p", "J", "e", "Vc", "Jp", "dqV", "gH", "dq0", "P", "dqN", "dq", "qn"], "archi": [["s:t", "pd", "t"], ["s:t", "vd", "t"], ["s:q", "p", "q"], ["s:q", "J", "q"], ["s:q", "gH", "q"], ["s:q", "qn", "q"], ["pd", "e", "pd"], ["vd", "Vc", "vd"], ["p", "e", "p"], ["J", "Jp", "J"], ["J", "P", "J"], ["e", "Vc", "e"], ["Vc", "dqV", "Vc"], ["Jp", "dqV", "Jp"], ["Jp", "P", "Jp"], ["dqV", "dq", "dqV"], ["gH", "dq0", "gH"], ["dq0", "dqN", "dq0"], ["P", "dqN", "P"], ["dqN", "dq", "dqN"], ["dq", "qn", "dq"]]}, "controllo": {"V0": {"t": 0.0, "q": [[-0.4537856055185257], [1.3264502315156905], [1.7453292519943295]], "pd": [[0.5], [0.15]], "vd": [[0.23561944901923448], [1.4427530202913423e-17]], "p": [[0.5011676057829845], [0.1489299816971036]], "J": [[-0.1489299816971036, -0.3681155550916423, -0.09999999999999999], [0.5011676057829845, 0.05177058263340095, -0.17320508075688776]], "gH": [[0.0007460387957432578], [0.016127700899978725], [-0.05092958178940653]], "e": [[-0.001167605782984471], [0.0010700183028964083]], "Jp": [[-0.09569000533022456, 1.7398648934205265], [-2.4071564421067317, -0.4653113319965092], [-0.9963715937903111, -0.878297074642256]], "dq0": [[0.007460387957432578], [0.16127700899978725], [-0.5092958178940653]], "Vc": [[0.21226733335954506], [0.02140036605792818]], "P": [[0.1137849662361412, -0.12529879866463853, 0.29178443883795374], [-0.1252987986646386, 0.13797770888484084, -0.3213099310462235], [0.2917844388379537, -0.32130993104622346, 0.7482373248790186]], "dqV": [[0.016921883349930045], [-0.5209185117808736], [-0.23029302015402095]], "dqN": [[-0.167963529914791], [0.18495965867862418], [-0.43071721988051714]], "dq": [[-0.15104164656486094], [-0.3359588531022494], [-0.6610102400345381]], "qn": [[-0.4552960219841743], [1.323090642984668], [1.7387191495939842]]}, "q": {"1": [-0.4552960219841743, 1.323090642984668, 1.7387191495939842], "10": [-0.46620237782448076, 1.2910852695812798, 1.6776453485463267], "100": [-0.28996781243816244, 1.1066609345148046, 1.1045995875472427], "400": [-0.7110384955074813, 1.6898487962747883, 0.9718075583456837]}, "H": {"0": -0.029347251157407415, "400": -0.0034587199139358184}}};
+const FUNZ = {
+  "pd": (V, P) => ([[P.cx + P.rho*Math.cos(P.omega*V.t + P.phi0)], [P.cy + P.rho*Math.sin(P.omega*V.t + P.phi0)]]),
+  "vd": (V, P) => ([[-P.omega*P.rho*Math.sin(P.omega*V.t + P.phi0)], [P.omega*P.rho*Math.cos(P.omega*V.t + P.phi0)]]),
+  "p": (V, P) => ([[P.l1*Math.cos(V.q[0][0]) + P.l2*Math.cos(V.q[0][0] + V.q[1][0]) + P.l3*Math.cos(V.q[0][0] + V.q[1][0] + V.q[2][0])], [P.l1*Math.sin(V.q[0][0]) + P.l2*Math.sin(V.q[0][0] + V.q[1][0]) + P.l3*Math.sin(V.q[0][0] + V.q[1][0] + V.q[2][0])]]),
+  "J": (V, P) => ([[-P.l1*Math.sin(V.q[0][0]) - P.l2*Math.sin(V.q[0][0] + V.q[1][0]) - P.l3*Math.sin(V.q[0][0] + V.q[1][0] + V.q[2][0]), -P.l2*Math.sin(V.q[0][0] + V.q[1][0]) - P.l3*Math.sin(V.q[0][0] + V.q[1][0] + V.q[2][0]), -P.l3*Math.sin(V.q[0][0] + V.q[1][0] + V.q[2][0])], [P.l1*Math.cos(V.q[0][0]) + P.l2*Math.cos(V.q[0][0] + V.q[1][0]) + P.l3*Math.cos(V.q[0][0] + V.q[1][0] + V.q[2][0]), P.l2*Math.cos(V.q[0][0] + V.q[1][0]) + P.l3*Math.cos(V.q[0][0] + V.q[1][0] + V.q[2][0]), P.l3*Math.cos(V.q[0][0] + V.q[1][0] + V.q[2][0])]]),
+  "e": (V, P) => (L.add(V.pd, L.scale(-1, V.p))),
+  "Vc": (V, P) => (L.add(V.vd, L.scale(P.K, V.e))),
+  "Jp": (V, P) => (L.pinv(V.J)),
+  "dqV": (V, P) => (L.mul(V.Jp, V.Vc)),
+  "gH": (V, P) => ([[(1/6)*(P.q1M + P.q1m - 2*V.q[0][0])/Math.pow(P.q1M - P.q1m, 2)], [(1/6)*(P.q2M + P.q2m - 2*V.q[1][0])/Math.pow(P.q2M - P.q2m, 2)], [(1/6)*(P.q3M + P.q3m - 2*V.q[2][0])/Math.pow(P.q3M - P.q3m, 2)]]),
+  "dq0": (V, P) => (L.scale(P.k0, V.gH)),
+  "P": (V, P) => (L.add(L.eye(3), L.scale(-1, L.mul(V.Jp, V.J)))),
+  "dqN": (V, P) => (L.mul(V.P, V.dq0)),
+  "dq": (V, P) => (L.add(V.dqV, V.dqN)),
+  "qn": (V, P) => (L.add(V.q, L.scale(P.h, V.dq))),
+};
+
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const $ = id => document.getElementById(id);
+const MACRO = { '\\bq': '\\boldsymbol{q}' };
+const tex = (s, el, display = false) => {
+  try { katex.render(s, el, { throwOnError: false, displayMode: display, macros: { ...MACRO } }); } catch (e) { el.textContent = s; }
+};
+const texIn = el => {
+  if (window.renderMathInElement) renderMathInElement(el, { delimiters: [{ left: '\\(', right: '\\)', display: false }], macros: { ...MACRO }, throwOnError: false });
+};
+const spT = t => `<span data-i="${encodeURIComponent(t)}"></span>`;
+const texSpan = el => el.querySelectorAll('[data-i]').forEach(x => tex(decodeURIComponent(x.dataset.i), x));
+const EQ = {}, PROD = {};
+for (const e of DATI.equazioni) { EQ[e.id] = e; PROD[e.out] = e.id; }
+const ORDINE = DATI.analisi.onde.flat();
+const vtex = s => DATI.variabili[s].tex;
+const dimDi = s => DATI.variabili[s].dim;
+const eMatrice = s => dimDi(s)[0] > 1 && dimDi(s)[1] > 1;
+const STATO = DATI.stato, PROSSIMO = DATI.prossimo;
+
+// ===========================================================================
+// ALGEBRA LINEARE: vettori e matrici come array di righe (un vettore e' n x 1)
+// ===========================================================================
+const L = {
+  eye: n => Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => +(i === j))),
+  add: (A, B) => A.map((r, i) => r.map((x, j) => x + B[i][j])),
+  scale: (c, A) => A.map(r => r.map(x => c * x)),
+  mul: (A, B) => A.map(r => B[0].map((_, j) => r.reduce((s, x, k) => s + x * B[k][j], 0))),
+  tr: A => A[0].map((_, j) => A.map(r => r[j])),
+  inv(A) {                                   // Gauss-Jordan con pivot parziale
+    const n = A.length, M = A.map((r, i) => [...r, ...L.eye(n)[i]]);
+    for (let c = 0; c < n; c++) {
+      let p = c;
+      for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+      [M[c], M[p]] = [M[p], M[c]];
+      const d = M[c][c];
+      for (let j = 0; j < 2 * n; j++) M[c][j] /= d;
+      for (let r = 0; r < n; r++) if (r !== c) { const f = M[r][c]; for (let j = 0; j < 2 * n; j++) M[r][j] -= f * M[c][j]; }
+    }
+    return M.map(r => r.slice(n));
+  },
+  // la pseudo-inversa: per la pagina basta J^T (J J^T)^{-1}, J ha rango pieno lontano dalle singolarita'
+  pinv(A) { const At = L.tr(A); return L.mul(At, L.inv(L.mul(A, At))); },
+  vec: A => A.map(r => r[0]),
+  col: v => v.map(x => [x]),
+  dot: (a, b) => a.reduce((s, x, i) => s + x * b[i], 0),
+  norm: a => Math.hypot(...a),
+  det2: A => A[0][0] * A[1][1] - A[0][1] * A[1][0],
+  maxAbs: A => Math.max(...A.flat().map(Math.abs)),
+};
+
+// ===========================================================================
+// PARAMETRI E PASSO NUMERICO
+// ===========================================================================
+const PAR = {};
+for (const p of DATI.parametri) PAR[p.slug] = p;
+const st = {
+  par: Object.fromEntries(DATI.parametri.map(p => [p.slug, p.valore])),
+  livello: 1, flusso: 'DOWN', aperti: new Set(), chiusi: new Set(), sel: null, evTipo: null,
+  valori: true, etichette: true, dip: true, impl: false, ombra: true, pos: {}, fili: {}, anim: null,
+};
+// i parametri nelle unita' delle equazioni: radianti, omega = 2 pi / T
+function parNum() {
+  const P = {};
+  for (const p of DATI.parametri) P[p.slug] = p.gradi ? st.par[p.slug] * D2R : st.par[p.slug];
+  P.omega = 2 * Math.PI / P.T;
+  return P;
+}
+const Num = {
+  // le equazioni del passo nell'ordine delle onde; 'fino' si ferma a un'onda
+  passo(q, t, P, fino = Infinity) {
+    const V = { t, q };
+    for (const id of ORDINE) { if (EQ[id].livello > fino) break; V[EQ[id].out] = FUNZ[id](V, P); }
+    return V;
+  },
+  H(q, P) {
+    const lo = [P.q1m, P.q2m, P.q3m], hi = [P.q1M, P.q2M, P.q3M];
+    return -q.reduce((s, r, i) => s + ((r[0] - (lo[i] + hi[i]) / 2) / (hi[i] - lo[i])) ** 2, 0) / (2 * q.length);
+  },
+  // i punti O_0..O_3 del braccio, per il disegno
+  giunti(q, P) {
+    const l = [P.l1, P.l2, P.l3], pts = [[0, 0]];
+    let a = 0;
+    for (let i = 0; i < 3; i++) { a += q[i][0]; const u = pts[i]; pts.push([u[0] + l[i] * Math.cos(a), u[1] + l[i] * Math.sin(a)]); }
+    return pts;
+  },
+  manipolabilita(J) { return Math.sqrt(Math.max(0, L.det2(L.mul(J, L.tr(J))))); },
+};
+
+// ===========================================================================
+// SIMULAZIONE: lo stato del passo k e la storia per i grafici. L'ombra e' la stessa
+// legge con k0 = 0 (solo norma minima), integrata in parallelo per il confronto.
+// ===========================================================================
+const MAX_STORIA = 8000;
+const Sim = {
+  P: null, k: 0, q: null, V: null, storia: [], ombra: null,
+  reset() {
+    const P = this.P = parNum();
+    this.k = 0;
+    this.q = [[P.q01], [P.q02], [P.q03]];
+    this.V = Num.passo(this.q, 0, P);
+    this.Vprec = null;                    // i valori del passo prima (all'inizio non ci sono)
+    this.storia = [this.campione()];
+    this.ombra = { q: this.q.map(r => [...r]), storia: [this.campioneOmbra(this.q, 0)] };
+  },
+  t() { return Math.round(this.k * this.P.h * 1e9) / 1e9; },
+  campione() {
+    const V = this.V;
+    return { t: V.t, q: L.vec(V.q), p: L.vec(V.p), pd: L.vec(V.pd), e: L.norm(L.vec(V.e)), H: Num.H(V.q, this.P) };
+  },
+  campioneOmbra(q, t) { return { t, q: L.vec(q), p: L.vec(FUNZ.p({ q, t }, this.P)), H: Num.H(q, this.P) }; },
+  // fine del passo: q_{k+1} passa dal ritardo e diventa q_k; si calcola il passo nuovo
+  avanza() {
+    const P = this.P, t0 = this.t(), P0 = { ...P, k0: 0 };
+    const Vo = Num.passo(this.ombra.q, t0, P0);
+    this.ombra.q = Vo.qn;
+    this.Vprec = this.V;
+    this.q = this.V.qn; this.k++;
+    this.V = Num.passo(this.q, this.t(), P);
+    this.storia.push(this.campione());
+    this.ombra.storia.push(this.campioneOmbra(this.ombra.q, this.t()));
+    if (this.storia.length > MAX_STORIA) { this.storia.shift(); this.ombra.storia.shift(); }
+  },
+};
+
+// ===========================================================================
+// FORMATTAZIONE DEI VALORI
+// ===========================================================================
+const inGradi = s => s === STATO || s === PROSSIMO;
+function fmtNum(x, cifre = 3) {
+  if (!isFinite(x)) return '∞';
+  const a = Math.abs(x);
+  if (a < 5e-13) return '0';
+  if (a >= 1e4 || a < 1e-3) return x.toExponential(1).replace('e', 'e');
+  return x.toFixed(Math.max(0, cifre - Math.max(0, Math.floor(Math.log10(a)) + 1)));
+}
+function unitaDi(s) { return inGradi(s) ? '°' : DATI.variabili[s].unita; }
+function valoriDi(s, X) { return inGradi(s) ? X.map(r => r.map(x => x * R2D)) : X; }
+// nel blocco: un vettore in riga, una matrice come tabellina
+function htmlVal(s, X) {
+  if (X === undefined) return '<span class="nm">—</span>';
+  if (s === 't') return `${fmtNum(X, 4)} s`;
+  const Y = valoriDi(s, X), u = unitaDi(s);
+  if (eMatrice(s)) return '<table class="mini">' + Y.map(r => '<tr>' + r.map(x => `<td>${fmtNum(x, 3)}</td>`).join('') + '</tr>').join('') + '</table>';
+  return `(${Y.map(r => fmtNum(r[0], inGradi(s) ? 4 : 3)).join(', ')})${u ? ' ' + u : ''}`;
+}
+// nel pannello: in LaTeX
+function texVal(s, X) {
+  if (X === undefined) return '\\text{non ancora calcolato}';
+  if (s === 't') return `${fmtNum(X, 4)}\\ \\text{s}`;
+  const Y = valoriDi(s, X), u = unitaDi(s);
+  const m = '\\begin{bmatrix}' + Y.map(r => r.map(x => fmtNum(x, 4)).join(' & ')).join('\\\\') + '\\end{bmatrix}';
+  return m + (u === '°' ? '^{\\circ}' : u ? `\\ \\text{${u}}` : '');
+}
+const testoVal = (s, X) => s === 't' ? `${fmtNum(X, 4)} s` : `(${valoriDi(s, X).flat().map(x => fmtNum(x, 3)).join(', ')})${unitaDi(s) ? ' ' + unitaDi(s) : ''}`;
+
+// ===========================================================================
+// GRAFO: tre livelli di dettaglio annidati. Ogni equazione ha tre chiavi:
+// la fase, il blocco della Fig. 9.8, l'equazione stessa. Le sorgenti sono
+// l'orologio (t_k) e il ritardo z^-1 (q_k); il ritardo riceve q_{k+1} da Eulero.
+// ===========================================================================
+const CHIAVI = {}, FIGLI = {};
+for (const e of DATI.equazioni) {
+  CHIAVI[e.id] = ['F:' + e.fase, 'B:' + e.blocco, 'E:' + e.id];
+  for (let j = 0; j < 2; j++) (FIGLI[CHIAVI[e.id][j]] = FIGLI[CHIAVI[e.id][j]] || new Set()).add(CHIAVI[e.id][j + 1]);
+}
+function costruisciGrafo() {
+  const ap = st.aperti, ch = st.chiusi;
+  const prof = e => {
+    const k = CHIAVI[e.id];
+    let d = st.livello;
+    for (let j = 0; j < 2; j++) if (d === j && ap.has(k[j])) d = j + 1;
+    for (let j = 2; j > 0; j--) if (d === j && ch.has(k[j - 1])) d = j - 1;
+    while (d < 2 && FIGLI[k[d]].size === 1) d++;            // un gruppo con un solo figlio non serve
+    return d;
+  };
+  const nodi = {}, nodoDi = {};
+  for (const e of DATI.equazioni) {
+    const d = prof(e), id = CHIAVI[e.id][d];
+    nodoDi[e.id] = id;
+    if (!nodi[id]) nodi[id] = {
+      id, tipo: ['fase', 'blocco', 'eq'][d], prof: d, eq: [], fase: e.fase, blocco: e.blocco,
+      tipoEq: d === 0 ? null : d === 1 ? DATI.blocchi[e.blocco].tipo : e.tipo,
+      apribile: d < 2 && FIGLI[id].size > 1, chiudibile: d > 0 && FIGLI[CHIAVI[e.id][d - 1]].size > 1,
+      padre: d > 0 ? CHIAVI[e.id][d - 1] : null };
+    nodi[id].eq.push(e);
+  }
+  for (const s of DATI.sorgenti) nodi['s:' + s] = { id: 's:' + s, tipo: 'sorgente', s, eq: [] };
+  const archi = {};
+  const arco = (a, b, s) => {
+    const k = a + '>' + b;
+    if (!archi[k]) archi[k] = { id: 'a' + Object.keys(archi).length, da: a, a: b, vars: [] };
+    if (!archi[k].vars.includes(s)) archi[k].vars.push(s);
+  };
+  for (const e of DATI.equazioni) for (const s of e.ins) {
+    const src = PROD[s] ? nodoDi[PROD[s]] : 's:' + s;
+    if (src !== nodoDi[e.id]) arco(src, nodoDi[e.id], s);
+  }
+  for (const a of Object.values(archi)) {
+    a.cls = a.vars.includes(STATO) ? 'stato' : a.vars.includes('t') ? 'ingresso' : a.vars.includes('dq') ? 'der' : '';
+    a.mat = a.vars.some(eMatrice);
+  }
+  // le uscite che lasciano il blocco (quelle da mostrare): lette fuori, oppure q_{k+1}
+  for (const n of Object.values(nodi)) {
+    if (!n.eq.length) continue;
+    const dentro = new Set(n.eq.map(e => e.id));
+    n.uscite = n.eq.map(e => e.out).filter(s => s === PROSSIMO || DATI.equazioni.some(f => !dentro.has(f.id) && f.ins.includes(s)));
+  }
+  const eulero = nodoDi[PROD[PROSSIMO]];
+  return { nodi, archi: Object.values(archi), nodoDi, eulero };
+}
+
+// ===========================================================================
+// BLOCCHI HTML
+// ===========================================================================
+const pill = n => (n.apribile ? '<span class="pill" data-azione="apri" title="mostra i blocchi interni">⊕ apri</span>' : '') +
+  (n.chiudibile ? '<span class="pill" data-azione="chiudi" title="riunisci con i blocchi vicini nel gruppo che li contiene">⊖ chiudi</span>' : '');
+function htmlNodo(n) {
+  const el = document.createElement('div');
+  el.className = 'nodo';
+  el.dataset.id = n.id;
+  if (n.tipo === 'sorgente') {
+    el.classList.add('sorgente');
+    if (n.s === 't') {
+      el.classList.add('ingresso');
+      el.innerHTML = '<div class="testa">orologio</div><div class="usc"></div><div class="val"></div>';
+      tex('t_k=k\\,h', el.querySelector('.usc'));
+    } else {
+      el.classList.add('ritardo');
+      el.innerHTML = '<div class="testa">ritardo unitario</div><div class="usc"><span class="z">z⁻¹</span><span class="m"></span></div><div class="val"></div>';
+      tex(vtex(STATO), el.querySelector('.m'));
+    }
+    return el;
+  }
+  if (n.tipo === 'fase') {
+    el.classList.add('fase', 'gruppo');
+    el.innerHTML = `<div class="testa">${DATI.fasi[n.fase].breve} <span class="n">×${n.eq.length}</span>${pill(n)}</div><div class="usc testo"></div>`;
+    el.querySelector('.usc').innerHTML = n.eq.map(e => spT(vtex(e.out))).join(', ');
+    texSpan(el);
+    return el;
+  }
+  el.classList.add('t-' + n.tipoEq);
+  const somma = n.eq.length === 1 && n.eq[0].out === 'dq';
+  if (somma) {
+    el.classList.add('somma');
+    el.innerHTML = '<div class="usc"></div>';
+    tex('\\Sigma', el.querySelector('.usc'));
+    return el;
+  }
+  if (n.tipo === 'blocco' && n.eq.length > 1) {
+    const b = DATI.blocchi[n.blocco];
+    el.classList.add('gruppo');
+    el.innerHTML = `<div class="testa">${b.titolo} <span class="n">×${n.eq.length}</span>${pill(n)}</div><div class="usc"></div><div class="val"></div>`;
+    tex(b.corto, el.querySelector('.usc'));
+  } else {
+    const e = n.eq[0], b = DATI.blocchi[e.blocco];
+    if (e.operazione) el.classList.add('operazione');
+    const nome = n.tipo === 'blocco' ? b.titolo : e.titolo[0].toUpperCase() + e.titolo.slice(1);
+    el.innerHTML = `<div class="testa">${nome}${pill(n)}</div><div class="usc"></div><div class="val"></div>`;
+    tex(n.tipo === 'blocco' ? b.corto : e.corto, el.querySelector('.usc'));
+  }
+  return el;
+}
+
+// ===========================================================================
+// DISPOSIZIONE (ELK): una porta per filo; a sinistra le sorgenti, a destra Eulero
+// ===========================================================================
+const Vista = { tx: 40, ty: 40, s: 1, grafo: null, geo: null, layoutN: 0, toccata: false, punti: {}, retro: null };
+const lati = () => st.flusso === 'DOWN' ? ['NORTH', 'SOUTH'] : ['WEST', 'EAST'];
+async function disegna(conserva = false) {
+  const g = costruisciGrafo();
+  Vista.grafo = g;
+  const mis = $('misura');
+  mis.innerHTML = '';
+  for (const n of Object.values(g.nodi)) {
+    const el = htmlNodo(n);
+    el.style.position = 'static'; el.style.display = el.classList.contains('somma') ? 'flex' : 'inline-block';
+    mis.appendChild(el);
+    riempiValori(el, n, st.valori ? Sim.V : null);
+  }
+  const dim = {};
+  for (const el of mis.children) dim[el.dataset.id] = [el.offsetWidth + 2, el.offsetHeight + 2];
+  const porteIn = {}, porteOut = {};
+  for (const a of g.archi) { (porteIn[a.a] = porteIn[a.a] || new Set()).add(a.da); (porteOut[a.da] = porteOut[a.da] || new Set()).add(a.a); }
+  const strato = n => String(n.tipo === 'sorgente' ? 0 : n.id === g.eulero ? 2 : 1);
+  const radice = { id: 'radice', layoutOptions: {
+      'elk.algorithm': 'layered', 'elk.direction': st.flusso, 'elk.edgeRouting': 'ORTHOGONAL',
+      'elk.layered.mergeEdges': 'false', 'elk.partitioning.activate': 'true',
+      'elk.spacing.nodeNode': '22', 'elk.layered.spacing.nodeNodeBetweenLayers': st.flusso === 'DOWN' ? '46' : '58',
+      'elk.spacing.edgeNode': '16', 'elk.spacing.edgeEdge': '12', 'elk.layered.spacing.edgeNodeBetweenLayers': '20',
+      'elk.layered.spacing.edgeEdgeBetweenLayers': '12', 'elk.layered.thoroughness': '25',
+      'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF', 'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+      'elk.padding': '[top=24,left=24,bottom=24,right=24]' },
+    children: Object.values(g.nodi).map(n => ({
+      id: n.id, width: dim[n.id][0], height: dim[n.id][1],
+      layoutOptions: { 'elk.portConstraints': 'FIXED_SIDE', 'elk.nodeSize.constraints': 'PORTS MINIMUM_SIZE',
+        'elk.nodeSize.minimum': `(${dim[n.id][0]}, ${dim[n.id][1]})`, 'elk.spacing.portPort': '10',
+        'elk.partitioning.partition': strato(n) },
+      ports: [...(porteOut[n.id] || [])].map(b => ({ id: n.id + '#o' + b, layoutOptions: { 'elk.port.side': lati()[1] } }))
+        .concat([...(porteIn[n.id] || [])].map(a => ({ id: n.id + '#i' + a, layoutOptions: { 'elk.port.side': lati()[0] } }))),
+    })),
+    edges: g.archi.map(a => ({ id: a.id, sources: [a.da + '#o' + a.a], targets: [a.a + '#i' + a.da] })) };
+  const mio = ++Vista.layoutN;
+  $('stato-layout').textContent = 'disposizione dei blocchi…';
+  const out = await new ELK().layout(radice);
+  if (mio !== Vista.layoutN) return;
+  $('stato-layout').textContent = '';
+  const geo = { nodi: {}, archi: {}, W: out.width, H: out.height };
+  for (const c of out.children) {
+    const ports = {};
+    for (const p of c.ports || []) ports[p.id] = { x: c.x + p.x + (p.width || 0) / 2, y: c.y + p.y + (p.height || 0) / 2 };
+    geo.nodi[c.id] = { x: c.x, y: c.y, w: c.width, h: c.height, ports };
+  }
+  for (const e of out.edges || []) {
+    const s = (e.sections || [])[0];
+    if (s) geo.archi[e.id] = [s.startPoint, ...(s.bendPoints || []), s.endPoint].map(p => ({ x: p.x, y: p.y }));
+  }
+  Vista.geo = geo;
+  st.pos = {}; st.fili = {};
+  if (st.sel && !g.nodi[st.sel]) st.sel = null;
+  rendi();
+  if (!conserva) inquadra();
+  Dettaglio.aggiorna();
+}
+
+// ===========================================================================
+// DISEGNO: blocchi, fili (doppi per le matrici), retroazione dal ritardo, etichette
+// ===========================================================================
+function rendi() {
+  const g = Vista.grafo, geo = Vista.geo, nodiEl = $('nodi');
+  nodiEl.innerHTML = '';
+  for (const n of Object.values(g.nodi)) {
+    const p = geo.nodi[n.id];
+    if (!p) continue;
+    const el = htmlNodo(n), q = st.pos[n.id] || p;
+    Object.assign(el.style, { left: q.x + 'px', top: q.y + 'px', minWidth: p.w + 'px' });
+    if (el.classList.contains('somma')) Object.assign(el.style, { width: p.w + 'px', height: p.h + 'px' });
+    nodiEl.appendChild(el);
+  }
+  rendiArchi();
+  aggiornaValori();
+  evidenzia();
+}
+// il filo di un arco: quello di ELK, quello ritoccato a mano, o uno nuovo se un estremo e' stato spostato
+function percorso(a) {
+  const geo = Vista.geo, pa = geo.nodi[a.da], pb = geo.nodi[a.a];
+  const mosso = st.pos[a.da] || st.pos[a.a];
+  if (!mosso && st.fili[a.id]) return st.fili[a.id];
+  if (!mosso && geo.archi[a.id]) return geo.archi[a.id];
+  const P = (id, n, porta) => {
+    const off = st.pos[id] ? { x: st.pos[id].x - n.x, y: st.pos[id].y - n.y } : { x: 0, y: 0 };
+    const q = n.ports[porta] || (st.flusso === 'DOWN' ? { x: n.x + n.w / 2, y: n.y + n.h } : { x: n.x + n.w, y: n.y + n.h / 2 });
+    return { x: q.x + off.x, y: q.y + off.y };
+  };
+  const s = P(a.da, pa, a.da + '#o' + a.a), t = P(a.a, pb, a.a + '#i' + a.da);
+  if (st.flusso === 'DOWN') { const ym = s.y + Math.max(10, (t.y - s.y) / 2); return [s, { x: s.x, y: ym }, { x: t.x, y: ym }, t]; }
+  const xm = s.x + Math.max(12, (t.x - s.x) / 2);
+  return [s, { x: xm, y: s.y }, { x: xm, y: t.y }, t];
+}
+function puntoA(pts, d) {
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1], l = Math.hypot(b.x - a.x, b.y - a.y);
+    if (d <= l || i === pts.length - 2) { const f = l ? Math.min(1, d / l) : 0; return { x: a.x + f * (b.x - a.x), y: a.y + f * (b.y - a.y) }; }
+    d -= l;
+  }
+  return pts[0];
+}
+const lunghezza = pts => pts.slice(1).reduce((s, p, i) => s + Math.hypot(p.x - pts[i].x, p.y - pts[i].y), 0);
+const dPath = pts => 'M' + pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L');
+// dove scrivere il nome del segnale: a meta' del tratto orizzontale piu' lungo
+function postoEtichetta(pts) {
+  let best = null, lmax = -1;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1], l = Math.abs(b.x - a.x);
+    if (Math.abs(b.y - a.y) < 0.5 && l > lmax) { lmax = l; best = { x: (a.x + b.x) / 2, y: a.y - 2 }; }
+  }
+  return best && lmax > 24 ? best : (() => { const p = puntoA(pts, lunghezza(pts) / 2); return { x: p.x + 4, y: p.y - 2 }; })();
+}
+// la retroazione: q_{k+1} esce da Eulero, passa sotto lo schema ed entra nel ritardo
+function percorsoRetro() {
+  const g = Vista.grafo, geo = Vista.geo, ne = geo.nodi[g.eulero], ns = geo.nodi['s:' + STATO];
+  if (!ne || !ns) return null;
+  const pe = st.pos[g.eulero] || ne, ps = st.pos['s:' + STATO] || ns;
+  const x1 = pe.x + ne.w, y1 = pe.y + ne.h / 2;
+  if (st.flusso === 'DOWN') {
+    const xb = Math.max(geo.W, x1 + 20) + 10, x2 = ps.x + ns.w, y2 = ps.y + ns.h / 2;
+    return [{ x: x1, y: y1 }, { x: xb, y: y1 }, { x: xb, y: y2 }, { x: x2 + 2, y: y2 }];
+  }
+  const yb = Math.max(geo.H, pe.y + ne.h + 20) + 12, xr = x1 + 18, x2 = ps.x, y2 = ps.y + ns.h / 2;
+  return [{ x: x1, y: y1 }, { x: xr, y: y1 }, { x: xr, y: yb }, { x: x2 - 18, y: yb }, { x: x2 - 18, y: y2 }, { x: x2 - 1, y: y2 }];
+}
+function rendiArchi() {
+  const g = Vista.grafo, geo = Vista.geo, svg = $('archi'), lab = $('etichette');
+  svg.setAttribute('width', geo.W + 300); svg.setAttribute('height', geo.H + 300);
+  const mk = (id, col) => `<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${col}"/></marker>`;
+  let h = `<defs>${mk('pf', '#7d8aa8')}${mk('pf-stato', '#48cae4')}${mk('pf-ingresso', '#e0b84a')}${mk('pf-der', '#ff5a76')}</defs>`;
+  let et = '';
+  Vista.punti = {};
+  for (const a of g.archi) {
+    const pts = percorso(a);
+    if (!pts) continue;
+    Vista.punti[a.id] = pts;
+    const d = dPath(pts), m = a.cls ? 'pf-' + a.cls : 'pf';
+    h += `<path class="arco ${a.cls}${a.mat ? ' mat' : ''}" data-a="${a.id}" d="${d}" marker-end="url(#${m})"/>`;
+    if (a.mat) h += `<path class="dentro" data-a="${a.id}" d="${d}"/>`;
+    h += `<path class="hit" data-a="${a.id}" d="${d}"/>`;
+    if (st.etichette) {
+      const q = postoEtichetta(pts);
+      et += `<div class="et" data-a="${a.id}" style="left:${q.x.toFixed(1)}px; top:${q.y.toFixed(1)}px">${a.vars.map(s => spT(vtex(s))).join(', ')}</div>`;
+    }
+  }
+  Vista.retro = percorsoRetro();
+  if (Vista.retro) {
+    const r = Vista.retro, k = st.flusso === 'DOWN' ? 1 : 2, a = r[k], b = r[k + 1];
+    h += `<path class="retro" d="${dPath(r)}" marker-end="url(#pf-der)"/>`;
+    h += `<text class="zeta" x="${((a.x + b.x) / 2 + (st.flusso === 'DOWN' ? -6 : 6)).toFixed(1)}" text-anchor="${st.flusso === 'DOWN' ? 'end' : 'start'}" y="${((a.y + b.y) / 2 + (st.flusso === 'DOWN' ? 0 : -6)).toFixed(1)}"><tspan font-weight="800">q</tspan><tspan baseline-shift="sub" font-size="9">k+1</tspan> → z⁻¹</text>`;
+  }
+  svg.innerHTML = h;
+  lab.innerHTML = et;
+  texSpan(lab);
+}
+const applicaVista = () => { $('mondo').style.transform = `translate(${Vista.tx}px, ${Vista.ty}px) scale(${Vista.s})`; };
+function inquadra() {
+  const c = $('centro').getBoundingClientRect(), geo = Vista.geo;
+  if (!geo) return;
+  const W = geo.W + (st.flusso === 'DOWN' ? 40 : 0), H = geo.H + (st.flusso === 'DOWN' ? 0 : 40);
+  const sopra = $('barra').offsetHeight + 20, sotto = $('leg').offsetHeight + 16;
+  Vista.s = Math.min(1.5, Math.max(0.15, Math.min((c.width - 30) / W, (c.height - sopra - sotto) / H)));
+  Vista.tx = (c.width - W * Vista.s) / 2;
+  Vista.ty = sopra + Math.max(0, (c.height - sopra - sotto - H * Vista.s) / 2);
+  Vista.toccata = false;
+  applicaVista();
+}
+
+// ===========================================================================
+// VALORI NEI BLOCCHI ED EVIDENZIAZIONE
+// ===========================================================================
+const valoriCorrenti = () => st.anim ? st.anim.V : Sim.V;
+function riempiValori(el, n, V) {
+  const v = el.querySelector('.val');
+  if (!v) return;
+  if (!V) { v.innerHTML = ''; return; }
+  if (n.tipo === 'sorgente') { v.innerHTML = htmlVal(n.s, V[n.s]); return; }
+  if (n.tipo === 'fase' || !n.uscite) return;
+  const us = n.uscite;
+  v.innerHTML = us.length === 1 && n.eq.length === 1 ? (eMatrice(us[0]) ? htmlVal(us[0], V[us[0]]) : '= ' + htmlVal(us[0], V[us[0]]))
+    : us.map(s => `<div>${spT(vtex(s))} <span class="nm">=</span> ${htmlVal(s, V[s])}</div>`).join('');
+  texSpan(v);
+}
+const nodoEl = id => id ? document.querySelector(`#nodi .nodo[data-id="${CSS.escape(id)}"]`) : null;
+function aggiornaValori() {
+  const g = Vista.grafo;
+  if (!g) return;
+  const V = valoriCorrenti(), A = st.anim;
+  for (const el of document.querySelectorAll('#nodi .nodo')) {
+    const n = g.nodi[el.dataset.id];
+    if (!n) continue;
+    const fresco = !!A && (n.eq.some(e => A.fresche.has(e.id)) || (n.tipo === 'sorgente' && A.fresche.has(n.id)));
+    el.classList.toggle('fresco', fresco);
+    el.classList.toggle('vecchio', !!A && !fresco && n.tipo !== 'sorgente');
+    riempiValori(el, n, st.valori ? V : null);
+  }
+}
+function evidenzia() {
+  const g = Vista.grafo;
+  if (!g) return;
+  const tutti = document.querySelectorAll('#nodi .nodo'), fili = document.querySelectorAll('#archi path.arco, #archi path.dentro'),
+    nomi = document.querySelectorAll('#etichette .et');
+  tutti.forEach(el => el.classList.remove('sel', 'monte', 'valle', 'spento', 'implicito'));
+  fili.forEach(p => p.classList.remove('monte', 'valle', 'spento'));
+  nomi.forEach(p => p.classList.remove('spento'));
+  if (st.impl) {
+    const L_ = new Set(DATI.analisi.loop_implicito);
+    tutti.forEach(el => { const n = g.nodi[el.dataset.id]; if (n && n.eq.some(e => L_.has(e.id))) el.classList.add('implicito'); });
+  }
+  const spegniFili = tenere => {
+    fili.forEach(p => { if (!tenere.has(p.dataset.a)) p.classList.add('spento'); });
+    nomi.forEach(p => { if (!tenere.has(p.dataset.a)) p.classList.add('spento'); });
+  };
+  if (st.evTipo) {
+    tutti.forEach(el => { const n = g.nodi[el.dataset.id]; if (!n || n.tipoEq !== st.evTipo && !n.eq.some(e => e.tipo === st.evTipo)) el.classList.add('spento'); });
+    spegniFili(new Set());
+    return;
+  }
+  if (!st.sel || !g.nodi[st.sel]) return;
+  const elSel = nodoEl(st.sel);
+  if (elSel) elSel.classList.add('sel');
+  if (!st.dip) return;
+  const su = {}, giu = {};
+  for (const a of g.archi) { (su[a.a] = su[a.a] || []).push(a); (giu[a.da] = giu[a.da] || []).push(a); }
+  const visita = (start, adj, chiave) => {
+    const nodi = new Set(), archi = new Set(), coda = [start];
+    while (coda.length) {
+      const x = coda.pop();
+      for (const a of adj[x] || []) { archi.add(a.id); const y = a[chiave]; if (!nodi.has(y) && y !== start) { nodi.add(y); coda.push(y); } }
+    }
+    return { nodi, archi };
+  };
+  const m = visita(st.sel, su, 'da'), v = visita(st.sel, giu, 'a');
+  tutti.forEach(el => {
+    const id = el.dataset.id;
+    if (id !== st.sel) el.classList.add(m.nodi.has(id) ? 'monte' : v.nodi.has(id) ? 'valle' : 'spento');
+  });
+  fili.forEach(p => p.classList.add(m.archi.has(p.dataset.a) ? 'monte' : v.archi.has(p.dataset.a) ? 'valle' : 'spento'));
+  nomi.forEach(p => { if (!m.archi.has(p.dataset.a) && !v.archi.has(p.dataset.a)) p.classList.add('spento'); });
+}
+
+// ===========================================================================
+// FLUSSO: il passo k a onde. Un'onda e' l'insieme delle equazioni che hanno gia'
+// tutti gli ingressi (lo stesso livello nell'analisi di networkx): i pallini partono
+// dai blocchi che forniscono i valori e, all'arrivo, il blocco calcola. L'ultima
+// onda riporta q_{k+1} al ritardo: il passo si chiude e l'orologio avanza.
+//   modo 'anim' : con i pallini (micro-step, passo, simula)
+//   modo 'reale': senza pallini, la simulazione in tempo reale per i grafici
+// ===========================================================================
+const COL = { stato: '#48cae4', ingresso: '#e0b84a', der: '#ff5a76', dato: '#ffe3a3' };
+const Flusso = {
+  modo: null, onde: [], i: -1, inizio: null, play: false, fermaSu: null, pendente: null, prossimo: 0,
+  scie: [], raf: null, vel: 1, ultimo: 0, accumulo: 0,
+  durata() { return 1300 / this.vel; },
+
+  // --- le onde del passo in corso ----------------------------------------------
+  costruisci() {
+    const k = Sim.k, Vn = Sim.V, onde = DATI.analisi.onde, n = onde.length;
+    let Vcur = { ...(Sim.Vprec || {}), t: Vn.t, q: Vn.q };
+    const fr = new Set(['s:t', 's:' + STATO]), lista = [];
+    onde.forEach((ids, w) => {
+      ids.forEach(id => { Vcur[EQ[id].out] = Vn[EQ[id].out]; fr.add(id); });
+      lista.push({ tipo: 'calc', w, eqs: ids, V: { ...Vcur }, fresche: new Set(fr),
+        stato: `passo k = ${k} · onda ${w + 1} di ${n}`, testo: this.racconto(ids, w, Vn) });
+    });
+    lista.push({ tipo: 'ritardo', eqs: [], V: { ...Vcur }, fresche: new Set(fr), stato: `passo k = ${k} · ritardo`,
+      testo: `${spT('\\bq_{k+1}')} = ${testoVal(PROSSIMO, Vn[PROSSIMO])} passa dal <b>ritardo</b> ${spT('z^{-1}')}: al passo ${k + 1} sarà la configurazione corrente. L'orologio avanza: ${spT('t_{k+1}=t_k+h')} = ${fmtNum(Vn.t + Sim.P.h, 4)} s.` });
+    this.onde = lista;
+    this.inizio = { V: { ...(Sim.Vprec || {}), t: Vn.t, q: Vn.q }, fresche: new Set(['s:t', 's:' + STATO]),
+      stato: `passo k = ${k} · inizio`, testo: `Le sorgenti: il ritardo restituisce ${spT('\\bq_k')}, l'orologio ${spT('t_k')}. Nei blocchi, sbiaditi, i valori del passo prima.` };
+    this.i = -1;
+  },
+  racconto(ids, w, V) {
+    const nomi = ids.map(id => `${spT(vtex(EQ[id].out))} <span style="color:#9aa6b8">(${EQ[id].titolo})</span>`).join(', ');
+    let s = `<b>Onda ${w + 1}</b>: ${ids.length > 1 ? 'si calcolano' : 'si calcola'} ${nomi}.`;
+    const q = ids.filter(id => EQ[id].ins.includes(STATO));
+    if (w === 0) s += ` Leggono solo le sorgenti; ${q.length ? 'la configurazione corrente ' + spT('\\bq_k') + ' serve a ' + q.map(id => spT(vtex(EQ[id].out))).join(', ') + '.' : ''} Sono indipendenti: si possono calcolare insieme.`;
+    if (ids.includes('Jp')) s += ` ${spT('J^{+}=\\operatorname{pinv}(J)')} è una chiamata a funzione, con la ${spT('J')} della configurazione corrente.`;
+    if (ids.includes('P')) s += ` ${spT('P')} riusa ${spT('J')} e ${spT('J^{+}')}: non si ricalcolano.`;
+    if (ids.includes('dqV')) s += ` ${spT('\\dot{\\bq}_V')} sta in ${spT('\\mathcal R(J^{\\mathsf T})')}, ${spT('\\dot{\\bq}_N')} in ${spT('\\mathcal N(J)')}: prodotto scalare ${fmtNum(L.dot(L.vec(V.dqV), L.vec(V.dqN)), 2)}.`;
+    if (ids.includes('dq')) s += ` ${spT('J\\dot{\\bq}')} = ${testoVal('Vc', L.mul(V.J, V.dq))}: è ${spT('V_c')}, l'automovimento non disturba il compito.`;
+    if (ids.includes(PROD[PROSSIMO])) s += ` Un passo di Eulero in avanti, con ${spT('h')} = ${fmtNum(Sim.P.h, 3)} s.`;
+    return s;
+  },
+
+  // --- comandi ----------------------------------------------------------------
+  entra(modo) {
+    if (this.modo === modo) return;
+    this.esci(false);
+    this.modo = modo;
+    if (modo === 'anim') { this.costruisci(); this.mostra(-1, false); }
+    else { st.anim = null; this.ultimo = 0; this.accumulo = 0; }
+  },
+  avanti() {
+    if (this.pendente) this.compi();
+    if (this.i + 1 >= this.onde.length) this.costruisci();
+    const k = this.i + 1, o = this.onde[k], d = this.durata(), ora = performance.now();
+    this.creaScie(o, d * 0.72);
+    Suoni.parte(o);
+    this.pendente = { k, at: ora + d * 0.72 };
+    this.prossimo = ora + d;
+    this.anima(); this.testi();
+    return true;
+  },
+  compi() { const k = this.pendente.k; this.pendente = null; this.mostra(k); },
+  suona() {                                                  // simula: un passo dopo l'altro
+    if (this.modo === 'anim' && this.play && !this.fermaSu) { this.ferma(); return; }
+    this.entra('anim');
+    this.fermaSu = null; this.play = true; this.prossimo = 0;
+    this.anima(); this.testi();
+  },
+  passo() {                                                  // fino alla fine del passo in corso
+    if (this.modo === 'anim' && this.play && this.fermaSu) { this.ferma(); return; }
+    this.entra('anim');
+    this.fermaSu = o => o.tipo === 'ritardo'; this.play = true; this.prossimo = 0;
+    this.anima(); this.testi();
+  },
+  micro() { this.ferma(); this.entra('anim'); this.avanti(); },
+  reale() {
+    if (this.modo === 'reale') { this.esci(); return; }
+    this.entra('reale');
+    this.anima(); this.testi();
+  },
+  ferma() { this.play = false; this.fermaSu = null; this.testi(); },
+  esci(ridisegna = true) {
+    this.play = false; this.fermaSu = null; this.pendente = null; this.scie = []; this.modo = null; this.onde = []; this.i = -1;
+    if (this.raf) cancelAnimationFrame(this.raf);
+    this.raf = null;
+    $('scie').innerHTML = '';
+    st.anim = null;
+    if (ridisegna) { aggiornaValori(); Dettaglio.aggiorna(); }
+    this.testi();
+  },
+
+  // --- visualizzazione ---------------------------------------------------------
+  mostra(k, lampo = true) {
+    this.i = k;
+    const o = k >= 0 ? this.onde[k] : this.inizio;
+    if (o.tipo === 'ritardo') {
+      Sim.avanza();
+      this.costruisci();                                     // il passo dopo: si riparte dalle sorgenti
+      st.anim = { V: this.inizio.V, fresche: this.inizio.fresche };
+      this.i = -1;
+      if (lampo) { this.lampo(['s:t', 's:' + STATO]); Suoni.arriva(o); }
+      Grafici.disegna();
+      if (this.fermaSu && this.fermaSu(o)) { this.fermaSu = null; this.play = false; }
+      this.corrente = { ...o, stato: `passo k = ${Sim.k} · inizio (il ritardo ha restituito q_k)` };
+    } else {
+      st.anim = { V: o.V, fresche: o.fresche };
+      if (lampo && k >= 0) { const nd = Vista.grafo.nodoDi; this.lampo([...new Set(o.eqs.map(id => nd[id]))]); Suoni.arriva(o); }
+      this.corrente = o;
+    }
+    aggiornaValori(); this.testi(); Dettaglio.aggiorna();
+  },
+  lampo(ids) {
+    ids.forEach(id => { const el = nodoEl(id); if (!el) return; el.classList.remove('sparo'); void el.offsetWidth; el.classList.add('sparo'); });
+  },
+  testi() {
+    const anim = this.modo === 'anim', reale = this.modo === 'reale';
+    $('s-play').innerHTML = anim && this.play && !this.fermaSu ? '&#10074;&#10074; pausa' : '&#9654; simula';
+    $('s-play').classList.toggle('on', anim && this.play && !this.fermaSu);
+    $('s-passo').classList.toggle('on', anim && this.play && !!this.fermaSu);
+    $('s-reale').innerHTML = reale ? '&#10074;&#10074; ferma' : '&#9193; tempo reale';
+    $('s-reale').classList.toggle('on', reale);
+    $('passo-k').textContent = `k = ${Sim.k} · t = ${Sim.t().toFixed(2)} s`;
+    let stato = 'fermo: nei blocchi i valori del passo k',
+      testo = 'Con <b>micro-step</b> si avanza di un\'onda di equazioni, con <b>passo</b> di un passo intero: qui compare il racconto di ciascuna onda.';
+    if (reale) { stato = `tempo reale ×${+this.vel.toPrecision(2)}`; testo = 'Senza pallini: a ogni fotogramma i passi di Eulero che corrispondono al tempo trascorso; i grafici si riempiono.'; }
+    else if (anim) {
+      const o = this.pendente ? this.onde[this.pendente.k] : this.corrente;
+      if (o) { stato = (this.pendente ? '→ ' : '') + o.stato; testo = o.testo; }
+    }
+    $('s-stato').textContent = stato; $('s-stato').title = stato;
+    $('s-testo').innerHTML = testo;
+    texSpan($('s-testo'));
+  },
+  creaScie(o, dur) {
+    const g = Vista.grafo, nd = g.nodoDi, ora = performance.now();
+    const perArco = new Map(g.archi.map(a => [a.da + '>' + a.a, a]));
+    const prio = { stato: 3, der: 2, ingresso: 1, dato: 0 };
+    const colore = s => s === STATO ? 'stato' : s === 't' ? 'ingresso' : s === 'dq' ? 'der' : 'dato';
+    const scelti = new Map();
+    for (const id of o.eqs) {
+      const tgt = nd[id];
+      for (const s of EQ[id].ins) {
+        const src = PROD[s] ? nd[PROD[s]] : 's:' + s;
+        const a = perArco.get(src + '>' + tgt);
+        if (!a) continue;
+        const c = colore(s), prima = scelti.get(a.id);
+        if (!prima || prio[c] > prio[prima.c]) scelti.set(a.id, { a, c, mat: eMatrice(s) || (prima && prima.mat) });
+      }
+    }
+    const add = (pts, col, mat) => { if (pts && pts.length > 1) this.scie.push({ pts, L: lunghezza(pts), col, mat, t0: ora, dur }); };
+    for (const { a, c, mat } of scelti.values()) add(Vista.punti[a.id], COL[c], mat);
+    if (o.tipo === 'ritardo') add(Vista.retro, COL.stato, false);
+  },
+  disegnaScie(ora) {
+    this.scie = this.scie.filter(s => ora - s.t0 < s.dur);
+    let h = '';
+    for (const s of this.scie) {
+      const f = Math.max(0, Math.min(1, (ora - s.t0) / s.dur)), e = f < 0.5 ? 2 * f * f : 1 - (2 - 2 * f) ** 2 / 2;
+      for (let j = 3; j >= 0; j--) {
+        const p = puntoA(s.pts, Math.max(0, e - j * 0.03) * s.L), r = j ? 4.2 - j : 5.2, op = j ? 0.55 - j * 0.14 : 1;
+        h += s.mat
+          ? `<rect x="${(p.x - r).toFixed(1)}" y="${(p.y - r).toFixed(1)}" width="${(2 * r).toFixed(1)}" height="${(2 * r).toFixed(1)}" rx="1.5" fill="${s.col}" opacity="${op}" style="color:${s.col}"/>`
+          : `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${s.col}" opacity="${op}" style="color:${s.col}"/>`;
+      }
+    }
+    $('scie').innerHTML = h;
+  },
+  anima() { if (!this.raf) this.raf = requestAnimationFrame(t => this.tick(t)); },
+  tick(ora) {
+    this.raf = null;
+    if (this.modo === 'reale') {
+      const dt = this.ultimo ? Math.min(0.1, (ora - this.ultimo) / 1000) : 0;
+      this.ultimo = ora;
+      this.accumulo += dt * this.vel;
+      let n = 0;
+      while (this.accumulo >= Sim.P.h && n < 400) { Sim.avanza(); this.accumulo -= Sim.P.h; n++; }
+      if (n) { aggiornaValori(); Grafici.disegna(); this.testi(); if (st.sel) Dettaglio.aggiorna(); }
+      this.anima();
+      return;
+    }
+    if (Vista.geo) { $('scie').setAttribute('width', Vista.geo.W + 300); $('scie').setAttribute('height', Vista.geo.H + 300); }
+    this.disegnaScie(ora);
+    if (this.pendente && ora >= this.pendente.at) this.compi();
+    if (this.play && !this.pendente && ora >= this.prossimo) this.avanti();
+    if (this.play || this.pendente || this.scie.length) this.anima();
+  },
+};
+
+// ===========================================================================
+// SUONI: un "pip" quando i valori partono, una nota quando arrivano (piu' alta onda
+// dopo onda), un respiro quando q_{k+1} torna al ritardo
+// ===========================================================================
+const Suoni = {
+  attivi: true, ac: null, out: null, ultimi: {},
+  init() {
+    if (this.ac) return this.ac;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    const ac = new AC(), master = ac.createGain(), lp = ac.createBiquadFilter(), comp = ac.createDynamicsCompressor();
+    master.gain.value = 0.22; lp.type = 'lowpass'; lp.frequency.value = 7000;
+    comp.threshold.value = -18; comp.ratio.value = 4;
+    const eco = ac.createDelay(), fb = ac.createGain(), umido = ac.createGain();
+    eco.delayTime.value = 0.11; fb.gain.value = 0.25; umido.gain.value = 0.16;
+    master.connect(lp); lp.connect(comp); comp.connect(ac.destination);
+    master.connect(eco); eco.connect(fb); fb.connect(eco); eco.connect(umido); umido.connect(lp);
+    this.ac = ac; this.out = master;
+    return ac;
+  },
+  pronto(chiave, minimo = 0.03) {
+    if (!this.attivi) return false;
+    const ac = this.init();
+    if (!ac) return false;
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime;
+    if (chiave && t - (this.ultimi[chiave] || -1) < minimo) return false;
+    if (chiave) this.ultimi[chiave] = t;
+    return true;
+  },
+  nota(f0, f1, dur, { forma = 'sine', vol = 0.3, ritardo = 0, vib = 0, vibF = 30 } = {}) {
+    const ac = this.ac, t = ac.currentTime + ritardo, o = ac.createOscillator(), g = ac.createGain();
+    o.type = forma;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
+    if (vib) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = vibF; lg.gain.value = f0 * vib; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + dur + 0.05); }
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.out);
+    o.start(t); o.stop(t + dur + 0.03);
+  },
+  SCALA: [0, 2, 4, 7, 9],
+  hz(grado, base) { const n = this.SCALA[((grado % 5) + 5) % 5] + 12 * Math.floor(grado / 5); return base * 2 ** (n / 12); },
+  parte() { if (this.pronto('parte', 0.04)) this.nota(1400, 950, 0.045, { forma: 'triangle', vol: 0.1 }); },
+  arriva(o) {
+    if (!this.pronto('arriva', 0.035)) return;
+    if (o.tipo === 'ritardo') {                              // q_{k+1} torna indietro: un respiro, poi il passo nuovo
+      this.nota(560, 190, 0.3, { vol: 0.24 });
+      this.nota(784, 784, 0.3, { vol: 0.16, ritardo: 0.12 });
+      return;
+    }
+    const f = this.hz(o.w + 2, 392);
+    this.nota(f, f * 1.04, 0.13, { vol: 0.26, vib: 0.012, vibF: 22 });
+    this.nota(f * 2, f * 2, 0.06, { vol: 0.07, ritardo: 0.012 });
+    if (o.eqs.includes('Jp')) this.nota(950, 1500, 0.13, { vol: 0.16, ritardo: 0.08, vib: 0.1, vibF: 36 });  // la funzione pensa
+  },
+  imposta(acceso) {
+    this.attivi = acceso;
+    try { localStorage.setItem('schema-clik-suoni', acceso ? '1' : '0'); } catch (e) { /* senza memoria va bene lo stesso */ }
+    $('b-suoni').innerHTML = acceso ? '&#128266; suoni' : '&#128263; muto';
+    $('b-suoni').classList.toggle('spento', !acceso);
+    if (acceso && this.pronto()) this.nota(880, 1320, 0.08, { vol: 0.18 });
+  },
+};
+
+// ===========================================================================
+// GRAFICI: spazio operativo, spazio dei giunti, H ed errore
+// ===========================================================================
+const COL_G = ['#ff6b81', '#7bd88f', '#a78bfa'];        // i tre giunti
+const Grafici = {
+  box: null,
+  tela(id) {
+    const c = $(id), r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (!r.width) return null;
+    c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+    const g = c.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, r.width, r.height);
+    g.font = '10.5px Segoe UI'; g.lineJoin = 'round'; g.lineCap = 'round';
+    return { g, w: r.width, h: r.height };
+  },
+  azzera() { this.box = null; },
+  disegna() {
+    if ($('graf').classList.contains('chiuso')) return;
+    this.operativo(); this.giunti(); this.he();
+    const e = Sim.storia[Sim.storia.length - 1].e;
+    $('op-e').textContent = `|e| = ${e < 1e-3 ? (e * 1e6).toFixed(0) + ' µm' : (e * 1e3).toFixed(1) + ' mm'}`;
+  },
+  // --- spazio operativo -------------------------------------------------------
+  operativo() {
+    const T = this.tela('c-op');
+    if (!T) return;
+    const { g, w, h } = T, P = Sim.P, V = Sim.V, pts = Num.giunti(V.q, P);
+    const allarga = (b, x, y) => { b.x0 = Math.min(b.x0, x); b.x1 = Math.max(b.x1, x); b.y0 = Math.min(b.y0, y); b.y1 = Math.max(b.y1, y); };
+    if (!this.box) {
+      const b = { x0: P.cx - P.rho, x1: P.cx + P.rho, y0: P.cy - P.rho, y1: P.cy + P.rho };
+      allarga(b, 0, 0);
+      for (const p of Num.giunti([[P.q01], [P.q02], [P.q03]], P)) allarga(b, p[0], p[1]);
+      this.box = b;
+    }
+    for (const p of pts) allarga(this.box, p[0], p[1]);
+    if (st.ombra) for (const p of Num.giunti(Sim.ombra.q, P)) allarga(this.box, p[0], p[1]);
+    // inquadratura automatica sul riquadro che contiene tutto; con zoom o pan la vista libera
+    // (centro e scala in px/m) resta ferma finché un doppio clic non la riporta all'automatica
+    const b = this.box, m = 0.08 * Math.max(b.x1 - b.x0, b.y1 - b.y0) + 0.03;
+    const sAuto = Math.min((w - 20) / (b.x1 - b.x0 + 2 * m), (h - 20) / (b.y1 - b.y0 + 2 * m));
+    const v = this.vista || { cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2, s: sAuto }, s = v.s;
+    const ox = w / 2 - s * v.cx, oy = h / 2 + s * v.cy;
+    this.trasf = { ox, oy, s, sAuto, w, h, cx: v.cx, cy: v.cy };
+    const X = x => ox + s * x, Y = y => oy - s * y;
+    // griglia
+    const passo = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2].find(p => p * s > 26) || 5;
+    g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 1;
+    for (let x = Math.ceil((-ox / s) / passo) * passo; X(x) < w; x += passo) { g.beginPath(); g.moveTo(X(x), 0); g.lineTo(X(x), h); g.stroke(); }
+    for (let y = Math.floor((oy / s) / passo) * passo; Y(y) < h; y -= passo) { g.beginPath(); g.moveTo(0, Y(y)); g.lineTo(w, Y(y)); g.stroke(); }
+    g.strokeStyle = 'rgba(255,255,255,.22)';
+    g.beginPath(); g.moveTo(X(0), 0); g.lineTo(X(0), h); g.moveTo(0, Y(0)); g.lineTo(w, Y(0)); g.stroke();
+    g.fillStyle = '#8f9bb0'; g.fillText(`x, y [m] · griglia ${passo} m`, 6, h - 6);
+    // circonferenza prescritta e punto desiderato
+    g.setLineDash([6, 5]); g.strokeStyle = 'rgba(224,184,74,.85)'; g.lineWidth = 1.5;
+    g.beginPath(); g.arc(X(P.cx), Y(P.cy), P.rho * s, 0, 2 * Math.PI); g.stroke(); g.setLineDash([]);
+    // percorso dell'estremita'
+    const H = Sim.storia;
+    g.strokeStyle = 'rgba(72,202,228,.9)'; g.lineWidth = 1.6; g.beginPath();
+    H.forEach((c, i) => i ? g.lineTo(X(c.p[0]), Y(c.p[1])) : g.moveTo(X(c.p[0]), Y(c.p[1]))); g.stroke();
+    // braccio con k0 = 0
+    if (st.ombra) {
+      const o = Num.giunti(Sim.ombra.q, P);
+      g.setLineDash([5, 4]); g.strokeStyle = 'rgba(160,172,196,.7)'; g.lineWidth = 2;
+      g.beginPath(); o.forEach((p, i) => i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); g.stroke(); g.setLineDash([]);
+    }
+    // base
+    g.fillStyle = '#5b6886'; g.beginPath(); g.moveTo(X(0), Y(0)); g.lineTo(X(0) - 9, Y(0) + 12); g.lineTo(X(0) + 9, Y(0) + 12); g.closePath(); g.fill();
+    // braccio
+    g.strokeStyle = '#e6ebf5'; g.lineWidth = 5;
+    g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); g.stroke();
+    pts.slice(0, 3).forEach((p, i) => { g.fillStyle = COL_G[i]; g.strokeStyle = '#1a1a2e'; g.lineWidth = 1.5; g.beginPath(); g.arc(X(p[0]), Y(p[1]), 5.5, 0, 2 * Math.PI); g.fill(); g.stroke(); });
+    const pe = pts[3], pd = L.vec(V.pd);
+    g.fillStyle = '#48cae4'; g.beginPath(); g.arc(X(pe[0]), Y(pe[1]), 4, 0, 2 * Math.PI); g.fill();
+    g.fillStyle = '#e0b84a'; g.beginPath(); g.arc(X(pd[0]), Y(pd[1]), 4.5, 0, 2 * Math.PI); g.fill();
+    // errore: da p a p_d
+    if (Math.hypot(pd[0] - pe[0], pd[1] - pe[1]) * s > 6) {
+      g.strokeStyle = '#2ec4b6'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(X(pe[0]), Y(pe[1])); g.lineTo(X(pd[0]), Y(pd[1])); g.stroke();
+      g.fillStyle = '#2ec4b6'; g.fillText('e', (X(pe[0]) + X(pd[0])) / 2 + 4, (Y(pe[1]) + Y(pd[1])) / 2 - 4);
+    }
+    g.fillStyle = '#c9d2e3'; g.fillText(`t = ${Sim.t().toFixed(2)} s`, w - 74, 14);
+    if (this.vista) { g.fillStyle = '#ffd1a1'; g.textAlign = 'right'; g.fillText(`vista libera ×${(s / sAuto).toPrecision(2)}`, w - 6, h - 6); g.textAlign = 'left'; }
+  },
+  // rotella: zoom attorno al punto sotto il cursore; trascinamento: pan; doppio clic: automatica
+  initZoom() {
+    const c = $('c-op');
+    const libera = () => this.vista || (this.vista = { cx: this.trasf.cx, cy: this.trasf.cy, s: this.trasf.s });
+    c.addEventListener('wheel', e => {
+      e.preventDefault();
+      const T = this.trasf;
+      if (!T) return;
+      const v = libera(), r = c.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+      const wx = (mx - T.ox) / T.s, wy = (T.oy - my) / T.s;          // il punto sotto il cursore resta lì
+      const d = e.deltaMode === 1 ? 33 * e.deltaY : e.deltaY;
+      v.s = Math.min(80 * T.sAuto, Math.max(T.sAuto / 8, v.s * Math.exp(-0.0015 * d)));
+      v.cx = wx - (mx - T.w / 2) / v.s; v.cy = wy + (my - T.h / 2) / v.s;
+      this.operativo();
+    }, { passive: false });
+    let presa = null;
+    c.addEventListener('pointerdown', e => { if (!this.trasf) return; presa = { x: e.clientX, y: e.clientY }; c.setPointerCapture(e.pointerId); c.classList.add('presa'); });
+    c.addEventListener('pointermove', e => {
+      if (!presa) return;
+      const dx = e.clientX - presa.x, dy = e.clientY - presa.y;
+      if (!this.vista && Math.hypot(dx, dy) < 3) return;         // un clic fermo non libera la vista
+      const v = libera();
+      v.cx -= dx / v.s; v.cy += dy / v.s; presa = { x: e.clientX, y: e.clientY };
+      this.operativo();
+    });
+    const fine = () => { presa = null; c.classList.remove('presa'); };
+    c.addEventListener('pointerup', fine); c.addEventListener('pointercancel', fine);
+    c.addEventListener('dblclick', () => { this.vista = null; this.operativo(); });
+  },
+  // --- strisce nel tempo -------------------------------------------------------
+  finestra() { const W = 3 * Sim.P.T, t = Sim.t(), t1 = Math.max(t, W); return [t1 - W, t1]; },
+  striscia(g, r, serie, lo, hi, { bande = [], linee = [], nome = '', valore = '', log = false } = {}) {
+    const [t0, t1] = this.finestra();
+    const f = log ? v => Math.log10(Math.max(v, 1e-12)) : v => v, a = f(lo), b = f(hi);
+    const X = t => r.x + (t - t0) / (t1 - t0) * r.w, Y = v => r.y + r.h - (Math.min(b, Math.max(a, f(v))) - a) / (b - a) * r.h;
+    g.fillStyle = 'rgba(255,255,255,.03)'; g.fillRect(r.x, r.y, r.w, r.h);
+    for (const [u, v, col] of bande) { g.fillStyle = col; const y0 = Y(v), y1 = Y(u); g.fillRect(r.x, Math.min(y0, y1), r.w, Math.abs(y1 - y0)); }
+    for (const [v, col, dash] of linee) { g.strokeStyle = col; g.lineWidth = 1; g.setLineDash(dash || []); g.beginPath(); g.moveTo(r.x, Y(v)); g.lineTo(r.x + r.w, Y(v)); g.stroke(); }
+    g.setLineDash([]);
+    g.save(); g.beginPath(); g.rect(r.x, r.y - 1, r.w, r.h + 2); g.clip();
+    for (const s of serie) {
+      g.strokeStyle = s.col; g.lineWidth = s.lw || 1.6; g.setLineDash(s.dash || []); g.beginPath();
+      let primo = true;
+      for (const [t, v] of s.pts) { if (t < t0) continue; primo ? g.moveTo(X(t), Y(v)) : g.lineTo(X(t), Y(v)); primo = false; }
+      g.stroke();
+    }
+    g.restore(); g.setLineDash([]);
+    g.fillStyle = '#c9d2e3'; g.fillText(nome, r.x + 4, r.y + 11);
+    g.fillStyle = '#ffd98a'; g.textAlign = 'right'; g.fillText(valore, r.x + r.w - 4, r.y + 11); g.textAlign = 'left';
+    return { X, Y };
+  },
+  asseTempo(g, r, y) {
+    const [t0, t1] = this.finestra(), passo = [0.5, 1, 2, 5, 10, 20].find(p => (t1 - t0) / p <= 8) || 50;
+    g.fillStyle = '#8f9bb0'; g.textAlign = 'center';
+    for (let t = Math.ceil(t0 / passo) * passo; t <= t1 + 1e-9; t += passo) g.fillText(`${+t.toFixed(1)}`, r.x + (t - t0) / (t1 - t0) * r.w, y);
+    g.textAlign = 'right'; g.fillText('t [s]', r.x - 3, y); g.textAlign = 'left';
+  },
+  giunti() {
+    const T = this.tela('c-giunti');
+    if (!T) return;
+    const { g, w, h } = T, P = Sim.P, H = Sim.storia, O = Sim.ombra.storia;
+    const lo = [P.q1m, P.q2m, P.q3m].map(x => x * R2D), hi = [P.q1M, P.q2M, P.q3M].map(x => x * R2D);
+    const sh = (h - 22) / 3;
+    for (let i = 0; i < 3; i++) {
+      const r = { x: 34, y: 4 + i * sh, w: w - 40, h: sh - 6 };
+      const dati = H.map(c => [c.t, c.q[i] * R2D]), ombra = O.map(c => [c.t, c.q[i] * R2D]);
+      const vals = dati.map(d => d[1]).concat(st.ombra ? ombra.map(d => d[1]) : []);
+      const corsa = hi[i] - lo[i], a = Math.min(lo[i] - 0.12 * corsa, ...vals), b = Math.max(hi[i] + 0.12 * corsa, ...vals);
+      const serie = [];
+      if (st.ombra) serie.push({ pts: ombra, col: 'rgba(160,172,196,.75)', dash: [5, 4], lw: 1.3 });
+      serie.push({ pts: dati, col: COL_G[i], lw: 1.9 });
+      const q = H[H.length - 1].q[i] * R2D;
+      const { Y } = this.striscia(g, r, serie, a, b, {
+        bande: [[a, lo[i], 'rgba(255,90,118,.16)'], [hi[i], b, 'rgba(255,90,118,.16)']],
+        linee: [[lo[i], 'rgba(255,90,118,.6)'], [hi[i], 'rgba(255,90,118,.6)'], [(lo[i] + hi[i]) / 2, 'rgba(123,216,143,.8)', [2, 3]]],
+        nome: `q${'₁₂₃'[i]} [°]`, valore: `${q.toFixed(1)}°` });
+      g.fillStyle = '#8f9bb0'; g.textAlign = 'right';
+      g.fillText(`${Math.round(hi[i])}`, r.x - 3, Y(hi[i]) + 3); g.fillText(`${Math.round(lo[i])}`, r.x - 3, Y(lo[i]) + 3);
+      g.textAlign = 'left';
+    }
+    this.asseTempo(g, { x: 34, y: 0, w: w - 40 }, h - 5);
+  },
+  he() {
+    const T = this.tela('c-he');
+    if (!T) return;
+    const { g, w, h } = T, H = Sim.storia, O = Sim.ombra.storia, sh = (h - 20) / 2;
+    const rH = { x: 34, y: 4, w: w - 40, h: sh - 6 }, rE = { x: 34, y: 4 + sh, w: w - 40, h: sh - 6 };
+    const dH = H.map(c => [c.t, c.H]), oH = O.map(c => [c.t, c.H]);
+    const minH = Math.min(...dH.map(d => d[1]), ...(st.ombra ? oH.map(d => d[1]) : [0]), -1e-3);
+    const serieH = [];
+    if (st.ombra) serieH.push({ pts: oH, col: 'rgba(160,172,196,.75)', dash: [5, 4], lw: 1.3 });
+    serieH.push({ pts: dH, col: '#7bd88f' });
+    this.striscia(g, rH, serieH, minH * 1.08, -minH * 0.08, { linee: [[0, 'rgba(123,216,143,.5)', [2, 3]]],
+      nome: 'H(q): 0 = tutti a metà corsa', valore: H[H.length - 1].H.toFixed(4) });
+    const dE = H.map(c => [c.t, c.e]), maxE = Math.max(1e-4, ...dE.map(d => d[1]));
+    const e = H[H.length - 1].e;
+    const { Y } = this.striscia(g, rE, [{ pts: dE, col: '#2ec4b6' }], 1e-7, maxE * 2, { log: true,
+      linee: [[1e-3, 'rgba(255,255,255,.12)'], [1e-6, 'rgba(255,255,255,.12)']], nome: '|e| [m], scala log', valore: e.toExponential(1) });
+    g.fillStyle = '#8f9bb0'; g.textAlign = 'right';
+    if (maxE * 2 > 1e-3) g.fillText('1 mm', rE.x - 3, Y(1e-3) + 3);
+    g.fillText('1 µm', rE.x - 3, Y(1e-6) + 3);
+    g.textAlign = 'left';
+    this.asseTempo(g, { x: 34, y: 0, w: w - 40 }, h - 5);
+  },
+};
+
+// ===========================================================================
+// PANNELLO DESTRO: il blocco selezionato, con le equazioni, i valori e le verifiche
+// ===========================================================================
+const Dettaglio = {
+  aggiorna() {
+    const box = $('dettaglio'), g = Vista.grafo;
+    if (!st.sel || !g || !g.nodi[st.sel]) {
+      box.innerHTML = '<div class="note">Clic su un blocco: le sue equazioni, scritte da sympy per il braccio RRR, che cosa legge e che cosa calcola, con i valori del passo. I blocchi a monte si colorano di blu, quelli a valle di verde. Doppio clic, o «⊕ apri», per vedere che cosa c\'è dentro.</div>';
+      return;
+    }
+    const n = g.nodi[st.sel], V = valoriCorrenti();
+    let h = '';
+    if (n.tipo === 'sorgente') {
+      h = n.s === 't'
+        ? `<div class="note"><b>Orologio</b>: il tempo del passo, \\(t_k=k\\,h\\). Alimenta solo il riferimento; a ogni passo avanza di \\(h\\).</div><div class="tex" data-t="${encodeURIComponent('t_k=' + texVal('t', V.t))}"></div>`
+        : `<div class="note"><b>Ritardo unitario</b> \\(z^{-1}\\): al passo \\(k\\) restituisce il valore \\(\\bq_{k+1}\\) che Eulero ha calcolato al passo \\(k-1\\); all'istante iniziale restituisce \\(\\bq_0\\), dato a sinistra. È la «postura ritardata»: per questo nello schema non ci sono loop algebrici.</div><div class="tex" data-t="${encodeURIComponent('\\bq_k=z^{-1}\\,\\bq_{k+1}')}"></div><div class="tex" data-t="${encodeURIComponent('\\bq_k=' + texVal(STATO, V[STATO]))}"></div>`;
+    } else if (n.tipo === 'fase') {
+      const bl = [...new Set(n.eq.map(e => e.blocco))];
+      h = `<div class="note"><b>${DATI.fasi[n.fase].titolo}</b>: ${n.eq.length} equazioni in ${bl.length} blocchi (${bl.map(b => DATI.blocchi[b].titolo).join(', ')}). Con «⊕ apri» si vedono i blocchi.</div>`;
+    } else {
+      for (const b of [...new Set(n.eq.map(e => e.blocco))]) {
+        const B = DATI.blocchi[b];
+        h += `<div class="note"><b>${B.titolo}</b> · nello schema: ${spT(B.corto)}</div><div class="tex" data-t="${encodeURIComponent(B.tex)}"></div><div class="note">${B.nota}</div>`;
+      }
+      h += '<div class="sub">Equazioni e valori del passo</div><table class="vals">';
+      for (const e of n.eq) {
+        h += `<tr><td colspan="2"><div class="tex" data-t="${encodeURIComponent(e.tex)}"></div></td></tr>`;
+        h += `<tr><td>calcola ${spT(vtex(e.out))}</td><td class="num">${spT(texVal(e.out, V[e.out]))}</td></tr>`;
+        if (n.eq.length === 1) for (const s of e.ins) h += `<tr><td style="color:#9aa6b8">legge ${spT(vtex(s))}</td><td class="num">${spT(texVal(s, V[s]))}</td></tr>`;
+        if (e.par.length) h += `<tr><td colspan="2" class="note">parametri: ${e.par.map(p => `${spT(DATI.partex[p])} = ${fmtNum(p === 'omega' ? Sim.P.omega : st.par[p], 3)}${p === 'omega' ? ' rad/s' : PAR[p].unita ? ' ' + PAR[p].unita : ''}`).join(', ')}</td></tr>`;
+      }
+      h += '</table>' + this.verifiche(n, V);
+    }
+    box.innerHTML = h;
+    box.querySelectorAll('[data-t]').forEach(el => tex(decodeURIComponent(el.dataset.t), el, true));
+    texSpan(box); texIn(box);
+  },
+  // le proprieta' che la dispensa dimostra, controllate sui numeri del passo
+  verifiche(n, V) {
+    const ids = new Set(n.eq.map(e => e.id)), r = [];
+    const ok = (x, tol = 1e-9) => `<b class="${x < tol ? 'ok' : 'warn'}">${x.toExponential(1)}</b>`;
+    if (ids.has('J') && V.J) {
+      const w = Num.manipolabilita(V.J);
+      r.push(`Manipolabilità \\(\\sqrt{\\det(JJ^{\\mathsf T})}\\) = <b class="${w > 0.02 ? 'ok' : 'warn'}">${w.toFixed(4)}</b>${w > 0.02 ? '' : ': vicino a una singolarità, \\(J^{+}\\) cresce'}.`);
+    }
+    if (ids.has('Jp') && V.Jp && V.J) r.push(`\\(JJ^{+}=I_2\\): scarto massimo ${ok(L.maxAbs(L.add(L.mul(V.J, V.Jp), L.scale(-1, L.eye(2)))))}; \\(J^{+}\\) è un'inversa destra.`);
+    if (ids.has('P') && V.P && V.J) r.push(`\\(JP=0\\) e \\(P^2=P\\): scarti ${ok(L.maxAbs(L.mul(V.J, V.P)))} e ${ok(L.maxAbs(L.add(L.mul(V.P, V.P), L.scale(-1, V.P))))}.`);
+    if (ids.has('dqN') && V.dqN && V.J) r.push(`\\(J\\dot{\\bq}_N\\) = ${ok(L.maxAbs(L.mul(V.J, V.dqN)))} m/s: l'automovimento non muove l'estremità.`);
+    if ((ids.has('dq') || ids.has('dqV')) && V.dqV && V.dqN) r.push(`\\(\\dot{\\bq}_V^{\\mathsf T}\\dot{\\bq}_N\\) = ${ok(Math.abs(L.dot(L.vec(V.dqV), L.vec(V.dqN))))}: i due addendi sono ortogonali.`);
+    if (ids.has('dq') && V.dq && V.Vc) r.push(`\\(J\\dot{\\bq}-V_c\\) = ${ok(L.maxAbs(L.add(L.mul(V.J, V.dq), L.scale(-1, V.Vc))))}: il compito è rispettato.`);
+    if (ids.has('qn')) { const kh = st.par.K * st.par.h; r.push(`\\(Kh\\) = <b class="${kh < 1 ? 'ok' : kh < 2 ? 'warn' : 'male'}">${kh.toFixed(2)}</b>: l'errore si moltiplica per \\(1-Kh\\) = ${(1 - kh).toFixed(2)} a ogni passo.`); }
+    return r.length ? '<div class="sub">Verifiche sui numeri</div>' + r.map(x => `<div class="verifica">${x}</div>`).join('') : '';
+  },
+};
+
+// ===========================================================================
+// STRUTTURA (analisi.py, networkx): onde, ciclo del ritardo, Eulero implicito
+// ===========================================================================
+const Struttura = {
+  disegna() {
+    const A = DATI.analisi, n = DATI.equazioni.length, nomi = ids => ids.map(id => spT(vtex(EQ[id].out))).join(', ');
+    $('str-n').textContent = `${n} equazioni, ${A.onde.length} onde`;
+    let h = `<div class="note">Il generatore (<b>visualizzatore.py</b>) scrive le equazioni con <b>sympy</b>; <b>analisi.py</b> ne studia la struttura con <b>networkx</b>: un arco da un'equazione a quella che ne legge l'uscita.</div>`;
+    h += `<div class="sub">Dentro il passo: nessun loop algebrico</div><div class="note">Il grafo è aciclico. L'<b>onda</b> di un'equazione è il cammino più lungo dalle sorgenti \\(t_k\\), \\(\\bq_k\\): le equazioni della stessa onda sono indipendenti e si possono calcolare insieme. Sono le onde dei pallini.</div>`;
+    h += '<table class="onde">' + A.onde.map((ids, i) => `<tr><td class="n">onda ${i + 1}</td><td>${ids.map(id => `<span class="lg${EQ[id].ins.includes(STATO) ? ' q' : ''}">${spT(vtex(EQ[id].out))}</span>`).join('')}</td></tr>`).join('') + '</table>';
+    h += `<div class="note">In azzurro le equazioni che leggono direttamente la configurazione corrente: ${nomi(A.leggono_q)}. Attraverso queste, da \\(\\bq_k\\) dipendono ${A.dipendono_da_q.length} equazioni su ${n}: tutte tranne il riferimento.</div>`;
+    h += `<div class="sub">Il ciclo della retroazione</div><div class="note">Aggiungendo l'arco del ritardo, \\(\\bq_{k+1}\\to z^{-1}\\to\\bq_k\\), nasce un ciclo di ${A.ciclo_ritardo.length} equazioni: è l'anello della CLIK. Lo spezza il ritardo: \\(\\bq_{k+1}\\) serve solo al passo dopo, ed è questo che rende esplicito Eulero in avanti.</div>`;
+    h += `<div class="sub">E con Eulero implicito?</div><div class="note">Con \\(\\bq_{k+1}=\\bq_k+h\\,\\dot{\\bq}(\\bq_{k+1})\\) le equazioni che leggono \\(\\bq\\) leggerebbero l'uscita di Eulero dello stesso passo: networkx trova un loop algebrico di ${A.loop_implicito.length} equazioni, da risolvere con Newton a ogni passo.</div>
+      <label class="chk"><input type="checkbox" id="chk-impl2"> mostra nello schema le equazioni del loop (bordo tratteggiato)</label>`;
+    $('struttura').innerHTML = h;
+    texSpan($('struttura')); texIn($('struttura'));
+    $('chk-impl2').checked = st.impl;
+    $('chk-impl2').addEventListener('change', e => impostaImpl(e.target.checked));
+  },
+};
+function impostaImpl(v) { st.impl = v; $('chk-impl').checked = v; if ($('chk-impl2')) $('chk-impl2').checked = v; evidenzia(); }
+
+// ===========================================================================
+// LEGENDA
+// ===========================================================================
+function costruisciLegenda() {
+  const tipi = Object.entries(DATI.tipi).map(([k, t]) =>
+    `<div class="voce tipo" data-tipo="${k}" title="clic: evidenzia i blocchi di questo tipo"><i style="background:color-mix(in srgb, var(--t-${k}) 30%, #18213b); border-left:5px solid var(--t-${k})"></i>${t.titolo}</div>`).join('');
+  $('leg').innerHTML = `<div class="fila"><span class="tit" title="riduci o riapri la legenda">legenda <span id="leg-rid">▾</span></span>
+      <span class="nota corpo">colore = che cosa calcola il blocco (clic per evidenziarlo):</span><span class="corpo fila" style="display:contents">${tipi}</span></div>
+    <div class="fila corpo">
+      <span class="voce"><i style="border-radius:2px 8px 8px 2px; border:1.5px solid var(--ingresso); background:#18213b"></i>orologio \\(t_k\\) / <i style="border-radius:2px; border:1.5px solid var(--der); background:#18213b"></i>ritardo \\(z^{-1}\\): dà \\(\\bq_k\\)</span>
+      <span class="voce"><i style="height:0; border-top:2px dashed var(--der)"></i>\\(\\bq_{k+1}\\) torna al ritardo</span>
+      <span class="voce">fili: <i style="height:0; border-top:2px solid var(--stato)"></i>\\(\\bq_k\\) <i style="height:0; border-top:2px solid var(--ingresso)"></i>\\(t_k\\) <i style="height:0; border-top:2px solid var(--der)"></i>\\(\\dot{\\bq}\\) <i style="height:5px; border-top:2px solid #7d8aa8; border-bottom:2px solid #7d8aa8; border-radius:0"></i>matrice</span>
+      <span class="voce">pallini: <i class="pal" style="background:#48cae4"></i>configurazione <i class="pal" style="background:#e0b84a"></i>tempo <i class="pal" style="background:#ffe3a3"></i>vettore <i class="qua" style="background:#ffe3a3"></i>matrice <i class="pal" style="background:#ff5a76"></i>\\(\\dot{\\bq}\\)</span>
+      <span class="voce"><i style="background:#18213b; border:1px solid #3a4766; box-shadow:2px 2px 0 0 #3a4766"></i>blocco con altri dentro: ⊕ apri, ⊖ chiudi</span>
+      <span class="voce"><i style="background:#18213b; box-shadow:0 0 0 2px var(--monte)"></i>a monte / <i style="background:#18213b; box-shadow:0 0 0 2px var(--valle)"></i>a valle del blocco scelto</span>
+      <span class="voce"><i style="background:#18213b; outline:2px dashed var(--loop); outline-offset:1px"></i>loop con Eulero implicito</span>
+      <span class="nota">rotella: zoom · trascina: sposta lo schema o un blocco · passa sui fili: i valori</span>
+    </div>`;
+  texIn($('leg'));
+  $('leg').querySelector('.tit').addEventListener('click', () => {
+    $('leg').classList.toggle('ridotta'); $('leg-rid').textContent = $('leg').classList.contains('ridotta') ? '▸' : '▾';
+    if (!Vista.toccata) inquadra();
+  });
+  $('leg').querySelectorAll('.voce.tipo').forEach(v => v.addEventListener('click', () => {
+    st.evTipo = st.evTipo === v.dataset.tipo ? null : v.dataset.tipo;
+    $('leg').querySelectorAll('.voce.tipo').forEach(x => x.classList.toggle('on', x.dataset.tipo === st.evTipo));
+    if (st.evTipo) st.sel = null;
+    evidenzia(); Dettaglio.aggiorna();
+  }));
+}
+
+// ===========================================================================
+// CURSORI E COMANDI
+// ===========================================================================
+const GRUPPI = { iniziale: 'cur-iniziale', moto: 'cur-moto', legge: 'cur-legge', braccio: 'cur-braccio', corse: 'cur-corse' };
+function nuovoInizio() {
+  Flusso.esci(false); Sim.reset(); Grafici.azzera();
+  aggiornaValori(); Grafici.disegna(); Dettaglio.aggiorna(); avvisi(); Flusso.testi();
+}
+function costruisciComandi() {
+  for (const p of DATI.parametri) {
+    const r = document.createElement('div');
+    r.className = 'riga';
+    r.innerHTML = `<label></label><input type="range" min="${p.lo}" max="${p.hi}" step="${p.passo}" value="${st.par[p.slug]}" id="c-${p.slug}"><span class="val" id="c-${p.slug}-v"></span>`;
+    tex(p.tex, r.querySelector('label'));
+    r.querySelector('input').addEventListener('input', ev => { st.par[p.slug] = parseFloat(ev.target.value); scriviCursore(p); nuovoInizio(); });
+    $(GRUPPI[p.gruppo]).appendChild(r);
+    scriviCursore(p);
+  }
+  $('b-default').addEventListener('click', () => {
+    for (const p of DATI.parametri) { st.par[p.slug] = p.valore; $('c-' + p.slug).value = p.valore; scriviCursore(p); }
+    nuovoInizio();
+  });
+  document.querySelectorAll('#seg-livello button').forEach(b => b.addEventListener('click', () => {
+    st.livello = +b.dataset.l; st.aperti.clear(); st.chiusi.clear();
+    document.querySelectorAll('#seg-livello button').forEach(x => x.classList.toggle('on', x === b));
+    disegna();
+  }));
+  $('b-flusso').addEventListener('click', () => {
+    st.flusso = st.flusso === 'DOWN' ? 'RIGHT' : 'DOWN';
+    $('b-flusso').innerHTML = st.flusso === 'DOWN' ? '&#8595; flusso' : '&#8594; flusso';
+    disegna();
+  });
+  $('b-riordina').addEventListener('click', () => disegna());
+  $('b-inquadra').addEventListener('click', inquadra);
+  $('chk-valori').addEventListener('change', e => { st.valori = e.target.checked; disegna(Vista.toccata); });
+  $('chk-etichette').addEventListener('change', e => { st.etichette = e.target.checked; rendiArchi(); evidenzia(); });
+  $('chk-dip').addEventListener('change', e => { st.dip = e.target.checked; evidenzia(); });
+  $('chk-impl').addEventListener('change', e => impostaImpl(e.target.checked));
+  $('chk-ombra').addEventListener('change', e => { st.ombra = e.target.checked; document.querySelectorAll('.leg-graf .ombra').forEach(x => x.style.display = st.ombra ? '' : 'none'); Grafici.azzera(); Grafici.disegna(); });
+  const vel = () => { Flusso.vel = 2 ** parseFloat($('vel').value); $('vel-v').textContent = '×' + (+Flusso.vel.toPrecision(2)); Flusso.testi(); };
+  $('vel').addEventListener('input', vel); vel();
+  $('s-play').addEventListener('click', () => Flusso.suona());
+  $('s-passo').addEventListener('click', () => Flusso.passo());
+  $('s-micro').addEventListener('click', () => Flusso.micro());
+  $('s-reale').addEventListener('click', () => Flusso.reale());
+  $('s-reset').addEventListener('click', nuovoInizio);
+  let suoni = true;
+  try { suoni = localStorage.getItem('schema-clik-suoni') !== '0'; } catch (e) { /* preferenza non disponibile */ }
+  Suoni.attivi = suoni; $('b-suoni').innerHTML = suoni ? '&#128266; suoni' : '&#128263; muto'; $('b-suoni').classList.toggle('spento', !suoni);
+  $('b-suoni').addEventListener('click', () => Suoni.imposta(!Suoni.attivi));
+  costruisciLegenda();
+}
+function scriviCursore(p) {
+  const v = st.par[p.slug];
+  $('c-' + p.slug + '-v').textContent = `${+v.toFixed(3)}${p.unita ? (p.unita === '°' ? '°' : ' ' + p.unita) : ''}`;
+}
+function avvisi() {
+  const P = Sim.P, V = Sim.V, kh = P.K * P.h;
+  $('avviso-kh').innerHTML = kh >= 2 ? `<b class="male">K h = ${kh.toFixed(2)} ≥ 2</b>: a tempo discreto l'errore cresce a ogni passo, la legge diverge.`
+    : kh > 1 ? `<b class="warn">K h = ${kh.toFixed(2)}</b>: l'errore cambia segno a ogni passo (1 − Kh < 0) e decade più lentamente.`
+      : `<b class="ok">K h = ${kh.toFixed(2)}</b>: a ogni passo l'errore si moltiplica per 1 − Kh = ${(1 - kh).toFixed(2)}.`;
+  const e0 = L.norm(L.vec(V.e)), lo = [P.q1m, P.q2m, P.q3m], hi = [P.q1M, P.q2M, P.q3M];
+  const fuori = [0, 1, 2].filter(i => V.q[i][0] < lo[i] || V.q[i][0] > hi[i]).map(i => `q${'₁₂₃'[i]}`);
+  $('nota-iniziale').innerHTML = `\\(p(\\bq_0)\\) dista <b>${(e0 * 1000).toFixed(1)} mm</b> da \\(p_d(0)\\)${e0 > 1e-3 ? ': l\'errore iniziale si annulla come \\((1-Kh)^k\\)' : ''}.`
+    + (fuori.length ? ` <b class="male">${fuori.join(', ')} fuori corsa</b> già all'inizio.` : '');
+  texIn($('nota-iniziale'));
+}
+
+// ===========================================================================
+// INTERAZIONE: zoom, trascinamento, selezione, apri e chiudi
+// ===========================================================================
+function apriChiudi(id, azione) {
+  const n = Vista.grafo.nodi[id];
+  if (!n || !n.eq.length) return;
+  if (azione === 'apri' && n.apribile) { st.aperti.add(n.id); st.chiusi.delete(n.id); }
+  else if (azione === 'chiudi' && n.chiudibile) { st.chiusi.add(n.padre); st.aperti.delete(n.padre); }
+  else return;
+  st.sel = null;
+  disegna(Vista.toccata);
+}
+function initInterazione() {
+  const c = $('centro');
+  let presa = null, ultimo = { id: null, t: 0 };
+  const fuori = e => e.target.closest('#leg, #barra');
+  c.addEventListener('wheel', e => {
+    if (fuori(e)) return;
+    e.preventDefault();
+    const r = c.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+    const s1 = Math.min(3, Math.max(0.1, Vista.s * Math.exp(-e.deltaY * 0.0012))), f = s1 / Vista.s;
+    Vista.tx = mx - (mx - Vista.tx) * f; Vista.ty = my - (my - Vista.ty) * f; Vista.s = s1;
+    Vista.toccata = true; applicaVista();
+  }, { passive: false });
+  c.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || fuori(e)) return;
+    const p = e.target.closest('.pill');
+    if (p) { apriChiudi(p.closest('.nodo').dataset.id, p.dataset.azione); return; }
+    const nodo = e.target.closest('.nodo');
+    c.setPointerCapture(e.pointerId);
+    if (nodo) {
+      const id = nodo.dataset.id, base = st.pos[id] || Vista.geo.nodi[id];
+      presa = { tipo: 'nodo', id, x0: e.clientX, y0: e.clientY, bx: base.x, by: base.y, mosso: false };
+    } else {
+      presa = { tipo: 'vista', x0: e.clientX, y0: e.clientY, tx: Vista.tx, ty: Vista.ty, mosso: false };
+      c.classList.add('trascina');
+    }
+  });
+  c.addEventListener('pointermove', e => {
+    if (!presa) { tooltip(e); return; }
+    const dx = e.clientX - presa.x0, dy = e.clientY - presa.y0;
+    if (Math.abs(dx) + Math.abs(dy) > 3) presa.mosso = true;
+    if (presa.tipo === 'vista') { Vista.tx = presa.tx + dx; Vista.ty = presa.ty + dy; Vista.toccata = true; applicaVista(); }
+    else if (presa.mosso) {
+      st.pos[presa.id] = { x: presa.bx + dx / Vista.s, y: presa.by + dy / Vista.s };
+      const el = nodoEl(presa.id);
+      el.style.left = st.pos[presa.id].x + 'px'; el.style.top = st.pos[presa.id].y + 'px';
+      rendiArchi(); evidenzia();
+    }
+  });
+  // clic: seleziona; due clic ravvicinati sullo stesso blocco: lo apre (o, se non si apre, lo richiude)
+  const fine = () => {
+    if (presa && !presa.mosso) {
+      if (presa.tipo === 'nodo') {
+        const ora = performance.now(), id = presa.id;
+        if (ultimo.id === id && ora - ultimo.t < 400) {
+          ultimo = { id: null, t: 0 }; presa = null; c.classList.remove('trascina');
+          const n = Vista.grafo.nodi[id];
+          apriChiudi(id, n && n.apribile ? 'apri' : 'chiudi');
+          return;
+        }
+        ultimo = { id, t: ora };
+        st.sel = id; st.evTipo = null;
+        $('leg').querySelectorAll('.voce.tipo').forEach(x => x.classList.remove('on'));
+      } else st.sel = null;
+      evidenzia(); Dettaglio.aggiorna();
+    }
+    presa = null; c.classList.remove('trascina');
+  };
+  c.addEventListener('pointerup', fine); c.addEventListener('pointercancel', fine);
+}
+function tooltip(e) {
+  const t = $('tooltip'), hit = e.target.classList && e.target.classList.contains('hit') ? e.target : null;
+  document.querySelectorAll('#archi path.arco.hover').forEach(p => p.classList.remove('hover'));
+  if (!hit) { t.style.display = 'none'; return; }
+  const a = Vista.grafo.archi.find(x => x.id === hit.dataset.a);
+  if (!a) { t.style.display = 'none'; return; }
+  document.querySelector(`#archi path.arco[data-a="${a.id}"]`).classList.add('hover');
+  const V = valoriCorrenti();
+  t.innerHTML = a.vars.map(s => `<div>${spT(vtex(s))} <span style="color:#9aa6b8">${DATI.variabili[s].nome}</span> <span style="color:#ffd98a; font-family:Consolas">${V[s] === undefined ? '—' : testoVal(s, V[s])}</span></div>`).join('');
+  texSpan(t);
+  const r = $('centro').getBoundingClientRect();
+  t.style.left = (e.clientX - r.left + 14) + 'px'; t.style.top = (e.clientY - r.top + 10) + 'px'; t.style.display = 'block';
+}
+// il pannello destro si chiude verso destra: lo schema al centro resta com'è e lo spazio
+// liberato va alla colonna dei grafici; riaprendolo la colonna restituisce lo spazio
+function pannelloDx(apri) {
+  const dx = $('dx'), gr = $('graf'), rz = $('rz-dx'), lc = () => $('centro').getBoundingClientRect().width;
+  if (apri === !dx.classList.contains('chiuso')) return;
+  const c0 = lc(), wg = gr.getBoundingClientRect().width;
+  dx.classList.toggle('chiuso', !apri); rz.classList.toggle('linguetta', !apri);
+  rz.title = apri ? 'trascina per allargare o stringere; doppio clic: chiudi verso destra' : 'clic: riapre il pannello del blocco selezionato';
+  if (!gr.classList.contains('chiuso')) {
+    // chiudendo si misura quanto si allarga il centro; riaprendo si restituisce lo stesso
+    // (misurarlo di nuovo non va: con lo schermo stretto il centro si ferma al minimo)
+    if (!apri) st.dGraf = lc() - c0;
+    gr.style.width = Math.max(240, wg + (apri ? -(st.dGraf || 0) : st.dGraf)) + 'px';
+  }
+  Grafici.disegna();
+}
+function initSeparatori() {
+  for (const [idR, idP, verso] of [['rz-sx', 'sx', 1], ['rz-graf', 'graf', -1], ['rz-dx', 'dx', -1]]) {
+    const rz = $(idR), pan = $(idP);
+    let x0 = null, w0 = 0;
+    rz.addEventListener('pointerdown', e => { if (pan.classList.contains('chiuso')) return; x0 = e.clientX; w0 = pan.getBoundingClientRect().width; rz.setPointerCapture(e.pointerId); rz.classList.add('attivo'); });
+    rz.addEventListener('pointermove', e => { if (x0 === null) return; pan.style.width = Math.max(240, Math.min(window.innerWidth * (idP === 'graf' ? 0.6 : 0.45), w0 + verso * (e.clientX - x0))) + 'px'; Grafici.disegna(); });
+    const fine = () => { x0 = null; rz.classList.remove('attivo'); };
+    rz.addEventListener('pointerup', fine); rz.addEventListener('pointercancel', fine);
+    if (idP === 'dx') {
+      rz.addEventListener('dblclick', () => pannelloDx(false));
+      rz.addEventListener('click', () => { if (pan.classList.contains('chiuso')) pannelloDx(true); });
+    } else rz.addEventListener('dblclick', () => { pan.classList.toggle('chiuso'); Grafici.disegna(); if (!Vista.toccata) inquadra(); });
+  }
+  $('b-chiudi-dx').addEventListener('click', () => pannelloDx(false));
+}
+
+window.addEventListener('load', () => {
+  Sim.reset();
+  costruisciComandi(); initInterazione(); initSeparatori(); Grafici.initZoom();
+  // i grafici si ridisegnano quando cambiano dimensione: separatori, pannello destro, sezioni chiuse
+  const ro = new ResizeObserver(() => Grafici.disegna());
+  for (const id of ['c-op', 'c-giunti', 'c-he']) ro.observe($(id));
+  texIn($('sx')); texIn($('graf'));
+  avvisi(); Struttura.disegna(); Dettaglio.aggiorna(); Flusso.testi();
+  Grafici.disegna();
+  disegna().then(() => { document.body.dataset.pronto = '1'; });
+});
+window.addEventListener('resize', () => { Grafici.disegna(); if (!Vista.toccata) inquadra(); });
+window.__clik = { Sim, Num, Flusso, Grafici, st, L, DATI, FUNZ, parNum };
+</script>
+</body>
+</html>
