@@ -12,6 +12,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quattro sottospazi del braccio RR</title>
 <style>
+  /* Dimensione globale del testo: 1 = valori di progetto, 1.2 = +20%. Scala il pannello, i titoli delle viste e
+     le etichette dei disegni. */
+  :root { --fs: 1.5; }
   /* Grafica a sinistra, pannello a destra (come sottospazi_antropomorfo.html). La grafica: in alto lo spazio
      dell'end-effector e quello dei giunti; sotto, i quattro sottospazi alla Strang. Colori dei sottospazi: le
      immagini in tinte fredde, i nuclei in tinte calde; gli stessi nelle viste, nel disegno e nel pannello. */
@@ -28,7 +31,7 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); }
-  body { font-family: var(--serif); font-size: 15px; line-height: 1.35; display: flex; overflow: hidden; }
+  body { font-family: var(--serif); font-size: calc(15px * var(--fs)); line-height: 1.35; display: flex; overflow: hidden; }
   #view { position: relative; flex: 1 1 auto; min-width: 0; height: 100%; display: grid;
           grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); }
   .cella { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
@@ -37,43 +40,43 @@
   #c-so { grid-column: 1 / span 2; grid-row: 2; border-top: 2px solid #cdb9b4; background: #fdfbfa; }
   .cella svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
   .cella svg text { font-family: var(--math); }
-  .tit { position: absolute; left: 10px; top: 7px; z-index: 2; pointer-events: none; font-size: 15.5px; font-weight: 700;
+  .tit { position: absolute; left: 10px; top: 7px; z-index: 2; pointer-events: none; font-size: calc(15.5px * var(--fs)); font-weight: 700;
          background: rgba(255,255,255,0.86); padding: 1px 6px 2px; max-width: calc(100% - 20px); }
-  .tit .s { display: block; font-size: 12.5px; color: var(--dim); font-style: italic; font-weight: normal; }
+  .tit .s { display: block; font-size: calc(12.5px * var(--fs)); color: var(--dim); font-style: italic; font-weight: normal; }
   .tit.dx { left: auto; right: 10px; text-align: right; }
   /* zoom delle viste in alto */
-  .rip { position: absolute; left: 10px; bottom: 8px; z-index: 3; font-size: 12.5px; padding: 1px 8px; opacity: 0.9; }
+  .rip { position: absolute; left: 10px; bottom: 8px; z-index: 3; font-size: calc(12.5px * var(--fs)); padding: 1px 8px; opacity: 0.9; }
   #c-ee svg, #c-gi svg { cursor: grab; touch-action: none; }
   #cap-auto { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); z-index: 3; pointer-events: none;
-               background: rgba(255,255,255,0.92); border: 1px solid #b9ddd6; padding: 3px 12px; font-size: 16.5px;
+               background: rgba(255,255,255,0.92); border: 1px solid #b9ddd6; padding: 3px 12px; font-size: calc(16.5px * var(--fs));
                font-weight: 700; color: var(--RJ); white-space: nowrap; }
-  #b-autoinf { left: auto; right: 10px; bottom: 8px; font-size: 13.5px; padding: 3px 10px; background: var(--rosina);
+  #b-autoinf { left: auto; right: 10px; bottom: 8px; font-size: calc(13.5px * var(--fs)); padding: 3px 10px; background: var(--rosina);
                border-color: var(--rosinaC); box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
   /* J = U Sigma V^T con i numeri */
-  .svd { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; margin: 4px 0; font-size: 14px; }
+  .svd { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; margin: 4px 0; font-size: calc(14px * var(--fs)); }
   .svd .lab { font-family: var(--math); font-style: italic; margin: 0 2px; }
-  .svd table.J { font-size: 11.5px; } .svd table.J td { padding: 0 3px; }
-  .svd table.J td.br { font-size: 24px; }
+  .svd table.J { font-size: calc(11.5px * var(--fs)); } .svd table.J td { padding: 0 3px; }
+  .svd table.J td.br { font-size: calc(24px * var(--fs)); }
   .svd .cU { color: var(--RJ); } .svd .cV { color: var(--RJt); }
-  .pill { display: inline-block; padding: 0 7px; border-radius: 9px; font-size: 13px; }
+  .pill { display: inline-block; padding: 0 7px; border-radius: 9px; font-size: calc(13px * var(--fs)); }
   .pill.ok { background: var(--okL); color: var(--ok); } .pill.no { background: var(--noL); color: var(--no); }
   .pill.warn { background: var(--warnL); color: var(--warn); }
-  #stato { position: absolute; right: 10px; top: 7px; z-index: 2; pointer-events: none; font-size: 13.5px;
+  #stato { position: absolute; right: 10px; top: 7px; z-index: 2; pointer-events: none; font-size: calc(13.5px * var(--fs));
            background: rgba(255,255,255,0.88); padding: 2px 8px; border: 1px solid var(--rule); }
-  aside { flex: 0 0 420px; height: 100%; overflow-y: auto; padding: 14px 18px 28px; border-left: 1px solid var(--rule); }
-  .copy { font-size: 12px; color: var(--dim); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
-  h1 { font-size: 21px; font-weight: normal; margin: 0 0 2px; text-wrap: balance; }
-  .sub { font-style: italic; color: var(--dim); margin: 0 0 10px; font-size: 13.5px; }
-  h2 { font-size: 13px; font-weight: normal; font-variant: small-caps; letter-spacing: 0.06em; color: var(--rosinaC);
+  aside { flex: 0 0 calc(420px * var(--fs)); height: 100%; overflow-y: auto; padding: 14px 18px 28px; border-left: 1px solid var(--rule); }
+  .copy { font-size: calc(12px * var(--fs)); color: var(--dim); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  h1 { font-size: calc(21px * var(--fs)); font-weight: normal; margin: 0 0 2px; text-wrap: balance; }
+  .sub { font-style: italic; color: var(--dim); margin: 0 0 10px; font-size: calc(13.5px * var(--fs)); }
+  h2 { font-size: calc(13px * var(--fs)); font-weight: normal; font-variant: small-caps; letter-spacing: 0.06em; color: var(--rosinaC);
        margin: 18px 0 6px; border-bottom: 1px solid var(--rule); padding-bottom: 2px; }
-  p.hint { font-size: 13.5px; margin: 4px 0; color: #444; }
-  .joint { display: grid; grid-template-columns: 34px 1fr 74px; align-items: center; gap: 2px 8px; font-size: 13.5px; margin: 1px 0; }
+  p.hint { font-size: calc(13.5px * var(--fs)); margin: 4px 0; color: #444; }
+  .joint { display: grid; grid-template-columns: 34px 1fr 74px; align-items: center; gap: 2px 8px; font-size: calc(13.5px * var(--fs)); margin: 1px 0; }
   .joint .nm { font-style: italic; white-space: nowrap; }
-  .joint .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--dim); font-size: 13px; }
+  .joint .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--dim); font-size: calc(13px * var(--fs)); }
   .joint.spento { opacity: 0.35; }
   input[type=range] { width: 100%; accent-color: #555; }
   .btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
-  button { font: inherit; font-size: 13px; border: 1px solid #c9b5b0; background: var(--rosinaL); color: var(--rosinaC);
+  button { font: inherit; font-size: calc(13px * var(--fs)); border: 1px solid #c9b5b0; background: var(--rosinaL); color: var(--rosinaC);
            padding: 3px 9px; border-radius: 2px; cursor: pointer; }
   button:hover { background: var(--rosina); }
   button:focus-visible, input:focus-visible { outline: 2px solid var(--rosinaC); outline-offset: 1px; }
@@ -81,38 +84,38 @@
   .tabs { display: flex; gap: 0; margin: 4px 0 6px; }
   .tabs button { border-radius: 0; flex: 1 1 0; }
   .tabs button + button { border-left: none; }
-  label.riga { display: block; font-size: 14px; cursor: pointer; margin: 4px 0; }
-  .dati { font-size: 13.5px; font-variant-numeric: tabular-nums; margin: 4px 0; }
+  label.riga { display: block; font-size: calc(14px * var(--fs)); cursor: pointer; margin: 4px 0; }
+  .dati { font-size: calc(13.5px * var(--fs)); font-variant-numeric: tabular-nums; margin: 4px 0; }
   .dim { color: var(--dim); }
-  .out { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; white-space: pre; overflow-x: auto;
+  .out { font-family: var(--mono); font-size: calc(12px * var(--fs)); font-variant-numeric: tabular-nums; white-space: pre; overflow-x: auto;
          background: #faf6f5; border: 1px solid var(--rule); padding: 5px 7px; margin: 6px 0; line-height: 1.45; }
-  .sv { display: grid; grid-template-columns: 34px 1fr 74px; gap: 2px 8px; align-items: center; font-size: 13px; margin: 2px 0; }
+  .sv { display: grid; grid-template-columns: 34px 1fr 74px; gap: 2px 8px; align-items: center; font-size: calc(13px * var(--fs)); margin: 2px 0; }
   .sv .bar { height: 9px; background: #f3ecea; position: relative; }
   .sv .bar span { position: absolute; top: 0; bottom: 0; }
   .sv .bar.centro::before { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: #999; }
   .sv .num { text-align: right; font-variant-numeric: tabular-nums; }
-  table.J { border-collapse: collapse; font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  table.J { border-collapse: collapse; font-family: var(--mono); font-size: calc(12.5px * var(--fs)); font-variant-numeric: tabular-nums; }
   table.J td { padding: 1px 8px; text-align: right; }
-  table.J td.br { font-family: var(--serif); font-size: 26px; color: #888; padding: 0 2px; line-height: 0.9; }
+  table.J td.br { font-family: var(--serif); font-size: calc(26px * var(--fs)); color: #888; padding: 0 2px; line-height: 0.9; }
   .quattro { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .sp { border: 1px solid var(--rule); border-top-width: 4px; padding: 4px 7px 5px; min-width: 0; }
-  .sp .tt { font-size: 14px; font-family: var(--math); }
-  .sp .dd { float: right; font-size: 13px; font-variant-numeric: tabular-nums; }
-  .sp .cosa { font-size: 12.5px; color: var(--dim); font-style: italic; margin: 1px 0 3px; }
-  .sp .base { font-family: var(--mono); font-size: 11.5px; }
+  .sp .tt { font-size: calc(14px * var(--fs)); font-family: var(--math); }
+  .sp .dd { float: right; font-size: calc(13px * var(--fs)); font-variant-numeric: tabular-nums; }
+  .sp .cosa { font-size: calc(12.5px * var(--fs)); color: var(--dim); font-style: italic; margin: 1px 0 3px; }
+  .sp .base { font-family: var(--mono); font-size: calc(11.5px * var(--fs)); }
   .sp.RJ { border-top-color: var(--RJ); } .sp.NJt { border-top-color: var(--NJt); }
   .sp.RJt { border-top-color: var(--RJt); } .sp.NJ { border-top-color: var(--NJ); }
   .sp.vuoto { background: #fafafa; }
-  .quattro .lato { grid-column: 1 / span 2; font-size: 12.5px; color: var(--dim); margin-top: 2px; }
+  .quattro .lato { grid-column: 1 / span 2; font-size: calc(12.5px * var(--fs)); color: var(--dim); margin-top: 2px; }
   .cRJ { color: var(--RJ); } .cNJt { color: var(--NJt); } .cRJt { color: var(--RJt); } .cNJ { color: var(--NJ); } .cS { color: var(--colS); }
   .m { font-family: var(--math); white-space: nowrap; }
   .qd { position: relative; display: inline-block; font-style: italic; }
   .qd::after { content: "\02D9"; position: absolute; left: 0.16em; top: -0.48em; font-style: normal; }
-  .opz { display: flex; flex-wrap: wrap; gap: 2px 16px; font-size: 14px; margin: 6px 0 4px; }
+  .opz { display: flex; flex-wrap: wrap; gap: 2px 16px; font-size: calc(14px * var(--fs)); margin: 6px 0 4px; }
   .opz label { cursor: pointer; white-space: nowrap; }
-  ol.guarda { padding-left: 20px; margin: 4px 0; font-size: 13.5px; }
+  ol.guarda { padding-left: 20px; margin: 4px 0; font-size: calc(13.5px * var(--fs)); }
   ol.guarda li { margin: 3px 0; }
-  .foot { margin-top: 18px; font-size: 12px; color: var(--dim); }
+  .foot { margin-top: 18px; font-size: calc(12px * var(--fs)); color: var(--dim); }
   @media (max-width: 900px) {
     body { flex-direction: column; overflow: auto; }
     #view { flex: none; height: 115vh; grid-template-columns: 1fr; grid-template-rows: minmax(0, 3fr) minmax(0, 3fr) minmax(0, 2.6fr); }
@@ -125,7 +128,7 @@
 </head>
 <body>
 <div id="view" data-errors="">
-  <div class="cella" id="c-ee"><div class="tit" id="t-ee"></div><div id="stato"></div><button class="rip" id="r-ee" title="rotella: zoom; trascina: sposta; doppio clic: vista iniziale">&#10226; vista iniziale</button><button class="rip" id="b-autoinf" hidden></button><div id="cap-auto" hidden><i>v</i> = <i>J</i><sub>1</sub><span class="qd">q</span><sub>1</sub> + <i>J</i><sub>2</sub><span class="qd">q</span><sub>2</sub> = 0</div><svg id="s-ee" role="img" aria-label="Spazio dell'end-effector"></svg></div>
+  <div class="cella" id="c-ee"><div class="tit" id="t-ee"></div><div id="stato"></div><button class="rip" id="r-ee" title="rotella: zoom; trascina: sposta; doppio clic: vista iniziale">&#10226; vista iniziale</button><button class="rip" id="b-autoinf" hidden></button><div id="cap-auto" hidden><i>v</i><sub><i>O</i><sub>2</sub></sub> = <i>J</i><sub>1</sub><span class="qd">q</span><sub>1</sub> + <i>J</i><sub>2</sub><span class="qd">q</span><sub>2</sub> = 0</div><svg id="s-ee" role="img" aria-label="Spazio dell'end-effector"></svg></div>
   <div class="cella" id="c-gi"><div class="tit" id="t-gi"></div><button class="rip" id="r-gi" title="rotella: zoom; trascina: sposta; doppio clic: vista iniziale">&#10226; vista iniziale</button><svg id="s-gi" role="img" aria-label="Spazio dei giunti"></svg></div>
   <div class="cella" id="c-so"><div class="tit" id="t-so"></div><div class="tit dx" id="t-so2"></div><svg id="s-so" role="img" aria-label="I quattro sottospazi alla Strang"></svg></div>
 </div>
@@ -169,20 +172,20 @@
   <h2>Cinematica e statica</h2>
   <div class="tabs"><button id="m-cin">Cinematica</button><button id="m-sta">Statica</button></div>
   <div id="pan-cin">
-    <p class="hint">Velocit&agrave; dei giunti [rad/s]: la velocit&agrave; di <i>O</i><sub>2</sub> &egrave; <i>v</i> = <i>J</i>&thinsp;<span class="qd">q</span>.</p>
+    <p class="hint">Velocit&agrave; dei giunti [rad/s]: la velocit&agrave; di <i>O</i><sub>2</sub> &egrave; <i>v</i><sub><i>O</i><sub>2</sub></sub> = <i>J</i>&thinsp;<span class="qd">q</span>.</p>
     <div class="tabs"><button id="qm-comp">componenti di <span class="qd">q</span></button><button id="qm-vers">versore: |<span class="qd">q</span>| = 1</button></div>
     <div class="joint"><span class="nm"><span class="qd">q</span><sub>1</sub></span><input type="range" id="qd1" min="-1" max="1" step="0.01"><span class="val" id="qd1v"></span></div>
     <div class="joint"><span class="nm"><span class="qd">q</span><sub>2</sub></span><input type="range" id="qd2" min="-1" max="1" step="0.01"><span class="val" id="qd2v"></span></div>
     <div id="qc-vers" hidden>
       <div class="joint"><span class="nm">&#977;</span><input type="range" id="vt" min="-180" max="180" step="0.5"><span class="val" id="vtv"></span></div>
       <p class="hint"><span class="qd">q</span> = cos&thinsp;&#977;&thinsp;<i>v</i><sub>1</sub> + sin&thinsp;&#977;&thinsp;<i>v</i><sub>2</sub> &egrave; un versore
-        inclinato di &#977; su <i>v</i><sub>1</sub>. Allora <i>v</i> = <i>J</i>&thinsp;<span class="qd">q</span> =
+        inclinato di &#977; su <i>v</i><sub>1</sub>. Allora <i>v</i><sub><i>O</i><sub>2</sub></sub> = <i>J</i>&thinsp;<span class="qd">q</span> =
         cos&thinsp;&#977;&thinsp;<i>&sigma;</i><sub>1</sub><i>u</i><sub>1</sub> + sin&thinsp;&#977;&thinsp;<i>&sigma;</i><sub>2</sub><i>u</i><sub>2</sub>:
-        al variare di &#977; la punta di <i>v</i> percorre tutto il contorno dell&rsquo;ellisse.</p>
+        al variare di &#977; la punta di <i>v</i><sub><i>O</i><sub>2</sub></sub> percorre tutto il contorno dell&rsquo;ellisse.</p>
     </div>
     <div class="btns"><button id="b-v1"><span class="qd">q</span> = <i>v</i><sub>1</sub></button><button id="b-auto"><span class="qd">q</span> = <i>v</i><sub>2</sub></button>
       <button id="b-giro">&#9654; fai il giro</button><button id="b-qd0">Azzera</button></div>
-    <p class="hint">In singolarit&agrave; <span class="qd">q</span> = <i>v</i><sub>2</sub> &egrave; un automovimento: <i>v</i> = 0. Il pulsante
+    <p class="hint">In singolarit&agrave; <span class="qd">q</span> = <i>v</i><sub>2</sub> &egrave; un automovimento: <i>v</i><sub><i>O</i><sub>2</sub></sub> = 0. Il pulsante
       &laquo;automovimenti&raquo; nella vista dell&rsquo;end-effector mostra perch&eacute;.</p>
     <p class="hint" id="auto-nota"></p>
   </div>
@@ -198,6 +201,7 @@
     <div class="opz">
       <label id="lab-fcirc"><input type="checkbox" id="f-circ"> circonferenza della punta di <i>f</i></label>
       <label><input type="checkbox" id="f-retta"> retta d&rsquo;azione di <i>f</i> e bracci</label>
+      <label id="lab-fell"><input type="checkbox" id="f-ell"> forze che i giunti ottengono con |<i>&tau;</i>| = 3&nbsp;N&middot;m</label>
     </div>
     <p class="hint">Il momento di <i>f</i> rispetto a <i>O</i><sub>0</sub> &egrave; <i>&tau;</i><sub>1</sub> e quello rispetto a
       <i>O</i><sub>1</sub> &egrave; <i>&tau;</i><sub>2</sub>: in modulo |<i>f</i>| per il braccio, la distanza del punto dalla retta d&rsquo;azione.</p>
@@ -213,7 +217,7 @@
     <i>&sigma;</i><sub>1</sub> &ge; <i>&sigma;</i><sub>2</sub> &ge; 0. Le colonne <i>v</i><sub><i>i</i></sub> di <i>V</i> sono due direzioni
     ortogonali dello spazio dei giunti; <i>J</i> le porta nelle colonne <i>u</i><sub><i>i</i></sub> di <i>U</i>, due direzioni ortogonali
     dello spazio dell&rsquo;end-effector, allungate dei valori singolari:</p>
-  <p class="hint" style="text-align:center;font-size:15px"><b><i>J</i>&thinsp;<i>v</i><sub><i>i</i></sub> = <i>&sigma;</i><sub><i>i</i></sub>&thinsp;<i>u</i><sub><i>i</i></sub></b>
+  <p class="hint" style="text-align:center;font-size: calc(15px * var(--fs))"><b><i>J</i>&thinsp;<i>v</i><sub><i>i</i></sub> = <i>&sigma;</i><sub><i>i</i></sub>&thinsp;<i>u</i><sub><i>i</i></sub></b>
     &emsp; e &emsp; <b><i>J</i><sup>T</sup><i>u</i><sub><i>i</i></sub> = <i>&sigma;</i><sub><i>i</i></sub>&thinsp;<i>v</i><sub><i>i</i></sub></b></p>
   <p class="hint">Per questo, in alto, il cerchio |<span class="qd">q</span>| = 1 dello spazio dei giunti diventa l&rsquo;ellisse di semiassi
     <i>&sigma;</i><sub>1</sub><i>u</i><sub>1</sub> e <i>&sigma;</i><sub>2</sub><i>u</i><sub>2</sub>: le frecce <i>v</i><sub>1</sub>,
@@ -248,6 +252,9 @@
 <script>
 (function () {
   "use strict";
+  // fattore del testo, dalla variabile --fs in cima al foglio di stile
+  const FS = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--fs")) || 1;
+  const TAU_E = 3;                // [N m] modulo delle coppie per l'ellisse delle forze ottenibili
   // errori JavaScript nel DOM (per le prove)
   const viewEl = document.getElementById("view");
   window.addEventListener("error", (e) => { viewEl.dataset.errors += (e.message || e) + "; "; });
@@ -276,7 +283,8 @@
     pe: { th: 25 * deg, eq: true, q1: 80 * deg, massa: 70, l: [0.45, 0.45] },
     modo: "cin",                               // "cin" | "sta"
     qd: [0.8, -0.5], fphi: 90 * deg, fmag: 10,
-    trF: { circ: true, retta: true },          // statica: circonferenza della punta di f, retta d'azione e bracci
+    trF: { circ: true, retta: true, ell: false },   // statica: circonferenza della punta di f, retta d'azione e bracci,
+                                               // forze che i giunti ottengono con |tau| = TAU_E
     autoInf: false, autoT: 0,                  // automovimento infinitesimo (solo in singolarita')
     qmodo: "comp", vt: 0, giro: false, traccia: [], tracciaQ: "",   // qd per componenti o versore a angolo vt da v_1
     calamita: true,
@@ -379,6 +387,7 @@
   }
   /** Testo con pedici e apici: "q_1", "J^T", "q_{12}", "\\dq" per q col punto, "\\R" e "\\N" calligrafiche. */
   function testo(g, x, y, s, { size = 15, color = C.ink, anchor = "middle", it = true, weight, halo = true, cls, evita = true } = {}) {
+    size *= FS;
     const t = el("text", { x, y, "text-anchor": anchor, "font-size": size, fill: color, "font-style": it ? "italic" : "normal",
       "font-weight": weight, "dominant-baseline": "middle", class: cls }, g);
     if (halo) { t.setAttribute("stroke", "#fff"); t.setAttribute("stroke-width", 3.2); t.setAttribute("paint-order", "stroke"); t.setAttribute("stroke-linejoin", "round"); }
@@ -659,8 +668,8 @@
       } else {
         const vv = sc(y2s(M.v), kv);
         freccia(g, O2, add(O2, vv), C.RJ, 2.6, { head: 12, hw: 8 });
-        if (nrm(vv) > 14) { const q = add(add(O2, vv), uni(vv), 13); testo(g, q[0], q[1], "v = J\\dq", { size: 15, color: C.RJ }); }
-        else testo(g, O2[0] + 16, O2[1] + 18, "v ≈ 0", { size: 14, color: C.RJ, anchor: "start" });
+        if (nrm(vv) > 14) { const q = add(add(O2, vv), uni(vv), 13); testo(g, q[0], q[1], "v_{O₂} = J\\dq", { size: 15, color: C.RJ }); }
+        else testo(g, O2[0] + 16, O2[1] + 18, "v_{O₂} ≈ 0", { size: 14, color: C.RJ, anchor: "start" });
       }
     } else {
       const kf = 0.45 * M.R * k / M.Fmax, ff = sc(y2s(M.f), kf);
@@ -668,6 +677,29 @@
       // la circonferenza su cui si muove la punta di f quando ne cambia la direzione (solo il braccio RR)
       if (st.trF.circ && st.es === "rr" && fN > 1e-12) {
         el("circle", { cx: O2[0], cy: O2[1], r: nrm(ff), fill: "none", stroke: "#1a1a1a", "stroke-width": 0.9, opacity: 0.85 }, g);
+      }
+      // le forze che i giunti ottengono con |tau| = TAU_E: f = U Sigma^-1 V^T tau, ellisse di semiassi (TAU_E/sigma_i) u_i,
+      // gli assi di quella delle velocita' con i semiassi inversi. Semiassi limitati a qualche volta la vista (sigma_2 -> 0).
+      // In singolarita' resta il segmento lungo u_1: la componente lungo u_2 non dipende da tau, e' la reazione della struttura
+      if (st.trF.ell && st.es === "rr") {
+        const Lmax = 4 * (W + H), e1 = sc(y2s(u1), Math.min(Lmax, (kf * TAU_E) / s1));
+        if (M.r === 2) {
+          const e2 = sc(y2s(u2), Math.min(Lmax, (kf * TAU_E) / s2)), pf = [];
+          for (let i = 0; i <= 144; i++) { const a = (2 * Math.PI * i) / 144; pf.push(add(add(O2, e1, Math.cos(a)), e2, Math.sin(a))); }
+          el("polygon", { points: pf.map(P).join(" "), fill: C.ink, "fill-opacity": 0.06, stroke: C.ink, "stroke-width": 1.4, "stroke-dasharray": "7 4" }, g);
+        } else {
+          linea(g, add(O2, e1, -1), add(O2, e1), C.ink, 3.4, { opacity: 0.75 });
+          const sr = taglia(O2, y2s(u2), W, H, 0);
+          if (sr) linea(g, sr[0], sr[1], C.NJt, 1.4, { "stroke-dasharray": "7 4" });
+          // etichetta lungo u_2, dalla parte in basso (lontano dal titolo), dentro la vista
+          const d0 = uni(y2s(u2)), d2 = d0[1] < 0 ? sc(d0, -1) : d0, et = "f_n: non comandabile dai giunti";
+          const pl = add(add(O2, d2, 0.32 * Math.min(W, H)), perp(d2), 20), mw = 0.27 * 13.5 * FS * et.length + 8;
+          pl[0] = Math.min(W - mw, Math.max(mw, pl[0]));
+          dopo.push(() => testo(g, pl[0], pl[1], et, { size: 13.5, color: C.NJt, it: false }));
+        }
+        // legenda in basso a destra, sopra i pulsanti: vicino a O_2 non c'e' posto
+        const leg = (M.r === 2 ? "ellisse tratteggiata" : "segmento nero") + ": forze con |τ| = 3 N·m";
+        dopo.push(() => testo(g, W - 14, H - 34 - 18 * FS, leg, { size: 13.5, color: C.ink, it: false, anchor: "end", evita: false }));
       }
       // la retta d'azione di f e i bracci: le distanze di O_0 e O_1 dalla retta, col piede della perpendicolare.
       // |tau_1| = |f| b_0 e |tau_2| = |f| b_1: tau = J^T f e' la coppia dei momenti di f rispetto a O_0 e a O_1
@@ -787,6 +819,15 @@
         const q = add(add(O, ax), uni(ax), 16);
         dopo.push(() => testo(g, q[0], q[1], lab, { size: 13.5, color: col }));
       }
+      // il cerchio |tau| = TAU_E: la sua immagine (J^T)^+ e' l'ellisse delle forze ottenibili nella vista dell'end-effector.
+      // In singolarita' conta solo la componente lungo v_1: il segmento, che va nel segmento lungo u_1
+      if (st.trF.ell && st.es === "rr") {
+        el("circle", { cx: O[0], cy: O[1], r: TAU_E * k, fill: "none", stroke: C.ink, "stroke-width": 1.4, "stroke-dasharray": "7 4" }, g);
+        if (M.r === 1) { const e = sc(y2s(v1), TAU_E * k); linea(g, add(O, e, -1), add(O, e), C.ink, 3.4, { opacity: 0.75 }); }
+        // legenda in basso a sinistra, sopra il pulsante, come nella vista dell'end-effector
+        const leg = ["cerchio tratteggiato: |τ| = 3 N·m"].concat(M.r === 1 ? ["segmento nero: la parte lungo v₁"] : []);
+        leg.forEach((s, i) => dopo.push(() => testo(g, 14, H - 34 - 18 * FS * (leg.length - i), s, { size: 13.5, color: C.ink, it: false, anchor: "start", evita: false })));
+      }
       const tt = sc(y2s(M.tau), k);
       freccia(g, O, add(O, tt), C.RJt, 2.6, { head: 12, hw: 8 });
       if (nrm(tt) > 10) { const q = add(add(O, tt), uni(tt), 15); testo(g, q[0], q[1], "τ = J^T f", { size: 15, color: C.RJt }); }
@@ -830,7 +871,7 @@
     const poly = (O, a, la, b, lb) => [O, add(O, a, la), add(add(O, a, la), b, lb), add(O, b, lb)];
     const nome = (p, colore, righe) => {
       const tt = [testo(svg, p[0], p[1], righe[0], { size: 17, color: colore, it: false, evita: false })];
-      righe.slice(1).forEach((r, i) => tt.push(testo(svg, p[0], p[1] + 16 + 14 * i, r, { size: 12.5, color: colore, it: i === 1, evita: false })));
+      righe.slice(1).forEach((r, i) => tt.push(testo(svg, p[0], p[1] + (16 + 14 * i) * FS, r, { size: 12.5, color: colore, it: i === 1, evita: false })));
       const bb = tt.map((x) => x.getBBox());
       posate.push([Math.min(...bb.map((b) => b.x)) - 2, Math.min(...bb.map((b) => b.y)) - 1, Math.max(...bb.map((b) => b.x + b.width)) + 2, Math.max(...bb.map((b) => b.y + b.height)) + 1]);
     };
@@ -916,7 +957,7 @@
     };
     if (cin) {
       const q = Math.SQRT2;
-      scena(Sn, Sm, fr(M.al, q), fr(M.be, q), C.RJt, C.NJ, ["\\dq", "\\dq_r", "\\dq_n", "v"], ["J\\dq = v", "J\\dq_r = v", "J\\dq_n = 0"], 0.24);
+      scena(Sn, Sm, fr(M.al, q), fr(M.be, q), C.RJt, C.NJ, ["\\dq", "\\dq_r", "\\dq_n", "v_{O₂}"], ["J\\dq = v_{O₂}", "J\\dq_r = v_{O₂}", "J\\dq_n = 0"], 0.24);
     } else {
       const F = Math.max(nrm(M.f), 1e-9);
       scena(Sm, Sn, fr(M.fa, F), fr(M.fb, F), C.RJ, C.NJt, ["f", "f_r", "f_n", "τ"], ["J^T f = τ", "J^T f_r = τ", "J^T f_n = 0"], -0.24);
@@ -965,20 +1006,21 @@
     sv("fphi", st.fphi / deg, fmt(st.fphi / deg, 1) + "°"); sv("fmag", st.fmag, fmt(st.fmag, 1) + " N");
     $("calamita").checked = st.calamita;
     $("f-circ").checked = st.trF.circ; $("f-retta").checked = st.trF.retta; $("lab-fcirc").hidden = pe;
+    $("f-ell").checked = st.trF.ell; $("lab-fell").hidden = pe;
     // numeri
     const pot1 = dot(M.f, M.v), pot2 = dot(M.tau, M.qd);
     $("out").textContent = (cin
-      ? `q̇ = ${vec(M.qd, 2)} rad/s\nv  = J q̇ = ${vec(M.v)} m/s   |v| = ${fmt(nrm(M.v))}`
+      ? `q̇ = ${vec(M.qd, 2)} rad/s\nv_O₂ = J q̇ = ${vec(M.v)} m/s   |v_O₂| = ${fmt(nrm(M.v))}`
       : `f  = ${vec(M.f, 2)} N\nτ  = Jᵀ f = ${vec(M.tau, 2)} N·m` +
         (nrm(M.f) > 1e-12 ? `\nbracci: b₀ = ${fmt(Math.abs(M.tau[0]) / nrm(M.f))} m, b₁ = ${fmt(Math.abs(M.tau[1]) / nrm(M.f))} m\n|τ₁| = |f| b₀, |τ₂| = |f| b₁` : "")) +
-      `\nf·v = ${fmt(pot1, 3)} W = τ·q̇ = ${fmt(pot2, 3)} W`;
+      `\nf·v_O₂ = ${fmt(pot1, 3)} W = τ·q̇ = ${fmt(pot2, 3)} W`;
     // coppie ai giunti, a barre centrate sullo zero
     const tm = M.tauMax;
     $("tau-bar").innerHTML = M.tau.map((x, i) => {
       const w = Math.min(50, (50 * Math.abs(x)) / tm), left = x >= 0 ? 50 : 50 - w;
       const nome = pe ? ["caviglia", "ginocchio"][i] : "";
       return `<div class="sv"><span><i>&tau;</i><sub>${i + 1}</sub></span><div class="bar centro"><span style="left:${left}%;width:${w}%;background:var(--RJt)"></span></div>` +
-        `<span class="num">${fmt(x, 1)} N·m</span></div>` + (nome ? `<div class="dim" style="font-size:12px;margin:-2px 0 3px 42px">${nome}</div>` : "");
+        `<span class="num">${fmt(x, 1)} N·m</span></div>` + (nome ? `<div class="dim" style="font-size: calc(12px * var(--fs));margin:-2px 0 3px 42px">${nome}</div>` : "");
     }).join("");
     // rango e valori singolari
     const [s1, s2] = M.D.s;
@@ -1001,7 +1043,7 @@
     const card = (cls, tit, cosa, d, base) => `<div class="sp ${cls}${d === 0 ? " vuoto" : ""}"><span class="dd">dim ${d}</span><div class="tt c${cls}">${tit}</div><div class="cosa">${cosa}</div><div class="base">${base}</div></div>`;
     $("quattro").innerHTML =
       `<div class="lato">&#8477;<sup><i>m</i></sup>: velocit&agrave; e forze di <i>O</i><sub>2</sub></div>` +
-      card("RJ", "&#8475;(J)", "velocit&agrave; realizzabili, <i>v</i> = <i>J</i>&thinsp;<span class='qd'>q</span>", sing ? 1 : 2, sing ? `span{<i>u</i><sub>1</sub>}, <i>u</i><sub>1</sub> = ${vec(u1)}` : "span{<i>u</i><sub>1</sub>, <i>u</i><sub>2</sub>} = &#8477;<sup>2</sup>") +
+      card("RJ", "&#8475;(J)", "velocit&agrave; realizzabili, <i>v</i><sub><i>O</i><sub>2</sub></sub> = <i>J</i>&thinsp;<span class='qd'>q</span>", sing ? 1 : 2, sing ? `span{<i>u</i><sub>1</sub>}, <i>u</i><sub>1</sub> = ${vec(u1)}` : "span{<i>u</i><sub>1</sub>, <i>u</i><sub>2</sub>} = &#8477;<sup>2</sup>") +
       card("NJt", "&#119977;(J<sup>T</sup>)", "forze strutturali, <i>J</i><sup>T</sup><i>f</i> = 0", sing ? 1 : 0, sing ? `span{<i>u</i><sub>2</sub>}, <i>u</i><sub>2</sub> = ${vec(u2)}` : "{0}") +
       `<div class="lato">&#8477;<sup><i>n</i></sup>: velocit&agrave; e coppie dei giunti</div>` +
       card("RJt", "&#8475;(J<sup>T</sup>)", "coppie che equilibrano <i>f</i>, <i>&tau;</i> = <i>J</i><sup>T</sup><i>f</i>", sing ? 1 : 2, sing ? `span{<i>v</i><sub>1</sub>}, <i>v</i><sub>1</sub> = ${vec(v1)}` : "span{<i>v</i><sub>1</sub>, <i>v</i><sub>2</sub>} = &#8477;<sup>2</sup>") +
@@ -1009,7 +1051,7 @@
     // titoli e stato sopra la grafica
     $("t-ee").innerHTML = `Spazio dell&rsquo;end-effector &#8477;<sup>2</sup><span class="s">${cin ? "velocit&agrave; di <i>O</i><sub>2</sub>; l&rsquo;ellisse, immagine del cerchio |<span class='qd'>q</span>| = 1, ha semiassi <i>&sigma;</i><sub>1</sub><i>u</i><sub>1</sub> e <i>&sigma;</i><sub>2</sub><i>u</i><sub>2</sub>" : "forza <i>f</i> in <i>O</i><sub>2</sub>; <i>u</i><sub>1</sub>, <i>u</i><sub>2</sub>: colonne di <i>U</i>" + (sing ? "; <i>f</i><sub>n</sub> &isin; &#119977;(J<sup>T</sup>) non arriva ai giunti" : "")}</span>`;
     $("t-gi").innerHTML = `Spazio dei giunti &#8477;<sup>2</sup><span class="s">${cin ? (sing ? "velocit&agrave; dei giunti; <span class='qd'>q</span><sub>n</sub> &isin; &#119977;(J) non muove <i>O</i><sub>2</sub>" : "velocit&agrave; dei giunti; <i>v</i><sub>1</sub>, <i>v</i><sub>2</sub>: colonne di <i>V</i>, <i>J</i>&thinsp;<i>v</i><sub><i>i</i></sub> = <i>&sigma;</i><sub><i>i</i></sub><i>u</i><sub><i>i</i></sub>") : pe ? "coppie che caviglia e ginocchio devono dare, <i>&tau;</i> = <i>J</i><sup>T</sup><i>f</i>" : "coppie ai giunti; l&rsquo;ellisse, immagine del cerchio di raggio |<i>f</i>|, ha semiassi |<i>f</i>|<i>&sigma;</i><sub><i>i</i></sub><i>v</i><sub><i>i</i></sub>"}</span>`;
-    $("t-so").innerHTML = `&#8477;<sup><i>m</i></sup> = &#8477;<sup>2</sup>: spazio dell&rsquo;end-effector<span class="s">velocit&agrave; <i>v</i> e forze <i>f</i> di <i>O</i><sub>2</sub>; base <i>u</i><sub>1</sub>, <i>u</i><sub>2</sub> (colonne di <i>U</i>)</span>`;
+    $("t-so").innerHTML = `&#8477;<sup><i>m</i></sup> = &#8477;<sup>2</sup>: spazio dell&rsquo;end-effector<span class="s">velocit&agrave; <i>v</i><sub><i>O</i><sub>2</sub></sub> e forze <i>f</i> di <i>O</i><sub>2</sub>; base <i>u</i><sub>1</sub>, <i>u</i><sub>2</sub> (colonne di <i>U</i>)</span>`;
     $("t-so2").innerHTML = `&#8477;<sup><i>n</i></sup> = &#8477;<sup>2</sup>: spazio dei giunti<span class="s">velocit&agrave; <span class='qd'>q</span> e coppie <i>&tau;</i>; base <i>v</i><sub>1</sub>, <i>v</i><sub>2</sub> (colonne di <i>V</i>)</span>`;
     $("stato").innerHTML = sing ? `<span class="pill no">singolare</span> <i>r</i> = 1` : `<span class="pill ${s2 / s1 < 0.1 ? "warn" : "ok"}">${s2 / s1 < 0.1 ? "vicino alla singolarit&agrave;" : "regolare"}</span> <i>r</i> = 2`;
     // che cosa guardare
@@ -1020,13 +1062,14 @@
       "Il prezzo, in Cinematica: a ginocchia distese l&rsquo;anca non pu&ograve; salire n&eacute; scendere (al primo ordine): <span class='m cRJ'>&#8475;(J)</span> &egrave; orizzontale. Per sedersi o per saltare bisogna prima uscire dalla singolarit&agrave;, piegando le ginocchia.",
     ] : [
       "In configurazione regolare guarda le frecce: i versori <i>v</i><sub>1</sub>, <i>v</i><sub>2</sub> dello spazio dei giunti (colonne di <i>V</i>) finiscono, attraverso <i>J</i>, nei semiassi <i>&sigma;</i><sub>1</sub><i>u</i><sub>1</sub>, <i>&sigma;</i><sub>2</sub><i>u</i><sub>2</sub> dell&rsquo;ellisse (colonne di <i>U</i> per i valori singolari). Avvicinandoti alla singolarit&agrave; <i>&sigma;</i><sub>2</sub>, e con lui il semiasse <i>&sigma;</i><sub>2</sub><i>u</i><sub>2</sub>, va a zero.",
-      "Scegli &laquo;versore&raquo; o premi &laquo;fai il giro&raquo;: <span class='qd'>q</span> ha modulo 1 e ruota di &#977; a partire da <i>v</i><sub>1</sub>; la punta di <i>v</i> = <i>J</i>&thinsp;<span class='qd'>q</span> percorre l&rsquo;ellisse. Per &#977; = 0 e 90&deg; si ottengono i semiassi: il pi&ugrave; lungo, <i>&sigma;</i><sub>1</sub><i>u</i><sub>1</sub>, per <span class='qd'>q</span> = <i>v</i><sub>1</sub>; il pi&ugrave; corto, <i>&sigma;</i><sub>2</sub><i>u</i><sub>2</sub>, per <span class='qd'>q</span> = <i>v</i><sub>2</sub>. In singolarit&agrave; l&rsquo;ellisse &egrave; un segmento, percorso avanti e indietro.",
+      "Scegli &laquo;versore&raquo; o premi &laquo;fai il giro&raquo;: <span class='qd'>q</span> ha modulo 1 e ruota di &#977; a partire da <i>v</i><sub>1</sub>; la punta di <i>v</i><sub><i>O</i><sub>2</sub></sub> = <i>J</i>&thinsp;<span class='qd'>q</span> percorre l&rsquo;ellisse. Per &#977; = 0 e 90&deg; si ottengono i semiassi: il pi&ugrave; lungo, <i>&sigma;</i><sub>1</sub><i>u</i><sub>1</sub>, per <span class='qd'>q</span> = <i>v</i><sub>1</sub>; il pi&ugrave; corto, <i>&sigma;</i><sub>2</sub><i>u</i><sub>2</sub>, per <span class='qd'>q</span> = <i>v</i><sub>2</sub>. In singolarit&agrave; l&rsquo;ellisse &egrave; un segmento, percorso avanti e indietro.",
       "Porta <i>q</i><sub>2</sub> a 0 o a 180&deg;. L&rsquo;ellisse delle velocit&agrave; diventa un segmento: <span class='m cRJ'>&#8475;(J)</span> &egrave; la retta perpendicolare al braccio, e la direzione persa, lungo il braccio, &egrave; <span class='m cNJt'>&#119977;(J<sup>T</sup>)</span>. In basso il quadrato di <span class='m cRJ'>&#8475;(J)</span> si schiaccia e lascia la zona delle velocit&agrave; non realizzabili.",
       "Nello stesso istante nello spazio dei giunti <span class='m cRJt'>&#8475;(J<sup>T</sup>)</span> perde una dimensione e nasce <span class='m cNJ'>&#119977;(J)</span>: in ogni spazio le dimensioni dell&rsquo;immagine e del nucleo sommano a 2.",
-      "In singolarit&agrave; premi &laquo;Automovimento&raquo;: <span class='qd'>q</span> &egrave; sulla retta <span class='m cNJ'>&#119977;(J)</span>, i giunti si muovono e <i>v</i> = 0. Con una <span class='qd'>q</span> qualsiasi, <i>J</i> vede solo la parte <span class='qd'>q</span><sub>r</sub> in <span class='m cRJt'>&#8475;(J<sup>T</sup>)</span>.",
+      "In singolarit&agrave; premi &laquo;Automovimento&raquo;: <span class='qd'>q</span> &egrave; sulla retta <span class='m cNJ'>&#119977;(J)</span>, i giunti si muovono e <i>v</i><sub><i>O</i><sub>2</sub></sub> = 0. Con una <span class='qd'>q</span> qualsiasi, <i>J</i> vede solo la parte <span class='qd'>q</span><sub>r</sub> in <span class='m cRJt'>&#8475;(J<sup>T</sup>)</span>.",
       "In Statica guarda la retta d&rsquo;azione di <i>f</i> e i bracci <i>b</i><sub>0</sub>, <i>b</i><sub>1</sub>: <i>&tau;</i><sub>1</sub> e <i>&tau;</i><sub>2</sub> sono i momenti di <i>f</i> rispetto a <i>O</i><sub>0</sub> e a <i>O</i><sub>1</sub>. Ruotando <i>f</i> la sua punta corre sulla circonferenza e i bracci cambiano.",
       "Passa a Statica e premi &laquo;Forza strutturale&raquo;: la retta d&rsquo;azione passa per <i>O</i><sub>0</sub> e <i>O</i><sub>1</sub>, i due bracci sono nulli e <i>&tau;</i> = 0. &Egrave; la stessa direzione persa dalla velocit&agrave;, perch&eacute; <span class='m cNJt'>&#119977;(J<sup>T</sup>)</span> &perp; <span class='m cRJ'>&#8475;(J)</span>.",
-      "Con <i>q</i><sub>2</sub> = 5&deg; i nuclei contengono solo lo zero, ma <i>&sigma;</i><sub>2</sub> &egrave; piccolo: l&rsquo;ellisse &egrave; sottile, &laquo;Automovimento&raquo; d&agrave; una <i>v</i> piccola ma non nulla e la forza lungo il braccio chiede coppie piccole (il principio della ginocchiera).",
+      "Con <i>q</i><sub>2</sub> = 5&deg; i nuclei contengono solo lo zero, ma <i>&sigma;</i><sub>2</sub> &egrave; piccolo: l&rsquo;ellisse &egrave; sottile, &laquo;Automovimento&raquo; d&agrave; una <i>v</i><sub><i>O</i><sub>2</sub></sub> piccola ma non nulla e la forza lungo il braccio chiede coppie piccole (il principio della ginocchiera).",
+      "In Statica spunta &laquo;forze che i giunti ottengono&raquo;: con |<i>&tau;</i>| fissato la punta di <i>f</i> sta su un&rsquo;ellisse con gli assi di quella delle velocit&agrave; e i semiassi inversi, |<i>&tau;</i>|<i>u</i><sub><i>i</i></sub>/<i>&sigma;</i><sub><i>i</i></sub>. Vicino alla singolarit&agrave; l&rsquo;ellisse si allunga lungo <i>u</i><sub>2</sub>: coppie piccole danno forze grandi lungo il braccio. In singolarit&agrave; resta il segmento lungo <i>u</i><sub>1</sub>: la componente lungo <i>u</i><sub>2</sub> non dipende dalle coppie, &egrave; la reazione della struttura.",
       "Prova l&rsquo;esempio &laquo;Persona in piedi&raquo;: la stessa singolarit&agrave;, sfruttata per stare in piedi senza fatica.",
     ]).map((s) => `<li>${s}</li>`).join("");
     document.body.dataset.stato = JSON.stringify({ es: st.es, modo: st.modo, r: M.r, t: +st.t.toFixed(3), q: M.q.map((x) => +(x / deg).toFixed(2)),
@@ -1089,6 +1132,7 @@
   $("calamita").addEventListener("change", (e) => { st.calamita = e.target.checked; aggiorna(); });
   $("f-circ").addEventListener("change", (e) => { st.trF.circ = e.target.checked; aggiorna(); });
   $("f-retta").addEventListener("change", (e) => { st.trF.retta = e.target.checked; aggiorna(); });
+  $("f-ell").addEventListener("change", (e) => { st.trF.ell = e.target.checked; aggiorna(); });
   const clic = (id, fn) => $(id).addEventListener("click", () => { fn(); aggiorna(); });
   clic("e-rr", () => { st.es = "rr"; st.modo = "cin"; });
   clic("e-pe", () => { st.es = "pe"; st.modo = "sta"; });
@@ -1143,6 +1187,7 @@
   if (h.has("vt")) { st.qmodo = "vers"; st.vt = Number(h.get("vt")) * deg; }
   if (h.has("zoom")) { const [z, x, y] = h.get("zoom").split(",").map(Number); vista.ee.z = z; vista.ee.p = [x || 0, y || 0]; }
   if (h.has("strut")) { const u2 = modello().D.u[1]; st.fphi = Math.atan2(u2[1], u2[0]); }
+  if (h.has("fell")) st.trF.ell = true;
 
   new ResizeObserver(() => { if (M) disegna(); }).observe($("view"));
   aggiorna();
