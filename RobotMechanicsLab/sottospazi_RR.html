@@ -1,0 +1,640 @@
+<!doctype html>
+<!-- (c) 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini, Universita' di Pisa. Tutti i diritti riservati. -->
+<!-- Copia per il sito di Dashboard_animazioni/sottospazi_RR.html, nel repository della dispensa (scheletro aggiunto da pubblica_sito.py). -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+<meta name="copyright" content="&copy; 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini. Tutti i diritti riservati.">
+<title>Sottospazi del braccio RR</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap">
+<style>
+  /* Layout: comandi in alto; due viste affiancate (spazio dell'end-effector, spazio dei giunti); monitor sotto */
+  :root {
+    --ground: #f2f4f8;
+    --panel: #ffffff;
+    --canvas: #fbfcfe;
+    --ink: #1a1e2b;
+    --muted: #5b6577;
+    --line: #d4d9e3;
+    --ghost: #a3abb9;
+    --link: #b9c0cc;
+    --ws: #eef1f6;
+    --ell: rgba(26, 30, 43, 0.06);
+    --s: #1436a8;          /* frame {S0}: blu, come nella dispensa */
+    --ok: #17714a; --ok-bg: #e0f2e8;
+    --var: #8f5400; --var-bg: #fbecd2;
+    --serif: "STIX Two Text", "Cambria Math", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #11141b; --panel: #191d27; --canvas: #151922; --ink: #e7eaf1;
+      --muted: #9aa4b7; --line: #2b3241; --ghost: #5a6376; --link: #4a5263;
+      --ws: #1c2130; --ell: rgba(231, 234, 241, 0.07); --s: #7ea5ff;
+      --ok: #74d6a4; --ok-bg: #15342a; --var: #f1b961; --var-bg: #392b11;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #11141b; --panel: #191d27; --canvas: #151922; --ink: #e7eaf1;
+    --muted: #9aa4b7; --line: #2b3241; --ghost: #5a6376; --link: #4a5263;
+    --ws: #1c2130; --ell: rgba(231, 234, 241, 0.07); --s: #7ea5ff;
+    --ok: #74d6a4; --ok-bg: #15342a; --var: #f1b961; --var-bg: #392b11;
+    color-scheme: dark;
+  }
+
+  body { background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 1180px; margin-inline: auto; padding-inline: 20px; padding-block: 28px 40px; display: flex; flex-direction: column; gap: 18px; }
+  @media (max-width: 480px) { .wrap { padding-inline: 16px; } }
+
+  .m { font-family: var(--serif); font-style: italic; font-size: 1.08em; white-space: nowrap; }
+  .m .rm { font-style: normal; }
+  .qd { position: relative; display: inline-block; }
+  .qd::after { content: "˙"; position: absolute; left: 0.2em; top: -0.42em; font-style: normal; }
+
+  header .eyebrow { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+  header h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(28px, 4vw, 40px); line-height: 1.12; text-wrap: balance; }
+  header .lede { margin: 10px 0 0; max-width: 72ch; color: var(--muted); font-size: 16px; }
+
+  /* ---- comandi ---- */
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 14px 26px; align-items: end; padding: 14px 18px; }
+  .controls > .tag { flex: 0 0 auto; align-self: center; font-size: 13px; font-weight: 600; min-width: 112px; }
+  .ctl { display: flex; flex-direction: column; gap: 4px; min-width: 120px; flex: 1 1 120px; }
+  .ctl label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
+  .ctl output { font-family: var(--mono); font-size: 12px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  input[type="range"] { width: 100%; accent-color: var(--ink); margin: 0; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 0 100%; }
+  button { font: 500 13.5px var(--sans); color: var(--ink); background: var(--ground); border: 1px solid var(--line); border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--ghost); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--s); outline-offset: 2px; }
+  .modes { display: flex; gap: 6px; flex: 0 0 auto; align-self: center; }
+  .modes button { border-radius: 999px; padding: 5px 14px; }
+  .modes button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+
+  /* ---- viste ---- */
+  .views { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 18px; }
+  @media (max-width: 860px) { .views { grid-template-columns: minmax(0, 1fr); } }
+  .view { display: flex; flex-direction: column; min-width: 0; }
+  .view > .head { padding: 14px 18px 10px; }
+  .view h2 { margin: 0; font: 600 19px/1.25 var(--serif); }
+  .view .sub { margin: 4px 0 0; font-size: 13.5px; color: var(--muted); }
+  .stage { background: var(--canvas); border-block: 1px solid var(--line); }
+  .stage svg { display: block; width: 100%; height: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 18px; padding: 10px 18px 14px; font-size: 12.5px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend svg { width: 30px; height: 8px; }
+
+  /* ---- svg ---- */
+  .ws { fill: var(--ws); stroke: var(--line); fill-rule: evenodd; }
+  .axis { stroke: var(--line); stroke-width: 1; }
+  .unit { fill: none; stroke: var(--line); stroke-dasharray: 3 4; }
+  .frame { stroke: var(--s); stroke-width: 1.6; } .frame-h { fill: var(--s); }
+  .frame-t { fill: var(--s); font: italic 14px var(--serif); }
+  .lnk { stroke: var(--link); stroke-width: 9; stroke-linecap: round; }
+  .jnt { fill: var(--panel); stroke: var(--ink); stroke-width: 2; }
+  .pt { fill: var(--ink); }
+  .hatch { stroke: var(--muted); stroke-width: 1; }
+  .sR { stroke: var(--ink); stroke-width: 1.3; stroke-dasharray: 8 5; }
+  .sN { stroke: var(--ink); stroke-width: 1.3; stroke-dasharray: 10 4 2 4; }
+  .sW { stroke: var(--ghost); stroke-width: 1; stroke-dasharray: 2 4; }
+  .ell { fill: var(--ell); stroke: var(--muted); stroke-width: 1.2; }
+  .act { stroke: var(--ghost); stroke-width: 1.2; stroke-dasharray: 6 4; }
+  .perp { stroke: var(--muted); stroke-width: 1; }
+  .v1 { stroke: var(--ink); } .v1-h { fill: var(--ink); }
+  .v2 { stroke: var(--muted); } .v2-h { fill: var(--muted); }
+  .v3 { stroke: var(--muted); stroke-dasharray: 5 3; } .v3-h { fill: var(--muted); }
+  .lb { fill: var(--ink); font: italic 15px var(--serif); }
+  .lbm { fill: var(--muted); font: italic 13.5px var(--serif); }
+  .lbs { fill: var(--muted); font: 11.5px var(--sans); }
+  .halo { paint-order: stroke; stroke: var(--canvas); stroke-width: 4px; stroke-linejoin: round; }
+
+  /* ---- monitor ---- */
+  .monitor { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr) minmax(0, 1fr); gap: 18px; }
+  @media (max-width: 980px) { .monitor { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .monitor .tbl { grid-column: 1 / -1; order: 3; } }
+  @media (max-width: 620px) { .monitor { grid-template-columns: minmax(0, 1fr); } }
+  .card { padding: 14px 18px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .card h3 { margin: 0; font: 600 16px/1.3 var(--serif); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .pill { font: 500 11.5px var(--sans); letter-spacing: 0.02em; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill.ok { color: var(--ok); background: var(--ok-bg); }
+  .pill.var { color: var(--var); background: var(--var-bg); }
+  .pill.sing { color: var(--panel); background: var(--ink); }
+  .kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; font-size: 13px; color: var(--muted); align-items: baseline; }
+  .kv b { font: 500 14px var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .mat { display: inline-grid; grid-template-columns: auto auto; gap: 2px 14px; padding: 4px 10px; border-left: 1.5px solid var(--ink); border-right: 1.5px solid var(--ink); border-radius: 3px; font: 500 14px var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .matrow { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 4px 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 6px 8px; border-bottom: 1px dashed var(--line); vertical-align: baseline; }
+  td.n { font: 500 13.5px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td .m { font-size: 1.12em; }
+  tr.zero td:not(:first-child) { color: var(--ghost); }
+  .note { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+  .obs { padding: 16px 20px; }
+  .obs h2 { margin: 0 0 8px; font: 600 17px/1.25 var(--serif); }
+  .obs ol { margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: 6px; max-width: 80ch; font-size: 14px; }
+  /* chi ha fatto la pagina */
+  .credito { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted);
+             display: flex; flex-wrap: wrap; gap: 2px 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Meccanica dei Robot · Capitolo 7 · Jacobiano</p>
+    <h1>I quattro sottospazi del braccio RR</h1>
+    <p class="lede">Il compito è la posizione di <span class="m">O<sub>2</sub></span> nel piano, quindi <span class="m">J</span> è 2×2. Con gli slider si porta il braccio verso la singolarità, braccio disteso o ripiegato, e si guarda come cambiano l'immagine e il nucleo di <span class="m">J</span> e di <span class="m">J<sup class="rm">T</sup></span>.</p>
+  </header>
+
+  <section class="panel controls" aria-label="Configurazione del braccio">
+    <span class="tag">Configurazione</span>
+    <div class="ctl">
+      <label for="q1"><span><span class="m">q</span><sub>1</sub></span><output id="q1o"></output></label>
+      <input id="q1" type="range" min="-180" max="180" step="1" value="30">
+    </div>
+    <div class="ctl">
+      <label for="q2"><span><span class="m">q</span><sub>2</sub></span><output id="q2o"></output></label>
+      <input id="q2" type="range" min="-180" max="180" step="1" value="60">
+    </div>
+    <div class="ctl">
+      <label for="l1"><span><span class="m">ℓ</span><sub>1</sub></span><output id="l1o"></output></label>
+      <input id="l1" type="range" min="0.1" max="0.6" step="0.01" value="0.5">
+    </div>
+    <div class="ctl">
+      <label for="l2"><span><span class="m">ℓ</span><sub>2</sub></span><output id="l2o"></output></label>
+      <input id="l2" type="range" min="0.1" max="0.6" step="0.01" value="0.3">
+    </div>
+    <div class="btns">
+      <button type="button" id="pReg">Regolare: <span class="m">q</span> = (30°, 60°)</button>
+      <button type="button" id="pNear">Vicino: <span class="m">q</span><sub>2</sub> = 5°</button>
+      <button type="button" id="pStr">Disteso: <span class="m">q</span><sub>2</sub> = 0</button>
+      <button type="button" id="pFold">Ripiegato: <span class="m">q</span><sub>2</sub> = 180°</button>
+    </div>
+  </section>
+
+  <section class="panel controls" aria-label="Cinematica o statica">
+    <div class="modes" role="group" aria-label="Modo">
+      <button type="button" id="mKin" aria-pressed="true">Cinematica</button>
+      <button type="button" id="mSta" aria-pressed="false">Statica</button>
+    </div>
+    <div class="ctl" data-mode="kin">
+      <label for="qd1"><span><span class="m"><span class="qd">q</span></span><sub>1</sub></span><output id="qd1o"></output></label>
+      <input id="qd1" type="range" min="-1" max="1" step="0.01" value="0.8">
+    </div>
+    <div class="ctl" data-mode="kin">
+      <label for="qd2"><span><span class="m"><span class="qd">q</span></span><sub>2</sub></span><output id="qd2o"></output></label>
+      <input id="qd2" type="range" min="-1" max="1" step="0.01" value="-0.5">
+    </div>
+    <div class="ctl" data-mode="sta" hidden>
+      <label for="fphi"><span>direzione di <span class="m">f</span></span><output id="fphio"></output></label>
+      <input id="fphi" type="range" min="-180" max="180" step="1" value="90">
+    </div>
+    <div class="ctl" data-mode="sta" hidden>
+      <label for="fmag"><span>modulo di <span class="m">f</span></span><output id="fmago"></output></label>
+      <input id="fmag" type="range" min="0" max="20" step="0.5" value="10">
+    </div>
+    <div class="btns">
+      <button type="button" id="bAuto" data-mode="kin">Automovimento: <span class="m"><span class="qd">q</span></span> lungo <span class="m">v</span><sub>2</sub></button>
+      <button type="button" id="bStruct" data-mode="sta" hidden>Forza strutturale: <span class="m">f</span> lungo <span class="m">u</span><sub>2</sub></button>
+      <button type="button" id="bVert" data-mode="sta" hidden>Forza verticale, come nella Fig. 7.4a</button>
+    </div>
+  </section>
+
+  <div class="views">
+    <section class="panel view">
+      <div class="head">
+        <h2>Spazio dell'end-effector <span class="m">ℝ</span><sup>2</sup></h2>
+        <p class="sub" id="subA"></p>
+      </div>
+      <div class="stage"><svg id="svgA" viewBox="0 0 460 440" role="img" aria-label="Braccio RR, con i sottospazi dell'end-effector in O2"></svg></div>
+      <div class="legend">
+        <span><svg viewBox="0 0 30 8"><line class="sR" x1="0" y1="4" x2="30" y2="4"/></svg>𝓡(J)</span>
+        <span><svg viewBox="0 0 30 8"><line class="sN" x1="0" y1="4" x2="30" y2="4"/></svg>𝓝(Jᵀ)</span>
+        <span><svg viewBox="0 0 30 8"><line class="sW" x1="0" y1="4" x2="30" y2="4"/></svg>direzioni principali u₁, u₂</span>
+        <span id="scaleA"></span>
+      </div>
+    </section>
+    <section class="panel view">
+      <div class="head">
+        <h2>Spazio dei giunti <span class="m">ℝ</span><sup>2</sup></h2>
+        <p class="sub" id="subB"></p>
+      </div>
+      <div class="stage"><svg id="svgB" viewBox="0 0 400 440" role="img" aria-label="Piano delle velocità o delle coppie dei giunti"></svg></div>
+      <div class="legend">
+        <span><svg viewBox="0 0 30 8"><line class="sR" x1="0" y1="4" x2="30" y2="4"/></svg>𝓡(Jᵀ)</span>
+        <span><svg viewBox="0 0 30 8"><line class="sN" x1="0" y1="4" x2="30" y2="4"/></svg>𝓝(J)</span>
+        <span><svg viewBox="0 0 30 8"><line class="sW" x1="0" y1="4" x2="30" y2="4"/></svg>direzioni principali v₁, v₂</span>
+        <span id="scaleB"></span>
+      </div>
+    </section>
+  </div>
+
+  <div class="monitor">
+    <section class="panel card">
+      <h3>Configurazione <span class="pill" id="state"></span></h3>
+      <div class="matrow"><span class="m">J</span> =<div class="mat" id="Jmat"></div><span>m</span></div>
+      <div class="kv" id="kvConf"></div>
+      <p class="note">Rango numerico: 1 se <span class="m">σ</span><sub>2</sub>/<span class="m">σ</span><sub>1</sub> &lt; 10⁻⁹. Il test <code>det(J)==0</code> non va usato in un codice.</p>
+    </section>
+    <section class="panel card tbl">
+      <h3>I quattro sottospazi</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>sottospazio</th><th>dim</th><th>base</th><th>significato meccanico</th></tr></thead>
+        <tbody id="tSub"></tbody>
+      </table></div>
+      <p class="note">In ciascuno spazio i due sottospazi sono ortogonali: 𝓝(Jᵀ) ⟂ 𝓡(J) nello spazio dell'end-effector, 𝓝(J) ⟂ 𝓡(Jᵀ) nello spazio dei giunti.</p>
+    </section>
+    <section class="panel card">
+      <h3 id="hMode"></h3>
+      <div class="kv" id="kvMode"></div>
+      <div class="kv" id="kvPow"></div>
+    </section>
+  </div>
+
+  <section class="panel obs">
+    <h2>Che cosa guardare</h2>
+    <ol>
+      <li>Portare <span class="m">q</span><sub>2</sub> a 0 o a 180°. L'ellisse delle velocità diventa un segmento lungo 𝓡(J), perpendicolare al braccio. La direzione persa, lungo il braccio, è 𝓝(Jᵀ).</li>
+      <li>In singolarità premere «Automovimento». I giunti si muovono, ma <span class="m">V</span> = 0: <span class="m"><span class="qd">q</span></span> è sulla retta 𝓝(J). Con una <span class="m"><span class="qd">q</span></span> qualsiasi, <span class="m">J</span> vede solo la parte <span class="m"><span class="qd">q</span></span><sub>r</sub> lungo 𝓡(Jᵀ).</li>
+      <li>Passare a «Statica» e premere «Forza strutturale». La retta d'azione passa per <span class="m">O</span><sub>0</sub> e per <span class="m">O</span><sub>1</sub>, quindi <span class="m">τ</span> = 0. È la stessa direzione persa dalla velocità.</li>
+      <li>Con una forza qualsiasi, in singolarità <span class="m">τ</span> resta sulla retta 𝓡(Jᵀ): le coppie stanno sempre nel rapporto dei bracci rispetto a <span class="m">O</span><sub>0</sub> e a <span class="m">O</span><sub>1</sub>.</li>
+      <li>Con <span class="m">q</span><sub>2</sub> = 5° i nuclei contengono solo lo zero, ma <span class="m">σ</span><sub>2</sub> è piccolo. «Automovimento» dà allora una <span class="m">V</span> piccola, non nulla, e «Forza strutturale» una <span class="m">τ</span> piccola, non nulla.</li>
+      <li>In ogni configurazione la potenza è la stessa ai due lati: <span class="m">f</span><sup class="rm">T</sup><span class="m">V</span> = <span class="m">τ</span><sup class="rm">T</sup><span class="m"><span class="qd">q</span></span>.</li>
+    </ol>
+  </section>
+  <footer class="credito"><span>Realizzato da Ing. Eugeniu Grabovic</span><span>&copy; 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini &mdash; Tutti i diritti riservati</span></footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const D2R = Math.PI / 180;
+
+  // stato; q, f in unita' del testo (gradi, N); qd in rad/s
+  const st = { mode: "kin", q1: 30, q2: 60, l1: 0.5, l2: 0.3, qd: [0.8, -0.5], fphi: 90, fmag: 10 };
+
+  // ---------- formattazione (virgola decimale) ----------
+  function fmt(x, n = 3) {
+    if (!isFinite(x)) return "∞";
+    if (Math.abs(x) < 0.5 * Math.pow(10, -n)) x = 0;
+    return x.toFixed(n).replace(".", ",").replace(/^-/, "−");
+  }
+  const vec = (v, n = 3) => "(" + fmt(v[0], n) + "; " + fmt(v[1], n) + ")";
+  // q con il punto sopra: il carattere combinante U+0307 non e' nei font caricati
+  const QD_HTML = (s) => s.replace(/q̇/g, '<span class="qd">q</span>');
+  const QD_SVG = (s) => s.replace(/q̇(\S*)/g, 'q<tspan dx="-0.4em" dy="-0.5em">˙</tspan><tspan dx="0.1em" dy="0.5em">$1</tspan>');
+
+  // ---------- algebra 2x2 ----------
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
+  const sc = (a, k) => [a[0] * k, a[1] * k];
+  const add = (a, b) => [a[0] + b[0], a[1] + b[1]];
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1]];
+  const perp = (a) => [-a[1], a[0]];
+  const nrm = (a) => Math.hypot(a[0], a[1]);
+  const mul = (J, v) => [J[0][0] * v[0] + J[0][1] * v[1], J[1][0] * v[0] + J[1][1] * v[1]];
+  const mulT = (J, v) => [J[0][0] * v[0] + J[1][0] * v[1], J[0][1] * v[0] + J[1][1] * v[1]];
+  function canon(v) { // verso fissato, per basi che non saltano di segno
+    return (v[0] < -1e-12 || (Math.abs(v[0]) <= 1e-12 && v[1] < 0)) ? sc(v, -1) : v;
+  }
+
+  function model() {
+    const { l1, l2 } = st, q1 = st.q1 * D2R, q12 = (st.q1 + st.q2) * D2R;
+    const O1 = [l1 * Math.cos(q1), l1 * Math.sin(q1)];
+    const O2 = [O1[0] + l2 * Math.cos(q12), O1[1] + l2 * Math.sin(q12)];
+    const J = [[-O2[1], -l2 * Math.sin(q12)], [O2[0], l2 * Math.cos(q12)]];
+    // SVD 2x2 da J^T J
+    const a = dot([J[0][0], J[1][0]], [J[0][0], J[1][0]]);
+    const c = dot([J[0][1], J[1][1]], [J[0][1], J[1][1]]);
+    const b = J[0][0] * J[0][1] + J[1][0] * J[1][1];
+    const lam1 = (a + c) / 2 + Math.hypot((a - c) / 2, b);
+    let v1;
+    if (Math.abs(b) > 1e-14) {
+      const p = [b, lam1 - a], r = [lam1 - c, b];
+      v1 = nrm(p) > nrm(r) ? p : r;
+    } else v1 = a >= c ? [1, 0] : [0, 1];
+    v1 = canon(sc(v1, 1 / nrm(v1)));
+    const v2 = perp(v1);
+    const det = J[0][0] * J[1][1] - J[0][1] * J[1][0];
+    const s1 = Math.sqrt(lam1), s2 = Math.abs(det) / s1;
+    const u1 = sc(mul(J, v1), 1 / s1);
+    const u2 = perp(u1);
+    const ratio = s2 / s1;
+    const sing = ratio < 1e-9, near = !sing && ratio < 0.1;
+    return { O1, O2, J, det, s1, s2, ratio, sing, near, v1, v2, u1, u2, r: sing ? 1 : 2 };
+  }
+
+  // ---------- disegno svg ----------
+  const P = (x, y) => x.toFixed(1) + "," + y.toFixed(1);
+  function arrow(g, a, b, cls, w) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy);
+    if (L < 2) return;
+    const ux = dx / L, uy = dy / L, h = Math.min(11, 0.5 * L), hw = h * 0.42;
+    const bx = b[0] - ux * h, by = b[1] - uy * h;
+    g.push(`<line class="${cls}" x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke-width="${w}" stroke-linecap="butt"/>`);
+    g.push(`<polygon class="${cls}-h" points="${P(b[0], b[1])} ${P(bx - uy * hw, by + ux * hw)} ${P(bx + uy * hw, by - ux * hw)}"/>`);
+  }
+  function lineThrough(g, p, d, cls) { // d: versore nel piano svg
+    g.push(`<line class="${cls}" x1="${(p[0] - 2000 * d[0]).toFixed(1)}" y1="${(p[1] - 2000 * d[1]).toFixed(1)}" x2="${(p[0] + 2000 * d[0]).toFixed(1)}" y2="${(p[1] + 2000 * d[1]).toFixed(1)}"/>`);
+  }
+  function label(g, x, y, txt, cls = "lb", anchor = "middle", W = 460, H = 440) {
+    x = Math.min(Math.max(x, 14), W - 14); y = Math.min(Math.max(y, 16), H - 8);
+    g.push(`<text class="${cls} halo" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}">${QD_SVG(txt)}</text>`);
+  }
+  function ellipse(g, c, a1, a2, cls) { // c centro svg, a1 a2 semiassi (vettori svg)
+    const pts = [];
+    for (let i = 0; i <= 72; i++) {
+      const t = i / 72 * 2 * Math.PI;
+      pts.push(P(c[0] + a1[0] * Math.cos(t) + a2[0] * Math.sin(t), c[1] + a1[1] * Math.cos(t) + a2[1] * Math.sin(t)));
+    }
+    g.push(`<polygon class="${cls}" points="${pts.join(" ")}"/>`);
+  }
+  // etichetta di una retta: al bordo interno, lungo d, spostata in normale
+  function lineLabel(g, p, d, txt, W, H, off = 14, dist = 150) {
+    let t = dist;
+    for (; t > 30; t -= 10) {
+      const x = p[0] + d[0] * t, y = p[1] + d[1] * t;
+      if (x > 30 && x < W - 30 && y > 24 && y < H - 16) break;
+    }
+    const n = [-d[1], d[0]];
+    label(g, p[0] + d[0] * t + n[0] * off, p[1] + d[1] * t + n[1] * off, txt, "lbm", "middle", W, H);
+  }
+
+  // vista A: piano del braccio, 1 m = 170 px
+  const WA = 460, HA = 440, kA = 170, cA = [215, 240];
+  const toA = (p) => [cA[0] + kA * p[0], cA[1] - kA * p[1]];
+  const dA = (d) => [d[0], -d[1]]; // direzione mondo -> svg
+  const kV = 0.6;   // 1 m/s = 0,6 m
+  const kF = 0.03;  // 1 N = 0,03 m
+
+  // vista B: piano dei giunti
+  const WB = 400, HB = 440, cB = [200, 220];
+  const kQ = 120;   // 1 rad/s = 120 px
+  const kT = 12;    // 1 N m = 12 px
+
+  function drawA(m, k) {
+    const g = [];
+    const { l1, l2 } = st, R = l1 + l2, r = Math.abs(l1 - l2);
+    const O0s = toA([0, 0]), O1s = toA(m.O1), O2s = toA(m.O2);
+    // spazio di lavoro (corona)
+    g.push(`<path class="ws" d="M ${cA[0] + kA * R} ${cA[1]} a ${kA * R} ${kA * R} 0 1 0 ${-2 * kA * R} 0 a ${kA * R} ${kA * R} 0 1 0 ${2 * kA * R} 0 Z` +
+      (r > 1e-6 ? ` M ${cA[0] + kA * r} ${cA[1]} a ${kA * r} ${kA * r} 0 1 0 ${-2 * kA * r} 0 a ${kA * r} ${kA * r} 0 1 0 ${2 * kA * r} 0 Z` : "") + `"/>`);
+    // telaio
+    g.push(`<line class="hatch" x1="${O0s[0] - 16}" y1="${O0s[1] + 9}" x2="${O0s[0] + 16}" y2="${O0s[1] + 9}"/>`);
+    for (let i = -16; i < 16; i += 5) g.push(`<line class="hatch" x1="${O0s[0] + i}" y1="${O0s[1] + 15}" x2="${O0s[0] + i + 5}" y2="${O0s[1] + 9}"/>`);
+    // frame {S0}
+    arrow(g, O0s, [O0s[0] + 48, O0s[1]], "frame", 1.6);
+    arrow(g, O0s, [O0s[0], O0s[1] - 48], "frame", 1.6);
+    g.push(`<text class="frame-t" x="${O0s[0] + 52}" y="${O0s[1] + 16}">x₀</text><text class="frame-t" x="${O0s[0] - 22}" y="${O0s[1] - 44}">y₀</text>`);
+
+    // sottospazi in O2
+    const du1 = dA(m.u1), du2 = dA(m.u2);
+    if (m.sing) {
+      lineThrough(g, O2s, du1, "sR");
+      lineThrough(g, O2s, du2, "sN");
+    } else {
+      lineThrough(g, O2s, du1, "sW");
+      lineThrough(g, O2s, du2, "sW");
+    }
+    // link sotto i vettori
+    g.push(`<line class="lnk" x1="${O0s[0].toFixed(1)}" y1="${O0s[1].toFixed(1)}" x2="${O1s[0].toFixed(1)}" y2="${O1s[1].toFixed(1)}"/>`);
+    g.push(`<line class="lnk" x1="${O1s[0].toFixed(1)}" y1="${O1s[1].toFixed(1)}" x2="${O2s[0].toFixed(1)}" y2="${O2s[1].toFixed(1)}"/>`);
+
+    if (st.mode === "kin") {
+      // ellisse delle velocita': immagine del cerchio |qd| = 1 rad/s
+      ellipse(g, O2s, sc(du1, m.s1 * kV * kA), sc(du2, m.s2 * kV * kA), "ell");
+      const c1 = [m.J[0][0] * st.qd[0], m.J[1][0] * st.qd[0]];
+      const c2 = [m.J[0][1] * st.qd[1], m.J[1][1] * st.qd[1]];
+      const V = add(c1, c2);
+      const P1 = toA(add(m.O2, sc(c1, kV))), PV = toA(add(m.O2, sc(V, kV)));
+      arrow(g, O2s, P1, "v3", 1.4);
+      arrow(g, P1, PV, "v3", 1.4);
+      arrow(g, O2s, PV, "v1", 2.6);
+      if (nrm(c1) * kV * kA > 22) label(g, (O2s[0] + P1[0]) / 2 + 12, (O2s[1] + P1[1]) / 2 - 6, "J₁q̇₁", "lbm", "start");
+      if (nrm(c2) * kV * kA > 22) label(g, (P1[0] + PV[0]) / 2 + 12, (P1[1] + PV[1]) / 2 + 4, "J₂q̇₂", "lbm", "start");
+      if (nrm(V) * kV * kA > 6) label(g, PV[0] + 10, PV[1] - 8, "V", "lb", "start");
+      else label(g, O2s[0] + 14, O2s[1] + 22, "V = 0", "lb", "start");
+    } else {
+      const f = k.f;
+      const e = nrm(f) > 0 ? sc(f, 1 / nrm(f)) : [Math.cos(st.fphi * D2R), Math.sin(st.fphi * D2R)];
+      // retta d'azione e bracci
+      lineThrough(g, O2s, dA(e), "act");
+      [[0, 0], m.O1].forEach((Q) => {
+        const foot = add(m.O2, sc(e, dot(sub(Q, m.O2), e)));
+        g.push(`<line class="perp" x1="${toA(Q)[0].toFixed(1)}" y1="${toA(Q)[1].toFixed(1)}" x2="${toA(foot)[0].toFixed(1)}" y2="${toA(foot)[1].toFixed(1)}"/>`);
+      });
+      const PF = toA(add(m.O2, sc(f, kF)));
+      if (m.sing) {
+        const fr = sc(m.u1, dot(f, m.u1)), fn = sc(m.u2, dot(f, m.u2));
+        const Pr = toA(add(m.O2, sc(fr, kF))), Pn = toA(add(m.O2, sc(fn, kF)));
+        arrow(g, O2s, Pr, "v2", 1.6);
+        arrow(g, O2s, Pn, "v3", 1.6);
+        // componenti senza nome quando coincidono con f
+        const own = (c) => nrm(c) * kF * kA > 18 && nrm(sub(c, f)) * kF * kA > 18;
+        if (own(fr)) label(g, Pr[0] + 10, Pr[1] + 4, "fᵣ", "lbm", "start");
+        if (own(fn)) label(g, Pn[0] + 10, Pn[1] + 14, "fₙ", "lbm", "start");
+      }
+      arrow(g, O2s, PF, "v1", 2.6);
+      if (nrm(f) > 0) label(g, PF[0] + 10, PF[1] - 8, "f", "lb", "start");
+      label(g, O0s[0] - 18, O0s[1] + 34, "τ₁ = " + fmt(k.tau[0], 2) + " N m", "lbs", "middle");
+      label(g, O1s[0] + (m.O1[0] >= 0 ? 16 : -16), O1s[1] + 26, "τ₂ = " + fmt(k.tau[1], 2) + " N m", "lbs", m.O1[0] >= 0 ? "start" : "end");
+    }
+    // giunti
+    g.push(`<circle class="jnt" cx="${O0s[0].toFixed(1)}" cy="${O0s[1].toFixed(1)}" r="6"/>`);
+    g.push(`<circle class="jnt" cx="${O1s[0].toFixed(1)}" cy="${O1s[1].toFixed(1)}" r="6"/>`);
+    g.push(`<circle class="pt" cx="${O2s[0].toFixed(1)}" cy="${O2s[1].toFixed(1)}" r="3.6"/>`);
+    // nomi dei punti
+    const lo = m.O1[0] >= 0 ? -1 : 1;
+    label(g, O0s[0] + 18 * lo, O0s[1] - 10, "O₀", "lb");
+    label(g, O1s[0] + 18 * lo, O1s[1] - 10, "O₁", "lb");
+    label(g, O2s[0] + 18 * lo, O2s[1] - 12, "O₂", "lb");
+    // etichette dei sottospazi
+    if (m.sing) {
+      lineLabel(g, O2s, du1, "𝓡(J)", WA, HA, 14, 160);
+      lineLabel(g, O2s, sc(du2, -1), "𝓝(Jᵀ)", WA, HA, -14, 150);
+    } else {
+      lineLabel(g, O2s, du1, "u₁", WA, HA, 12, 170);
+      lineLabel(g, O2s, du2, "u₂", WA, HA, 12, 170);
+    }
+    $("svgA").innerHTML = g.join("");
+  }
+
+  function drawB(m, k) {
+    const g = [];
+    const kin = st.mode === "kin", s = kin ? kQ : kT;
+    const toB = (p) => [cB[0] + s * p[0], cB[1] - s * p[1]];
+    g.push(`<line class="axis" x1="16" y1="${cB[1]}" x2="${WB - 16}" y2="${cB[1]}"/><line class="axis" x1="${cB[0]}" y1="${HB - 12}" x2="${cB[0]}" y2="14"/>`);
+    // tacche
+    const step = kin ? 0.5 : 5, lim = kin ? 1.5 : 15;
+    for (let t = -lim; t <= lim + 1e-9; t += step) {
+      if (Math.abs(t) < 1e-9) continue;
+      const X = cB[0] + s * t, Y = cB[1] - s * t;
+      g.push(`<line class="axis" x1="${X}" y1="${cB[1] - 3}" x2="${X}" y2="${cB[1] + 3}"/><line class="axis" x1="${cB[0] - 3}" y1="${Y}" x2="${cB[0] + 3}" y2="${Y}"/>`);
+      if (Math.abs(Math.abs(t) - lim) < 1e-9) {
+        g.push(`<text class="lbs" x="${X}" y="${cB[1] + 16}" text-anchor="middle">${fmt(t, kin ? 1 : 0)}</text>`);
+        g.push(`<text class="lbs" x="${cB[0] - 7}" y="${Y + 4}" text-anchor="end">${fmt(t, kin ? 1 : 0)}</text>`);
+      }
+    }
+    g.push(`<text class="lb" x="${WB - 18}" y="${cB[1] - 8}" text-anchor="end">${kin ? QD_SVG("q̇₁") : "τ₁"}</text>`);
+    g.push(`<text class="lb" x="${cB[0] + 8}" y="26">${kin ? QD_SVG("q̇₂") : "τ₂"}</text>`);
+
+    const dv1 = [m.v1[0], -m.v1[1]], dv2 = [m.v2[0], -m.v2[1]];
+    if (m.sing) { lineThrough(g, cB, dv1, "sR"); lineThrough(g, cB, dv2, "sN"); }
+    else { lineThrough(g, cB, dv1, "sW"); lineThrough(g, cB, dv2, "sW"); }
+
+    if (kin) {
+      g.push(`<circle class="unit" cx="${cB[0]}" cy="${cB[1]}" r="${kQ}"/>`);
+      const q = st.qd, Pq = toB(q);
+      if (m.sing) {
+        const qr = sc(m.v1, dot(q, m.v1)), qn = sc(m.v2, dot(q, m.v2));
+        const Pr = toB(qr), Pn = toB(qn);
+        g.push(`<line class="sW" x1="${Pr[0].toFixed(1)}" y1="${Pr[1].toFixed(1)}" x2="${Pq[0].toFixed(1)}" y2="${Pq[1].toFixed(1)}"/>`);
+        g.push(`<line class="sW" x1="${Pn[0].toFixed(1)}" y1="${Pn[1].toFixed(1)}" x2="${Pq[0].toFixed(1)}" y2="${Pq[1].toFixed(1)}"/>`);
+        arrow(g, cB, Pr, "v2", 1.8);
+        arrow(g, cB, Pn, "v3", 1.8);
+        const own = (c) => nrm(c) * kQ > 18 && nrm(sub(c, q)) * kQ > 18;
+        if (own(qr)) label(g, Pr[0] + 12, Pr[1] - 6, "q̇ᵣ", "lbm", "start", WB, HB);
+        if (own(qn)) label(g, Pn[0] + 12, Pn[1] + 14, "q̇ₙ", "lbm", "start", WB, HB);
+      }
+      arrow(g, cB, Pq, "v1", 2.6);
+      if (nrm(q) * kQ > 6) label(g, Pq[0] + 10, Pq[1] - 10, "q̇", "lb", "start", WB, HB);
+    } else {
+      // ellisse delle coppie: immagine del cerchio |f| = modulo corrente
+      ellipse(g, cB, sc(dv1, m.s1 * st.fmag * kT), sc(dv2, m.s2 * st.fmag * kT), "ell");
+      const Pt = toB(k.tau);
+      arrow(g, cB, Pt, "v1", 2.6);
+      if (nrm(k.tau) * kT > 6) label(g, Pt[0] + 10, Pt[1] - 10, "τ", "lb", "start", WB, HB);
+      else label(g, cB[0] + 14, cB[1] + 24, "τ = 0", "lb", "start", WB, HB);
+    }
+    if (m.sing) {
+      lineLabel(g, cB, dv1, "𝓡(Jᵀ)", WB, HB, 14, 185);
+      lineLabel(g, cB, sc(dv2, -1), "𝓝(J)", WB, HB, -14, 185);
+    } else {
+      lineLabel(g, cB, dv1, "v₁", WB, HB, 12, 190);
+      lineLabel(g, cB, dv2, "v₂", WB, HB, 12, 190);
+    }
+    $("svgB").innerHTML = g.join("");
+  }
+
+  // ---------- monitor ----------
+  function monitor(m, k) {
+    const pill = $("state");
+    pill.className = "pill " + (m.sing ? "sing" : m.near ? "var" : "ok");
+    pill.textContent = m.sing ? "singolare, rango 1" : m.near ? "vicino alla singolarità" : "regolare, rango 2";
+    $("Jmat").innerHTML = [m.J[0][0], m.J[0][1], m.J[1][0], m.J[1][1]].map((x) => `<span>${fmt(x, 3)}</span>`).join("");
+    $("kvConf").innerHTML =
+      `<span>det J = ℓ₁ℓ₂ sin q₂</span><b>${fmt(m.det, 4)} m²</b>` +
+      `<span>σ₁</span><b>${fmt(m.s1, 4)} m</b>` +
+      `<span>σ₂</span><b>${fmt(m.s2, 4)} m</b>` +
+      `<span>σ₂ / σ₁</span><b>${fmt(m.ratio, 4)}</b>`;
+
+    const R2 = "tutto ℝ²", Z = "solo lo 0";
+    const rows = [
+      ["𝓡(J)", m.r, m.sing ? vec(m.u1) : R2, "velocità realizzabili di O₂", false],
+      ["𝓝(Jᵀ)", 2 - m.r, m.sing ? vec(m.u2) : Z, "forze strutturali: τ = Jᵀf = 0", !m.sing],
+      ["𝓡(Jᵀ)", m.r, m.sing ? vec(m.v1) : R2, "coppie equilibrabili con una forza in O₂", false],
+      ["𝓝(J)", 2 - m.r, m.sing ? vec(m.v2) : Z, "automovimenti: V = Jq̇ = 0", !m.sing],
+    ];
+    $("tSub").innerHTML = QD_HTML(rows.map((r) =>
+      `<tr class="${r[4] ? "zero" : ""}"><td><span class="m">${r[0]}</span></td><td class="n">${r[1]}</td><td class="n">${r[2]}</td><td>${r[3]}</td></tr>`).join(""));
+
+    if (st.mode === "kin") {
+      $("hMode").innerHTML = QD_HTML("Cinematica: V = J q̇");
+      let h = `<span>q̇</span><b>${vec(st.qd)} rad/s</b>`;
+      if (m.sing) {
+        h += `<span>q̇ᵣ, in 𝓡(Jᵀ)</span><b>${vec(sc(m.v1, dot(st.qd, m.v1)))}</b>`;
+        h += `<span>q̇ₙ, in 𝓝(J)</span><b>${vec(sc(m.v2, dot(st.qd, m.v2)))}</b>`;
+      }
+      h += `<span>V</span><b>${vec(k.V)} m/s</b><span>|V|</span><b>${fmt(nrm(k.V), 4)} m/s</b>`;
+      $("kvMode").innerHTML = QD_HTML(h);
+    } else {
+      $("hMode").innerHTML = "Statica: τ = Jᵀ f";
+      const e = nrm(k.f) > 0 ? sc(k.f, 1 / nrm(k.f)) : [0, 0];
+      const b0 = Math.abs(m.O2[0] * e[1] - m.O2[1] * e[0]);
+      const d1 = sub(m.O2, m.O1), b1 = Math.abs(d1[0] * e[1] - d1[1] * e[0]);
+      let h = `<span>f</span><b>${vec(k.f, 2)} N</b>`;
+      if (m.sing) {
+        h += `<span>fᵣ, in 𝓡(J)</span><b>${vec(sc(m.u1, dot(k.f, m.u1)), 2)}</b>`;
+        h += `<span>fₙ, in 𝓝(Jᵀ)</span><b>${vec(sc(m.u2, dot(k.f, m.u2)), 2)}</b>`;
+      }
+      h += `<span>braccio da O₀, da O₁</span><b>${fmt(b0, 3)}; ${fmt(b1, 3)} m</b>`;
+      h += `<span>τ</span><b>${vec(k.tau, 2)} N m</b>`;
+      $("kvMode").innerHTML = QD_HTML(h);
+    }
+    $("kvPow").innerHTML =
+      QD_HTML(`<span>fᵀV</span><b>${fmt(dot(k.f, k.V), 4)} W</b><span>τᵀq̇</span><b>${fmt(dot(k.tau, st.qd), 4)} W</b>`);
+
+    $("subA").innerHTML = QD_HTML(st.mode === "kin"
+      ? "Velocità di O₂. L'ellisse è l'immagine del cerchio |q̇| = 1 rad/s."
+      : "Forza che O₂ esercita sull'ambiente, con la retta d'azione e i bracci rispetto a O₀ e O₁.");
+    $("subB").innerHTML = QD_HTML(st.mode === "kin"
+      ? "Velocità dei giunti. Il cerchio tratteggiato è |q̇| = 1 rad/s."
+      : "Coppie ai giunti. L'ellisse è l'insieme delle τ per tutte le direzioni di f, con il modulo assegnato.");
+    $("scaleA").textContent = st.mode === "kin" ? "scala: 1 m/s = 0,6 m" : "scala: 10 N = 0,3 m";
+    $("scaleB").textContent = st.mode === "kin" ? "assi in rad/s" : "assi in N m";
+  }
+
+  function render() {
+    const m = model();
+    const f = [st.fmag * Math.cos(st.fphi * D2R), st.fmag * Math.sin(st.fphi * D2R)];
+    const k = { V: mul(m.J, st.qd), f, tau: mulT(m.J, f) };
+    drawA(m, k); drawB(m, k); monitor(m, k);
+    $("q1o").textContent = Math.round(st.q1) + "°";
+    $("q2o").textContent = Math.round(st.q2) + "°";
+    $("l1o").textContent = fmt(st.l1, 2) + " m";
+    $("l2o").textContent = fmt(st.l2, 2) + " m";
+    $("qd1o").textContent = fmt(st.qd[0], 3) + " rad/s";
+    $("qd2o").textContent = fmt(st.qd[1], 3) + " rad/s";
+    $("fphio").textContent = fmt(st.fphi, 1) + "°";
+    $("fmago").textContent = fmt(st.fmag, 1) + " N";
+  }
+
+  // ---------- comandi ----------
+  function setSlider(id, v) { $(id).value = v; }
+  ["q1", "q2", "fphi", "fmag"].forEach((id) => $(id).addEventListener("input", (e) => { st[id] = +e.target.value; render(); }));
+  ["l1", "l2"].forEach((id) => $(id).addEventListener("input", (e) => { st[id] = +e.target.value; render(); }));
+  $("qd1").addEventListener("input", (e) => { st.qd = [+e.target.value, st.qd[1]]; render(); });
+  $("qd2").addEventListener("input", (e) => { st.qd = [st.qd[0], +e.target.value]; render(); });
+
+  function preset(q1, q2) {
+    if (q1 !== null) { st.q1 = q1; setSlider("q1", q1); }
+    st.q2 = q2; setSlider("q2", q2); render();
+  }
+  $("pReg").onclick = () => preset(30, 60);
+  $("pNear").onclick = () => preset(null, 5);
+  $("pStr").onclick = () => preset(null, 0);
+  $("pFold").onclick = () => preset(null, 180);
+
+  function setMode(mode) {
+    st.mode = mode;
+    $("mKin").setAttribute("aria-pressed", mode === "kin");
+    $("mSta").setAttribute("aria-pressed", mode === "sta");
+    document.querySelectorAll("[data-mode]").forEach((el) => { el.hidden = el.dataset.mode !== mode; });
+    render();
+  }
+  $("mKin").onclick = () => setMode("kin");
+  $("mSta").onclick = () => setMode("sta");
+
+  // valori esatti nello stato; gli slider mostrano il valore arrotondato
+  $("bAuto").onclick = () => {
+    const m = model(); st.qd = sc(m.v2, 0.9);
+    setSlider("qd1", st.qd[0]); setSlider("qd2", st.qd[1]); render();
+  };
+  $("bStruct").onclick = () => {
+    // verso uscente da O0, cosi' f non si sovrappone al braccio
+    const m = model(), d = dot(m.u2, m.O2) < 0 ? sc(m.u2, -1) : m.u2;
+    const phi = Math.atan2(d[1], d[0]) / D2R;
+    st.fphi = phi; setSlider("fphi", Math.round(phi)); render();
+  };
+  $("bVert").onclick = () => { st.fphi = 90; st.fmag = 10; setSlider("fphi", 90); setSlider("fmag", 10); render(); };
+
+  render();
+})();
+</script>
+</body>
+</html>

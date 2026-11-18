@@ -1,9 +1,12 @@
 <!doctype html>
-<!-- Dispensa di Meccanica dei Robot, Universita' di Pisa: dashboard dei sottospazi dello Jacobiano (Cap. 7).
+<!-- (c) 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini, Universita' di Pisa. Tutti i diritti riservati.
+     Dispensa di Meccanica dei Robot, Universita' di Pisa: dashboard dei sottospazi dello Jacobiano (Cap. 7).
      La grafica 3D usa three.js (c) 2010-2024 three.js authors, licenza MIT: l'avviso e' nel codice incorporato. -->
 <html lang="it">
 <head>
 <meta charset="utf-8">
+<meta name="author" content="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+<meta name="copyright" content="&copy; 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini. Tutti i diritti riservati.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sottospazi dell'antropomorfo</title>
 <style>
@@ -100,6 +103,7 @@
   .layers label { white-space: nowrap; cursor: pointer; }
   .qd { position: relative; display: inline-block; }
   .qd::after { content: "\02D9"; position: absolute; left: 0.18em; top: -0.45em; font-style: normal; }
+  .copy { font-size: 12px; color: var(--dim); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
   .foot { margin-top: 18px; font-size: 12px; color: var(--dim); }
   @media (max-width: 860px) {
     body { flex-direction: column; overflow: auto; }
@@ -115,6 +119,7 @@
   window.addEventListener("unhandledrejection", (e) => { document.body.dataset.errors += String(e.reason) + "; "; });</script>
 <div id="view"><div id="stato"></div></div>
 <aside>
+  <p class="copy">Realizzato da Ing. Eugeniu Grabovic &middot; &copy; 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini &mdash; Tutti i diritti riservati</p>
   <h1>Sottospazi dello Jacobiano</h1>
   <p class="sub">Manipolatore antropomorfo con polso sferico &mdash; Capitolo 7 della dispensa di Meccanica dei Robot</p>
   <p class="hint">Il <b>compito</b> sceglie le righe di <i>J</i> (le componenti del twist, in <span class="cS">{<i>S</i><sub>0</sub>}</span>)

@@ -1,0 +1,1557 @@
+<!doctype html>
+<!-- (c) 2026 Prof. Marco Gabiccini, Universita' di Pisa. Tutti i diritti riservati.
+     Le formule usano KaTeX (c) Khan Academy, licenza MIT, caricato da cdn.jsdelivr.net. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="author" content="Prof. Marco Gabiccini">
+<meta name="copyright" content="&copy; 2026 Prof. Marco Gabiccini. Tutti i diritti riservati.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dinamica vincolata nel piano</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+  :root {
+    /* come le figure della dispensa: rosina per i riquadri, i colori dei frame (preambolo.tex) per i corpi */
+    --paper: #ffffff; --ink: #262626; --dim: #6b6b6b; --rule: #e3d6d2;
+    --rosina: #f1cdc5; --rosinaL: #fbe9e5; --rosinaC: #4e2a28;
+    --colS: #0000a6; --colB: #a60000; --colC: #007300; --colD: #d96c00;
+    --vinc: #4e2a28; --forza: #7a7a7a; --nuovo: #ffe08a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); }
+  body { font-family: "Latin Modern Roman", "CMU Serif", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    font-size: 15px; line-height: 1.35; display: flex; overflow: hidden; }
+  #view { position: relative; flex: 1 1 auto; min-width: 0; height: 100%; }
+  #scena { display: block; width: 100%; height: 100%; touch-action: none; }
+  .hud { position: absolute; z-index: 2; background: rgba(255,255,255,0.92); border: 1px solid var(--rule);
+    padding: 6px 9px; font-size: 13.5px; line-height: 1.38; font-variant-numeric: tabular-nums; }
+  .hud .tit { font-variant: small-caps; letter-spacing: 0.05em; color: var(--rosinaC); font-size: 12.5px; }
+  /* strumenti in alto a sinistra */
+  #hud-strumenti { top: 10px; left: 10px; width: 186px; padding: 6px 7px; }
+  .strum { display: grid; grid-template-columns: 1fr; gap: 3px; margin-top: 3px; }
+  .strum button { display: flex; align-items: center; gap: 7px; text-align: left; padding: 2px 6px; }
+  .strum button .ic { width: 22px; height: 16px; flex: 0 0 22px; }
+  .strum button .k { margin-left: auto; font-size: 11px; color: var(--dim); font-family: Consolas, monospace; }
+  .strum .sep { height: 1px; background: var(--rule); margin: 2px 0; }
+  #aiuto-strum { font-size: 12.5px; color: #444; margin-top: 6px; line-height: 1.35; min-height: 3.5em; }
+  /* simulazione in alto al centro */
+  #hud-sim { top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+  #hud-sim .t { min-width: 76px; text-align: right; }
+  /* elemento selezionato in alto a destra */
+  #hud-sel { top: 10px; right: 10px; width: 236px; }
+  #hud-sel[hidden] { display: none; }
+  #hud-sel .riga-p { display: grid; grid-template-columns: 64px 1fr 58px; gap: 4px; align-items: center; font-size: 13px; margin: 2px 0; }
+  #hud-sel .riga-p .val { text-align: right; color: var(--dim); }
+  #hud-sel input { width: 100%; min-width: 0; }
+  #hud-sel .info { font-size: 12.5px; color: #444; margin: 3px 0; }
+  /* grafici in basso */
+  #grafico-box { position: absolute; z-index: 2; left: 206px; right: 10px; bottom: 10px; height: 132px;
+    background: rgba(255,255,255,0.92); border: 1px solid var(--rule); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr); overflow: hidden; }
+  /* min-height 0: senza, l'altezza intrinseca del canvas (150 px) allarga la riga e il grafico esce dal riquadro */
+  #grafico-box canvas { width: 100%; height: 100%; min-height: 0; display: block; }
+  #grafico-box canvas + canvas { border-left: 1px solid var(--rule); }
+  #grafico-box.chiuso { height: 22px; }
+  #grafico-box.chiuso canvas { display: none; }
+  #b-grafici { position: absolute; right: 3px; top: 2px; font-size: 11px; padding: 0 5px; z-index: 3; }
+  #avviso { position: absolute; left: 50%; bottom: 152px; transform: translateX(-50%); z-index: 3; background: var(--nuovo);
+    border: 1px solid #d8b24a; padding: 4px 10px; font-size: 13.5px; opacity: 0; transition: opacity .3s; pointer-events: none; max-width: 70%; }
+  #avviso.vis { opacity: 1; }
+  /* menu del tasto destro su un corpo */
+  #menu-corpo { position: absolute; z-index: 6; background: #fff; border: 1px solid #c9b5b0; box-shadow: 0 3px 10px rgba(0,0,0,.18);
+    padding: 5px; display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+  #menu-corpo[hidden] { display: none; }
+  #menu-corpo .tit { font-variant: small-caps; letter-spacing: 0.05em; color: var(--rosinaC); font-size: 12.5px; padding: 0 2px 3px; border-bottom: 1px solid var(--rule); }
+  #menu-corpo button { text-align: left; }
+  #menu-corpo .dim { font-size: 11.5px; }
+  /* separatore trascinabile */
+  #rz { flex: 0 0 5px; cursor: col-resize; background: var(--rule); }
+  #rz:hover, #rz.attivo { background: var(--rosina); }
+  aside { flex: 0 0 470px; height: 100%; overflow-y: auto; padding: 16px 18px 28px; scrollbar-gutter: stable; }
+  .copy { font-size: 12px; color: var(--dim); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  h1 { font-size: 20px; font-weight: normal; margin: 0 0 2px; }
+  .sub { font-style: italic; color: var(--dim); margin: 0 0 12px; font-size: 13.5px; }
+  h2 { font-size: 13px; font-weight: normal; font-variant: small-caps; letter-spacing: 0.06em; color: var(--rosinaC);
+    margin: 18px 0 6px; border-bottom: 1px solid var(--rule); padding-bottom: 2px; }
+  h2 i, h2 sub, h2 sup, h2 b, h2 span { font-variant: normal; letter-spacing: normal; }
+  details.sez > summary { list-style: none; cursor: pointer; }
+  details.sez > summary::-webkit-details-marker { display: none; }
+  details.sez > summary h2::before { content: "\25BE"; display: inline-block; width: 1em; font-variant: normal; transition: transform 0.15s; }
+  details.sez:not([open]) > summary h2::before { transform: rotate(-90deg); }
+  details.sez > summary:hover h2 { color: #000; border-bottom-color: #c9b5b0; }
+  p.hint, ul.hint, ol.hint { font-size: 13.5px; margin: 4px 0; color: #444; }
+  ul.hint, ol.hint { padding-left: 18px; }
+  ul.hint li, ol.hint li { margin: 2px 0; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  button { font: inherit; font-size: 13px; border: 1px solid #c9b5b0; background: var(--rosinaL); color: var(--rosinaC);
+    padding: 3px 9px; border-radius: 2px; cursor: pointer; }
+  button:hover { background: var(--rosina); }
+  button:disabled { opacity: 0.45; cursor: default; background: var(--rosinaL); }
+  button.acceso { background: var(--rosina); border-color: var(--rosinaC); }
+  select, input[type=number] { font: inherit; font-size: 13px; max-width: 100%; }
+  input[type=range] { width: 100%; accent-color: #555; }
+  label.riga { white-space: nowrap; cursor: pointer; font-size: 14px; }
+  label.riga.blocco { display: block; margin: 3px 0; white-space: normal; }
+  .layers { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; font-size: 14px; }
+  .joint { display: grid; grid-template-columns: 70px 1fr 64px; align-items: center; gap: 2px 8px; font-size: 13.5px; margin: 2px 0; }
+  .joint .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--dim); }
+  .dim { color: var(--dim); }
+  .ok { color: #2d6a3a; } .no { color: #b00020; }
+  b.v { font-style: italic; font-weight: bold; }
+  .mono { font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+  /* percorso guidato */
+  .passi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 4px 0; }
+  .passi button { padding: 3px 2px; font-size: 12.5px; }
+  #racconto { font-size: 13.5px; color: #333; background: #fbf7f6; border-left: 3px solid var(--rosina); padding: 5px 8px; margin: 6px 0 2px; min-height: 4em; }
+  /* conteggi */
+  table.conti { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  table.conti td { padding: 1px 4px; border-bottom: 1px solid #f0e6e3; }
+  table.conti td.n { text-align: right; font-weight: bold; width: 50px; }
+  table.conti tr.forte td { background: #fbf2ef; }
+  /* il tabellone: colonne = coordinate */
+  .tab-wrap { overflow-x: auto; margin: 4px 0; }
+  table.mat { border-collapse: collapse; font-size: 11px; font-variant-numeric: tabular-nums; font-family: Consolas, "Courier New", monospace; }
+  table.mat th, table.mat td { padding: 0 2px; height: 17px; min-width: 30px; text-align: right; white-space: nowrap; }
+  table.mat th { font-weight: normal; font-family: "Latin Modern Roman", Palatino, Georgia, serif; font-size: 12px; text-align: center; }
+  table.mat th.corpo { font-size: 11.5px; color: #fff; padding: 1px 2px; }
+  table.mat th.coord { font-style: italic; border-bottom: 1px solid #999; }
+  table.mat td.lab, table.mat th.lab { text-align: left; font-family: "Latin Modern Roman", Palatino, Georgia, serif; font-size: 12px; padding-right: 5px; min-width: 0; }
+  table.mat td.lab .tag { display: inline-block; min-width: 18px; text-align: center; border-radius: 2px; padding: 0 3px; color: #fff; background: var(--vinc); font-size: 11px; }
+  table.mat td.lab .tag.P { background: #7d4e9e; }
+  table.mat td.lab .tag.grande { background: #555; }
+  table.mat td.sx { border-left: 1px solid #ccc; }
+  table.mat tr.sepa td { border-top: 1px solid #999; }
+  table.mat tr.sepb td { border-top: 1px dashed #d6c6c2; }
+  table.mat td.z { color: #d0d0d0; }
+  table.mat td.nz { color: #000; }
+  table.mat td.extra { border-left: 2px solid #999; min-width: 54px; color: #444; }
+  table.mat td.extra + td.extra { border-left: 1px solid #ccc; }
+  table.mat tr.vett td { color: #444; }
+  table.mat .nuovo { animation: lampo 1.6s ease-out; }
+  @keyframes lampo { 0% { background: var(--nuovo); } 70% { background: var(--nuovo); } 100% { } }
+  table.mat.struttura td.nz { color: transparent; }
+  table.mat.struttura td.z { color: transparent; }
+  /* spy */
+  .spy-riga { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; justify-content: center; margin: 4px 0; }
+  .spy-riga figure { margin: 0; text-align: center; font-size: 12.5px; color: #444; }
+  .spy-riga svg { display: block; margin: 0 auto 2px; }
+  .formula { text-align: center; font-size: 14px; margin: 6px 0; overflow-x: auto; overflow-y: hidden; }
+  .formula .katex { font-size: 1.02em; }
+  .passo-f { display: grid; grid-template-columns: 54px 1fr; gap: 6px; align-items: center; font-size: 13.5px; margin: 4px 0; }
+  .passo-f .n { font-variant: small-caps; color: var(--rosinaC); }
+  .passo-f .f { overflow-x: auto; overflow-y: hidden; }
+  #grafo { display: block; width: 100%; max-width: 420px; margin: 4px auto; }
+  .foot { margin-top: 18px; font-size: 12px; color: var(--dim); }
+  kbd { font-family: Consolas, monospace; font-size: 11.5px; border: 1px solid #ccc; border-bottom-width: 2px; border-radius: 3px; padding: 0 3px; background: #fafafa; }
+  @media (max-width: 820px) {
+    body { flex-direction: column; overflow: auto; }
+    #view { flex: 0 0 78vh; height: 78vh; }
+    #rz { display: none; }
+    aside { flex: none; height: auto; border-top: 1px solid var(--rule); padding: 14px 16px; }
+    #hud-strumenti { width: 150px; font-size: 12px; }
+    #grafico-box { left: 10px; height: 100px; }
+    #hud-sel { width: 190px; }
+  }
+</style>
+</head>
+<body data-errors="">
+<script>/* errori JavaScript nel DOM */
+  window.addEventListener("error", (e) => { document.body.dataset.errors += (e.message || e) + "; "; });</script>
+<div id="view">
+  <canvas id="scena"></canvas>
+  <div class="hud" id="hud-strumenti">
+    <div class="tit">strumenti</div>
+    <div class="strum" id="strum"></div>
+    <div id="aiuto-strum"></div>
+  </div>
+  <div class="hud" id="hud-sim">
+    <button id="b-play" title="Avvia o ferma la simulazione (barra spaziatrice)">&#9654; Avvia</button>
+    <button id="b-passo" title="Un passo di 1/60 s">&#9654;|</button>
+    <button id="b-inizio" title="Torna alla configurazione da cui si e' partiti (R)">&#8634; Riparti</button>
+    <select id="s-vel" title="Rallentatore">
+      <option value="0.1">0.1&times;</option><option value="0.25">0.25&times;</option><option value="0.5">0.5&times;</option>
+      <option value="1" selected>1&times;</option><option value="2">2&times;</option></select>
+    <span class="t" id="tempo">t = 0.00 s</span>
+  </div>
+  <div class="hud" id="hud-sel" hidden></div>
+  <div id="grafico-box"><button id="b-grafici" title="Chiudi o apri i grafici">&ndash;</button>
+    <canvas id="g-res"></canvas><canvas id="g-en"></canvas></div>
+  <div id="avviso"></div>
+  <div id="menu-corpo" hidden></div>
+</div>
+<div id="rz" title="Trascina per allargare o stringere il pannello"></div>
+<aside>
+  <p class="copy">&copy; 2026 Prof. Marco Gabiccini &mdash; Tutti i diritti riservati</p>
+  <h1>Dinamica dei sistemi vincolati nel piano</h1>
+  <p class="sub">Corpi rigidi, vincoli e matrice <i>A</i> &mdash; Capitolo 11 della dispensa di Meccanica dei Robot</p>
+  <p class="hint">Ogni corpo ha le sue tre coordinate, la posizione (<i>x</i>,&nbsp;<i>y</i>) del baricentro e
+    l&rsquo;angolo <i>&theta;</i>, e la sua matrice d&rsquo;inerzia diag(<i>m</i>,&nbsp;<i>m</i>,&nbsp;<i>I</i>).
+    Messi insieme, <i>B</i> resta diagonale e costante, e quindi <i>C</i>&nbsp;=&nbsp;0: <b>tutta la topologia del
+    sistema, chi &egrave; collegato a chi, finisce nella matrice dei vincoli <i>A</i></b>. Le molle invece sono forze:
+    entrano in <i>Q</i>, non in <i>A</i>.</p>
+
+  <details class="sez" id="sez-esempi" open><summary><h2>Esempi</h2></summary>
+    <div class="btns" id="esempi"></div>
+    <p class="hint" id="desc-esempio"></p>
+  </details>
+
+  <details class="sez" id="sez-percorso" open><summary><h2>Dai due pendoli al quadrilatero articolato</h2></summary>
+    <div class="passi" id="passi"></div>
+    <div id="racconto"></div>
+  </details>
+
+  <details class="sez" id="sez-conti" open><summary><h2>Conteggi</h2></summary>
+    <table class="conti" id="conti"></table>
+  </details>
+
+  <details class="sez" id="sez-A" open><summary><h2>Coordinate, inerzie e matrice dei vincoli <i>A</i></h2></summary>
+    <div class="layers">
+      <label class="riga"><input type="checkbox" id="c-valori" checked> valori numerici</label>
+      <label class="riga"><input type="checkbox" id="c-extra" checked> colonne <i>&phi;</i> e <i>&lambda;</i></label>
+      <label class="riga"><input type="checkbox" id="c-vett" checked> righe <i>q</i>, diag&thinsp;<i>B</i>, <i>Q</i>&minus;<i>G</i></label>
+    </div>
+    <div class="tab-wrap"><table class="mat" id="tab-A"></table></div>
+    <p class="hint" id="nota-A"></p>
+  </details>
+
+  <details class="sez" id="sez-struttura" open><summary><h2>La struttura delle equazioni</h2></summary>
+    <div class="formula">\[
+      \begin{bmatrix} B & -A^{\mathrm T}\\ A & 0\end{bmatrix}
+      \begin{bmatrix}\ddot q\\ \lambda\end{bmatrix}=
+      \begin{bmatrix} Q-G\\ -\dot A\,\dot q+\mu\end{bmatrix}\]</div>
+    <div class="spy-riga">
+      <figure><svg id="spy-aum"></svg><figcaption>sistema aumentato, <span id="dim-aum"></span></figcaption></figure>
+      <figure><svg id="spy-W"></svg><figcaption><i>A</i>&thinsp;<i>B</i><sup>&minus;1</sup><i>A</i><sup>T</sup>, <span id="dim-W"></span></figcaption></figure>
+    </div>
+    <p class="hint" id="nota-W"></p>
+  </details>
+
+  <details class="sez" id="sez-passi" open><summary><h2>Le equazioni che si integrano</h2></summary>
+    <p class="hint">A ogni valutazione l&rsquo;integratore risolve il sistema aumentato nei tre passi della
+      Sezione&nbsp;11.4.1:</p>
+    <div class="passo-f"><span class="n">passo 1</span><span class="f">\(\ddot q_{\text{free}}=B^{-1}(Q-G)\)
+      &nbsp;<span class="dim">(B diagonale: si inverte elemento per elemento)</span></span></div>
+    <div class="passo-f"><span class="n">passo 2</span><span class="f">\(\bigl(A B^{-1}A^{\mathrm T}\bigr)\,\lambda=-\bigl(A\,\ddot q_{\text{free}}+\dot A\,\dot q-\mu\bigr)\)</span></div>
+    <div class="passo-f"><span class="n">passo 3</span><span class="f">\(\ddot q=\ddot q_{\text{free}}+B^{-1}A^{\mathrm T}\lambda\)</span></div>
+    <p class="hint">con <span id="txt-mu"></span>. Poi lo stato \((q,\dot q)\), di <span id="dim-stato"></span> componenti,
+      avanza di un passo \(h\) con <span id="txt-metodo"></span>.</p>
+  </details>
+
+  <details class="sez" id="sez-grafo" open><summary><h2>Grafo della topologia</h2></summary>
+    <svg id="grafo"></svg>
+    <p class="hint">Nodi: i corpi e il telaio 0. Lati pieni: i vincoli (<b>R</b> cerniera, <b>P</b> prismatica), che
+      riempiono righe di <i>A</i>. Lati tratteggiati: le molle, che non toccano <i>A</i>. Ogni lato pieno in pi&ugrave;
+      di quelli che servono a collegare i corpi al telaio chiude un anello.</p>
+  </details>
+
+  <details class="sez" id="sez-integra" open><summary><h2>Integrazione e stabilizzazione</h2></summary>
+    <div class="joint"><span>metodo</span><select id="s-metodo">
+      <option value="rk4" selected>Runge-Kutta 4</option><option value="simplettico">Eulero semi-implicito</option>
+      <option value="eulero">Eulero esplicito</option></select><span></span></div>
+    <div class="joint"><span>passo <i>h</i></span><select id="s-h">
+      <option value="0.0005">0.5 ms</option><option value="0.001" selected>1 ms</option><option value="0.002">2 ms</option>
+      <option value="0.005">5 ms</option><option value="0.01">10 ms</option></select><span></span></div>
+    <label class="riga blocco"><input type="radio" name="stab" value="nessuna"> nessuna stabilizzazione (<i>&mu;</i>&nbsp;=&nbsp;0)</label>
+    <label class="riga blocco"><input type="radio" name="stab" value="baum" checked> Baumgarte, <i>&mu;</i>&nbsp;=&nbsp;&minus;<i>K<sub>p</sub></i>&thinsp;<i>&phi;</i>&nbsp;&minus;&nbsp;<i>K<sub>v</sub></i>&thinsp;<i>A</i>&thinsp;<i>q&#775;</i> (Sezione 11.4.4)</label>
+    <div class="joint"><span><i>&omega;<sub>n</sub></i></span><input type="range" id="r-wn" min="1" max="60" step="1" value="20"><span class="val" id="v-wn"></span></div>
+    <label class="riga blocco"><input type="radio" name="stab" value="proiezione"> proiezione dopo ogni passo:
+      Newton su <i>&phi;</i>&nbsp;=&nbsp;0 e <i>q&#775;</i>&nbsp;&larr;&nbsp;(<i>I</i>&nbsp;&minus;&nbsp;<i>A</i><sup>#</sup><i>A</i>)&thinsp;<i>q&#775;</i></label>
+    <p class="hint">Con Eulero esplicito e senza stabilizzazione il residuo nel grafico in basso cresce a vista d&rsquo;occhio:
+      le aste si allungano e le cerniere si aprono.</p>
+  </details>
+
+  <details class="sez" id="sez-strati" open><summary><h2>Strati</h2></summary>
+    <div class="layers">
+      <label class="riga"><input type="checkbox" id="ly-reaz"> reazioni vincolari</label>
+      <label class="riga"><input type="checkbox" id="ly-bar" checked> baricentri</label>
+      <label class="riga"><input type="checkbox" id="ly-terne"> terne dei corpi</label>
+      <label class="riga"><input type="checkbox" id="ly-griglia" checked> griglia (aggancio 5 cm)</label>
+      <label class="riga"><input type="checkbox" id="ly-scie"> scie dei baricentri</label>
+      <label class="riga"><input type="checkbox" id="ly-g" checked> gravit&agrave;</label>
+    </div>
+  </details>
+
+  <details class="sez" id="sez-uso"><summary><h2>Come si usa</h2></summary>
+    <ul class="hint">
+      <li><b>Asta</b>: premi, trascina e rilascia; gli estremi si agganciano ai punti dei corpi e alla griglia. Ogni corpo aggiunge 3 colonne ad <i>A</i>.</li>
+      <li><b>Blocco</b>: un clic lo posa. Va bene come carrello su una prismatica.</li>
+      <li><b>Cerniera</b>: clic su un punto. Se l&igrave; c&rsquo;&egrave; un solo corpo, lo incerniera al telaio; se ce ne sono due, li incerniera fra loro. Aggiunge 2 righe.</li>
+      <li><b>Prismatica</b>: clic su un corpo. Scorre lungo il proprio asse <i>x</i> rispetto al telaio, o rispetto al corpo sotto, se c&rsquo;&egrave;. Aggiunge 2 righe.</li>
+      <li><b>Molla</b>: clic sul primo punto e sul secondo (corpo o telaio); la lunghezza a riposo &egrave; quella attuale. <b>Molla torsionale</b>: clic su una cerniera.</li>
+      <li><b>Seleziona</b>: clic su un elemento per vederne e cambiarne i dati; trascinando un corpo a simulazione ferma lo sposti rispettando i vincoli, a simulazione avviata gli dai una spinta con una molla.</li>
+      <li><b>Tasto destro su un corpo</b>, con qualunque strumento: un menu per <b>traslarlo</b> (il baricentro segue il mouse, l&rsquo;orientazione resta) o <b>ruotarlo</b> (attorno alla sua cerniera a telaio, se ce l&rsquo;ha, altrimenti attorno al baricentro). Gli spostamenti vanno a passi di 5&nbsp;cm e di 5&deg;; con <kbd>Maiusc</kbd> sono liberi. Se il corpo &egrave; vincolato, gli altri lo seguono quanto basta a rispettare i vincoli. Clic sinistro conferma, <kbd>Esc</kbd> o tasto destro annullano.</li>
+      <li>Rotella: zoom; trascina lo sfondo (anche col tasto destro): sposta la vista. <kbd>Spazio</kbd> avvia e ferma, <kbd>R</kbd> riparte, <kbd>Canc</kbd> elimina la selezione, <kbd>Ctrl</kbd>+<kbd>Z</kbd> annulla.</li>
+    </ul>
+  </details>
+  <p class="foot">Coordinate assolute (dette anche cartesiane o naturali): niente catena cinematica da percorrere, ogni corpo
+    &egrave; trattato da solo e i vincoli lo collegano agli altri. &Egrave; l&rsquo;impostazione dei codici multibody
+    generali; il prezzo &egrave; un sistema pi&ugrave; grande (3<i>N</i>&nbsp;+&nbsp;<i>m</i> incognite) ma sparso.</p>
+</aside>
+<script>
+/* ===================== MOTORE: modello, vincoli, dinamica, integrazione =====================
+   Coordinate assolute: per ogni corpo k, q_k = (x_k, y_k, theta_k), con (x_k, y_k) il baricentro.
+   B = blockdiag(m_k, m_k, I_k) costante, quindi C = 0. Le equazioni sono quelle della dispensa,
+   B qdd + G = Q + A^T lambda,   A qdd = -Adot qd + mu,
+   risolte nei tre passi della Sezione 11.4.1: qdd_free = B^-1 (Q - G),
+   (A B^-1 A^T) lambda = -(A qdd_free + Adot qd - mu),   qdd = qdd_free + B^-1 A^T lambda.     */
+const MOT = (() => {
+  "use strict";
+
+  const Rs = (th, s) => { const c = Math.cos(th), n = Math.sin(th); return [c * s[0] - n * s[1], n * s[0] + c * s[1]]; };
+  const Erot = (u) => [-u[1], u[0]];            // E u, rotazione di +90 gradi
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
+
+  let prossimoId = 1;
+  function nuovoModello() { return { corpi: [], vincoli: [], forze: [], g: 9.81 }; }
+
+  /* ---- corpi ---- */
+  function aggiungiAsta(M, p1, p2, opz = {}) {
+    const dx = p2[0] - p1[0], dy = p2[1] - p1[1], L = Math.hypot(dx, dy);
+    const m = opz.m ?? Math.max(0.2, +(L * 1.5).toFixed(2));
+    const c = { id: prossimoId++, tipo: "asta", L, m, I: m * L * L / 12, larg: opz.larg ?? 0.05,
+      x: (p1[0] + p2[0]) / 2, y: (p1[1] + p2[1]) / 2, th: Math.atan2(dy, dx), vx: 0, vy: 0, w: 0 };
+    M.corpi.push(c); return c;
+  }
+  function aggiungiBlocco(M, p, opz = {}) {
+    const a = opz.a ?? 0.3, b = opz.b ?? 0.18, m = opz.m ?? 2;
+    const c = { id: prossimoId++, tipo: "blocco", a, b, m, I: m * (a * a + b * b) / 12,
+      x: p[0], y: p[1], th: opz.th ?? 0, vx: 0, vy: 0, w: 0 };
+    M.corpi.push(c); return c;
+  }
+  /* punti notevoli di un corpo, in coordinate locali */
+  function puntiCorpo(c) {
+    if (c.tipo === "asta") return [{ nome: "A", s: [-c.L / 2, 0] }, { nome: "G", s: [0, 0] }, { nome: "B", s: [c.L / 2, 0] }];
+    return [{ nome: "G", s: [0, 0] }];
+  }
+  const mondo = (c, s) => { const u = Rs(c.th, s); return [c.x + u[0], c.y + u[1]]; };
+  const locale = (c, p) => Rs(-c.th, [p[0] - c.x, p[1] - c.y]);
+
+  /* ---- vincoli (j = 0 vuol dire telaio) ---- */
+  function cerniera(M, ci, p, cj) {        // cerniera nel punto p (mondo) fra ci e cj (o il telaio)
+    const v = { id: prossimoId++, tipo: "R", i: ci.id, si: locale(ci, p), j: cj ? cj.id : 0, sj: cj ? locale(cj, p) : [p[0], p[1]] };
+    M.vincoli.push(v); return v;
+  }
+  function prismatica(M, cb, ca, asseMondo) { // cb scorre su ca (o sul telaio) lungo asseMondo, passando per il baricentro di cb
+    const u = [Math.cos(asseMondo), Math.sin(asseMondo)], pb = [cb.x, cb.y];
+    const v = { id: prossimoId++, tipo: "P", b: cb.id, sb: [0, 0], a: ca ? ca.id : 0 };
+    if (ca) { v.sa = locale(ca, pb); v.ua = Rs(-ca.th, u); v.th0 = cb.th - ca.th; }
+    else { v.sa = pb; v.ua = u; v.th0 = cb.th; }
+    M.vincoli.push(v); return v;
+  }
+  const righeVincolo = (v) => 2;
+  const etichetteRighe = { R: ["x", "y"], P: ["⊥", "θ"] };
+
+  /* ---- forze (non entrano in A: entrano in Q) ---- */
+  function molla(M, ci, pi, cj, pj, opz = {}) {
+    const L0 = Math.hypot(pj[0] - pi[0], pj[1] - pi[1]);
+    const f = { id: prossimoId++, tipo: "K", i: ci ? ci.id : 0, si: ci ? locale(ci, pi) : [...pi],
+      j: cj ? cj.id : 0, sj: cj ? locale(cj, pj) : [...pj], k: opz.k ?? 60, c: opz.c ?? 0, L0: opz.L0 ?? L0 };
+    M.forze.push(f); return f;
+  }
+  function mollaTorsionale(M, ci, cj, opz = {}) {
+    const f = { id: prossimoId++, tipo: "T", i: ci.id, j: cj ? cj.id : 0, k: opz.k ?? 5, c: opz.c ?? 0,
+      th0: ci.th - (cj ? cj.th : 0) };
+    M.forze.push(f); return f;
+  }
+
+  /* ---- vettori di stato ---- */
+  function indici(M) { const ix = new Map(); M.corpi.forEach((c, k) => ix.set(c.id, k)); return ix; }
+  function impacca(M) {
+    const n = 3 * M.corpi.length, q = new Float64Array(n), v = new Float64Array(n);
+    M.corpi.forEach((c, k) => { q[3 * k] = c.x; q[3 * k + 1] = c.y; q[3 * k + 2] = c.th; v[3 * k] = c.vx; v[3 * k + 1] = c.vy; v[3 * k + 2] = c.w; });
+    return { q, v };
+  }
+  function spacchetta(M, q, v) {
+    M.corpi.forEach((c, k) => { c.x = q[3 * k]; c.y = q[3 * k + 1]; c.th = q[3 * k + 2]; if (v) { c.vx = v[3 * k]; c.vy = v[3 * k + 1]; c.w = v[3 * k + 2]; } });
+  }
+  const numRighe = (M) => M.vincoli.reduce((s, v) => s + righeVincolo(v), 0);
+
+  /* ---- phi(q), A(q), Adot qd: una coppia di righe per vincolo ---- */
+  function vincoliValuta(M, q, v, ix) {
+    const n = q.length, m = numRighe(M);
+    const phi = new Float64Array(m), A = new Float64Array(m * n), gam = new Float64Array(m), righe = [];
+    let r = 0;
+    const st = (id) => { if (!id) return null; const k = ix.get(id);
+      return { k, r: [q[3 * k], q[3 * k + 1]], th: q[3 * k + 2], vr: [v[3 * k], v[3 * k + 1]], w: v[3 * k + 2] }; };
+    M.vincoli.forEach((vc, iv) => {
+      if (vc.tipo === "R") {
+        const a = st(vc.i), b = st(vc.j);
+        const ua = Rs(a.th, vc.si), pa = [a.r[0] + ua[0], a.r[1] + ua[1]];
+        let pb = vc.sj, ub = [0, 0], wb = 0;
+        if (b) { ub = Rs(b.th, vc.sj); pb = [b.r[0] + ub[0], b.r[1] + ub[1]]; wb = b.w; }
+        phi[r] = pa[0] - pb[0]; phi[r + 1] = pa[1] - pb[1];
+        const ca = 3 * a.k;
+        A[r * n + ca] = 1; A[r * n + ca + 2] = -ua[1];
+        A[(r + 1) * n + ca + 1] = 1; A[(r + 1) * n + ca + 2] = ua[0];
+        if (b) { const cb = 3 * b.k;
+          A[r * n + cb] = -1; A[r * n + cb + 2] = ub[1];
+          A[(r + 1) * n + cb + 1] = -1; A[(r + 1) * n + cb + 2] = -ub[0]; }
+        gam[r] = -a.w * a.w * ua[0] + wb * wb * ub[0];
+        gam[r + 1] = -a.w * a.w * ua[1] + wb * wb * ub[1];
+      } else if (vc.tipo === "P") {
+        const b = st(vc.b), a = st(vc.a);
+        const ub = Rs(b.th, vc.sb), pb = [b.r[0] + ub[0], b.r[1] + ub[1]];
+        let pa, na, us = [0, 0], tha = 0, wa = 0, ra = [0, 0], vra = [0, 0];
+        if (a) { const uw = Rs(a.th, vc.ua); na = Erot(uw); us = Rs(a.th, vc.sa); ra = a.r; vra = a.vr; tha = a.th; wa = a.w;
+          pa = [ra[0] + us[0], ra[1] + us[1]]; }
+        else { na = Erot(vc.ua); pa = vc.sa; }
+        const d = [pb[0] - pa[0], pb[1] - pa[1]];
+        phi[r] = dot(na, d);
+        phi[r + 1] = b.th - tha - vc.th0;
+        const cb = 3 * b.k, Eub = Erot(ub);
+        A[r * n + cb] = na[0]; A[r * n + cb + 1] = na[1]; A[r * n + cb + 2] = dot(na, Eub);
+        A[(r + 1) * n + cb + 2] = 1;
+        const dd = [b.vr[0] + b.w * Eub[0] - vra[0], b.vr[1] + b.w * Eub[1] - vra[1]];
+        if (a) { const ca = 3 * a.k, Ena = Erot(na), Eus = Erot(us);
+          A[r * n + ca] = -na[0]; A[r * n + ca + 1] = -na[1]; A[r * n + ca + 2] = dot(Ena, [pb[0] - ra[0], pb[1] - ra[1]]);
+          A[(r + 1) * n + ca + 2] = -1;
+          dd[0] -= wa * Eus[0]; dd[1] -= wa * Eus[1];
+          gam[r] = -wa * wa * dot(na, d) + 2 * wa * dot(Ena, dd) + dot(na, [-b.w * b.w * ub[0] + wa * wa * us[0], -b.w * b.w * ub[1] + wa * wa * us[1]]);
+        } else gam[r] = dot(na, [-b.w * b.w * ub[0], -b.w * b.w * ub[1]]);
+        gam[r + 1] = 0;
+      }
+      const et = etichetteRighe[vc.tipo];
+      righe.push({ iv, comp: et[0] }, { iv, comp: et[1] });
+      r += 2;
+    });
+    return { phi, A, gam, righe, m, n };
+  }
+
+  /* ---- forze: G (pesi) e Q (molle, smorzatori, mano) ---- */
+  function forzeValuta(M, q, v, ix, extra) {
+    const n = q.length, Q = new Float64Array(n), G = new Float64Array(n);
+    M.corpi.forEach((c, k) => { G[3 * k + 1] = c.m * M.g; });
+    const punto = (id, s) => { if (!id) return { p: s, vp: [0, 0], u: null, k: -1 };
+      const k = ix.get(id), u = Rs(q[3 * k + 2], s), w = v[3 * k + 2];
+      return { p: [q[3 * k] + u[0], q[3 * k + 1] + u[1]], vp: [v[3 * k] - w * u[1], v[3 * k + 1] + w * u[0]], u, k }; };
+    const applica = (P, F) => { if (P.k < 0) return; const c = 3 * P.k;
+      Q[c] += F[0]; Q[c + 1] += F[1]; Q[c + 2] += P.u[0] * F[1] - P.u[1] * F[0]; };
+    for (const f of M.forze) {
+      if (f.tipo === "K") {
+        const Pi = punto(f.i, f.si), Pj = punto(f.j, f.sj);
+        const d = [Pj.p[0] - Pi.p[0], Pj.p[1] - Pi.p[1]], L = Math.hypot(d[0], d[1]) || 1e-12;
+        const e = [d[0] / L, d[1] / L], Ld = dot(e, [Pj.vp[0] - Pi.vp[0], Pj.vp[1] - Pi.vp[1]]);
+        const T = f.k * (L - f.L0) + f.c * Ld;            // tiro della molla
+        applica(Pi, [T * e[0], T * e[1]]); applica(Pj, [-T * e[0], -T * e[1]]);
+      } else if (f.tipo === "T") {
+        const ki = ix.get(f.i), kj = f.j ? ix.get(f.j) : -1;
+        const D = q[3 * ki + 2] - (kj >= 0 ? q[3 * kj + 2] : 0) - f.th0, Dd = v[3 * ki + 2] - (kj >= 0 ? v[3 * kj + 2] : 0);
+        const tau = -f.k * D - f.c * Dd;
+        Q[3 * ki + 2] += tau; if (kj >= 0) Q[3 * kj + 2] -= tau;
+      }
+    }
+    if (extra) {                                         // la "mano": una molla dal mouse a un punto del corpo
+      const P = punto(extra.id, extra.s), c = M.corpi[P.k], kk = 40 * c.m, cc = 2 * Math.sqrt(kk * c.m);
+      applica(P, [kk * (extra.p[0] - P.p[0]) - cc * P.vp[0], kk * (extra.p[1] - P.p[1]) - cc * P.vp[1]]);
+    }
+    return { Q, G };
+  }
+
+  /* ---- Cholesky con pivot sulla diagonale: risolve W x = b anche se W e' singolare (vincoli ridondanti) ---- */
+  function cholPiv(W, m, tolRel = 1e-9) {
+    const L = Float64Array.from(W), p = Array.from({ length: m }, (_, i) => i);
+    let dmax = 0; for (let i = 0; i < m; i++) dmax = Math.max(dmax, L[i * m + i]);
+    const tol = tolRel * (dmax || 1);
+    let r = 0;
+    for (let k = 0; k < m; k++) {
+      let piv = k; for (let i = k + 1; i < m; i++) if (L[i * m + i] > L[piv * m + piv]) piv = i;
+      if (L[piv * m + piv] <= tol) break;
+      if (piv !== k) {
+        for (let j = 0; j < m; j++) { const t = L[k * m + j]; L[k * m + j] = L[piv * m + j]; L[piv * m + j] = t; }
+        for (let i = 0; i < m; i++) { const t = L[i * m + k]; L[i * m + k] = L[i * m + piv]; L[i * m + piv] = t; }
+        const t = p[k]; p[k] = p[piv]; p[piv] = t;
+      }
+      const d = Math.sqrt(L[k * m + k]); L[k * m + k] = d;
+      for (let i = k + 1; i < m; i++) L[i * m + k] /= d;
+      // il blocco che resta si aggiorna tutto, non solo sotto la diagonale: gli scambi successivi ne leggono le colonne
+      for (let j = k + 1; j < m; j++) { const ljk = L[j * m + k];
+        for (let i = k + 1; i < m; i++) L[i * m + j] -= L[i * m + k] * ljk; }
+      r++;
+    }
+    return { L, p, r, m };
+  }
+  function cholRisolvi(F, b) {
+    const { L, p, r, m } = F, y = new Float64Array(m), x = new Float64Array(m);
+    for (let i = 0; i < r; i++) { let s = b[p[i]]; for (let k = 0; k < i; k++) s -= L[i * m + k] * y[k]; y[i] = s / L[i * m + i]; }
+    for (let i = r - 1; i >= 0; i--) { let s = y[i]; for (let k = i + 1; k < r; k++) s -= L[k * m + i] * y[k]; y[i] = s / L[i * m + i]; }
+    for (let i = 0; i < r; i++) x[p[i]] = y[i];          // le righe ridondanti restano con lambda = 0
+    return x;
+  }
+
+  /* ---- dinamica: i tre passi ---- */
+  function accelerazioni(M, q, v, opz = {}) {
+    const ix = indici(M), n = q.length;
+    const { Q, G } = forzeValuta(M, q, v, ix, opz.mano);
+    const Binv = new Float64Array(n);
+    M.corpi.forEach((c, k) => { Binv[3 * k] = Binv[3 * k + 1] = 1 / c.m; Binv[3 * k + 2] = 1 / c.I; });
+    const af = new Float64Array(n);
+    for (let i = 0; i < n; i++) af[i] = Binv[i] * (Q[i] - G[i]);               // passo 1
+    const V = vincoliValuta(M, q, v, ix), m = V.m, A = V.A;
+    const out = { a: af, af, lam: new Float64Array(m), Q, G, V, rango: 0, Binv, mu: new Float64Array(m) };
+    if (!m) return out;
+    const W = new Float64Array(m * m);
+    for (let i = 0; i < m; i++) for (let j = i; j < m; j++) { let s = 0;
+      for (let k = 0; k < n; k++) s += A[i * n + k] * Binv[k] * A[j * n + k];
+      W[i * m + j] = W[j * m + i] = s; }
+    const rhs = new Float64Array(m);
+    for (let i = 0; i < m; i++) { let Aaf = 0, Av = 0;
+      for (let k = 0; k < n; k++) { Aaf += A[i * n + k] * af[k]; Av += A[i * n + k] * v[k]; }
+      const mu = opz.baum ? -opz.wn * opz.wn * V.phi[i] - 2 * opz.wn * Av : 0;
+      out.mu[i] = mu;
+      rhs[i] = -(Aaf + V.gam[i] - mu); }
+    const F = cholPiv(W, m), lam = cholRisolvi(F, rhs);                          // passo 2
+    const a = new Float64Array(n);
+    for (let k = 0; k < n; k++) { let s = 0; for (let i = 0; i < m; i++) s += A[i * n + k] * lam[i]; a[k] = af[k] + Binv[k] * s; } // passo 3
+    out.a = a; out.lam = lam; out.W = W; out.rango = F.r;
+    return out;
+  }
+
+  /* ---- proiezione sui vincoli: Newton con la pseudo-inversa (min norma) ---- */
+  function proiettaPosizioni(M, q, iterMax = 30, tol = 1e-12) {
+    const ix = indici(M), n = q.length, v0 = new Float64Array(n);
+    for (let it = 0; it < iterMax; it++) {
+      const V = vincoliValuta(M, q, v0, ix), m = V.m; if (!m) return 0;
+      let res = 0; for (let i = 0; i < m; i++) res = Math.max(res, Math.abs(V.phi[i]));
+      if (res < tol) return res;
+      const W = new Float64Array(m * m), A = V.A;
+      for (let i = 0; i < m; i++) for (let j = i; j < m; j++) { let s = 0; for (let k = 0; k < n; k++) s += A[i * n + k] * A[j * n + k]; W[i * m + j] = W[j * m + i] = s; }
+      const y = cholRisolvi(cholPiv(W, m, 1e-10), V.phi);
+      for (let k = 0; k < n; k++) { let s = 0; for (let i = 0; i < m; i++) s += A[i * n + k] * y[i]; q[k] -= s; }
+    }
+    return NaN;
+  }
+  /* velocita': qd <- (I - A^# A) qd, con A^# la pseudo-inversa pesata con B (Sezione 11.4.1) */
+  function proiettaVelocita(M, q, v) {
+    const ix = indici(M), n = q.length, V = vincoliValuta(M, q, v, ix), m = V.m, A = V.A; if (!m) return;
+    const Binv = new Float64Array(n);
+    M.corpi.forEach((c, k) => { Binv[3 * k] = Binv[3 * k + 1] = 1 / c.m; Binv[3 * k + 2] = 1 / c.I; });
+    const W = new Float64Array(m * m), Av = new Float64Array(m);
+    for (let i = 0; i < m; i++) { for (let j = i; j < m; j++) { let s = 0; for (let k = 0; k < n; k++) s += A[i * n + k] * Binv[k] * A[j * n + k]; W[i * m + j] = W[j * m + i] = s; }
+      let s = 0; for (let k = 0; k < n; k++) s += A[i * n + k] * v[k]; Av[i] = s; }
+    const y = cholRisolvi(cholPiv(W, m), Av);
+    for (let k = 0; k < n; k++) { let s = 0; for (let i = 0; i < m; i++) s += A[i * n + k] * y[i]; v[k] -= Binv[k] * s; }
+  }
+
+  /* ---- trascinamento a simulazione ferma: il punto s del corpo id va verso p, i vincoli restano rispettati ---- */
+  function trascinaCinematico(M, q, id, s, p) {
+    const ix = indici(M), n = q.length, k = ix.get(id), v0 = new Float64Array(n), wgt = 0.5;
+    // passo di minima norma pesata, D = diag(1, 1, 0.3, ...): un corpo libero preso per un punto trasla piu' che ruotare
+    const D = Float64Array.from({ length: n }, (_, c) => (c % 3 === 2 ? 0.3 : 1));
+    for (let it = 0; it < 8; it++) {
+      const V = vincoliValuta(M, q, v0, ix), m = V.m, mm = m + 2, J = new Float64Array(mm * n), r = new Float64Array(mm);
+      J.set(V.A); r.set(V.phi);
+      const u = Rs(q[3 * k + 2], s);
+      r[m] = wgt * (q[3 * k] + u[0] - p[0]); r[m + 1] = wgt * (q[3 * k + 1] + u[1] - p[1]);
+      J[m * n + 3 * k] = wgt; J[m * n + 3 * k + 2] = -wgt * u[1];
+      J[(m + 1) * n + 3 * k + 1] = wgt; J[(m + 1) * n + 3 * k + 2] = wgt * u[0];
+      const W = new Float64Array(mm * mm);
+      for (let i = 0; i < mm; i++) for (let j = i; j < mm; j++) { let t = 0; for (let c = 0; c < n; c++) t += J[i * n + c] * D[c] * J[j * n + c]; W[i * mm + j] = W[j * mm + i] = t + (i === j ? 1e-4 : 0); }
+      const y = cholRisolvi(cholPiv(W, mm, 1e-12), r);
+      for (let c = 0; c < n; c++) { let t = 0; for (let i = 0; i < mm; i++) t += J[i * n + c] * y[i]; q[c] -= D[c] * t; }
+    }
+    proiettaPosizioni(M, q);
+  }
+
+  /* ---- posa imposta a mano (trasla o ruota): le coordinate del corpo id vanno verso obiettivo = (x, y, theta)
+          con i pesi w = (wx, wy, wth); gli altri corpi si spostano quanto basta per rispettare i vincoli ---- */
+  function posaCinematica(M, q, id, obiettivo, w) {
+    const ix = indici(M), n = q.length, k = ix.get(id), v0 = new Float64Array(n);
+    for (let it = 0; it < 10; it++) {
+      const V = vincoliValuta(M, q, v0, ix), m = V.m, mm = m + 3, J = new Float64Array(mm * n), r = new Float64Array(mm);
+      J.set(V.A); r.set(V.phi);
+      for (let c = 0; c < 3; c++) { J[(m + c) * n + 3 * k + c] = w[c]; r[m + c] = w[c] * (q[3 * k + c] - obiettivo[c]); }
+      const W = new Float64Array(mm * mm);
+      for (let i = 0; i < mm; i++) for (let j = i; j < mm; j++) { let t = 0; for (let c = 0; c < n; c++) t += J[i * n + c] * J[j * n + c]; W[i * mm + j] = W[j * mm + i] = t + (i === j ? 1e-6 : 0); }
+      const y = cholRisolvi(cholPiv(W, mm, 1e-12), r);
+      let passo = 0;
+      for (let c = 0; c < n; c++) { let t = 0; for (let i = 0; i < mm; i++) t += J[i * n + c] * y[i]; q[c] -= t; passo = Math.max(passo, Math.abs(t)); }
+      if (passo < 1e-12) break;
+    }
+    proiettaPosizioni(M, q);
+  }
+
+  /* ---- energia meccanica ---- */
+  function energia(M, q, v) {
+    const ix = indici(M); let T = 0, U = 0;
+    M.corpi.forEach((c, k) => { T += 0.5 * c.m * (v[3 * k] ** 2 + v[3 * k + 1] ** 2) + 0.5 * c.I * v[3 * k + 2] ** 2; U += c.m * M.g * q[3 * k + 1]; });
+    for (const f of M.forze) {
+      if (f.tipo === "K") {
+        const P = (id, s) => { if (!id) return s; const k = ix.get(id), u = Rs(q[3 * k + 2], s); return [q[3 * k] + u[0], q[3 * k + 1] + u[1]]; };
+        const a = P(f.i, f.si), b = P(f.j, f.sj); U += 0.5 * f.k * (Math.hypot(b[0] - a[0], b[1] - a[1]) - f.L0) ** 2;
+      } else if (f.tipo === "T") {
+        const ki = ix.get(f.i), kj = f.j ? ix.get(f.j) : -1;
+        U += 0.5 * f.k * (q[3 * ki + 2] - (kj >= 0 ? q[3 * kj + 2] : 0) - f.th0) ** 2;
+      }
+    }
+    return { T, U, E: T + U };
+  }
+
+  /* ---- un passo d'integrazione ---- */
+  function passo(M, st, h, opz) {
+    const { q, v } = st, n = q.length;
+    const f = (qq, vv) => accelerazioni(M, qq, vv, opz).a;
+    if (opz.metodo === "eulero") {
+      const a = f(q, v); for (let i = 0; i < n; i++) { q[i] += h * v[i]; v[i] += h * a[i]; }
+    } else if (opz.metodo === "simplettico") {
+      const a = f(q, v); for (let i = 0; i < n; i++) { v[i] += h * a[i]; q[i] += h * v[i]; }
+    } else {
+      const q2 = new Float64Array(n), v2 = new Float64Array(n);
+      const k1v = v.slice(), k1a = f(q, v);
+      for (let i = 0; i < n; i++) { q2[i] = q[i] + 0.5 * h * k1v[i]; v2[i] = v[i] + 0.5 * h * k1a[i]; }
+      const k2v = v2.slice(), k2a = f(q2, v2);
+      for (let i = 0; i < n; i++) { q2[i] = q[i] + 0.5 * h * k2v[i]; v2[i] = v[i] + 0.5 * h * k2a[i]; }
+      const k3v = v2.slice(), k3a = f(q2, v2);
+      for (let i = 0; i < n; i++) { q2[i] = q[i] + h * k3v[i]; v2[i] = v[i] + h * k3a[i]; }
+      const k4v = v2, k4a = f(q2, v2);
+      for (let i = 0; i < n; i++) { q[i] += h / 6 * (k1v[i] + 2 * k2v[i] + 2 * k3v[i] + k4v[i]); v[i] += h / 6 * (k1a[i] + 2 * k2a[i] + 2 * k3a[i] + k4a[i]); }
+    }
+    if (opz.proiezione) { proiettaPosizioni(M, q, 3); proiettaVelocita(M, q, v); }
+    st.t += h;
+  }
+
+  return { Rs, Erot, nuovoModello, aggiungiAsta, aggiungiBlocco, puntiCorpo, mondo, locale, cerniera, prismatica,
+    molla, mollaTorsionale, indici, impacca, spacchetta, numRighe, vincoliValuta, forzeValuta, accelerazioni,
+    cholPiv, cholRisolvi, proiettaPosizioni, proiettaVelocita, trascinaCinematico, posaCinematica, energia, passo,
+    get prossimoId() { return prossimoId; }, set prossimoId(x) { prossimoId = x; } };
+})();
+if (typeof module !== "undefined") module.exports = MOT;
+/* ===================== STATO DELLA PAGINA, SCENA, STRUMENTI ===================== */
+const $ = (id) => document.getElementById(id);
+const COLORI = ["#0000a6", "#a60000", "#007300", "#d96c00", "#6a1b9a", "#00838f", "#8d6e00", "#c2185b", "#455a64", "#2e7d32"];
+const S = {
+  M: MOT.nuovoModello(), st: null, gira: false, accum: 0, tsPrec: 0, iniziale: null,
+  strumento: "sel", vista: { cx: 0.25, cy: -0.25, scala: 260 }, sel: null, hover: null, mouse: [0, 0], mouseS: [0, 0],
+  bozza: null, trascina: null, mano: null, pan: null, storia: [], scie: new Map(),
+  nuovi: { corpi: new Set(), vincoli: new Set() }, gr: [], E0: null, out: null, scalaF: 0
+};
+const colore = (k) => COLORI[k % COLORI.length];
+function mescola(hex, t) {            // hex verso il bianco di t (0..1)
+  const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return `rgb(${Math.round(r + (255 - r) * t)},${Math.round(g + (255 - g) * t)},${Math.round(b + (255 - b) * t)})`;
+}
+const corpoDaId = (id) => S.M.corpi.find((c) => c.id === id);
+const numCorpo = (id) => (id ? S.M.corpi.findIndex((c) => c.id === id) + 1 : 0);
+function opzioni() {
+  const stab = document.querySelector("input[name=stab]:checked").value;
+  return { metodo: $("s-metodo").value, baum: stab === "baum", wn: +$("r-wn").value, proiezione: stab === "proiezione",
+    mano: S.mano && S.gira ? S.mano : null };
+}
+function sincronizza() { const t = S.st ? S.st.t : 0; S.st = MOT.impacca(S.M); S.st.t = t; }
+
+/* ---- vista ---- */
+const cv = $("scena"), ctx = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+function ridimensiona() { DPR = window.devicePixelRatio || 1; W = cv.clientWidth; H = cv.clientHeight; cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); }
+const aS = (p) => [W / 2 + (p[0] - S.vista.cx) * S.vista.scala, H / 2 - (p[1] - S.vista.cy) * S.vista.scala];
+const aM = (X, Y) => [S.vista.cx + (X - W / 2) / S.vista.scala, S.vista.cy - (Y - H / 2) / S.vista.scala];
+const pxM = (px) => px / S.vista.scala;
+
+/* ---- ricerca di punti e corpi sotto il mouse ---- */
+function puntiNotevoli() {          // punti a cui ci si aggancia: punti dei corpi, cerniere e ancoraggi a telaio
+  const L = [];
+  S.M.corpi.forEach((c) => MOT.puntiCorpo(c).forEach((pt) => L.push({ p: MOT.mondo(c, pt.s), corpo: c })));
+  S.M.vincoli.forEach((v) => { if (v.tipo === "R" && !v.j) L.push({ p: v.sj, corpo: null }); });
+  S.M.forze.forEach((f) => { if (f.tipo === "K") { if (!f.i) L.push({ p: f.si, corpo: null }); if (!f.j) L.push({ p: f.sj, corpo: null }); } });
+  return L;
+}
+function aggancia(p) {
+  let best = null, dmin = pxM(11);
+  for (const pt of puntiNotevoli()) { const d = Math.hypot(pt.p[0] - p[0], pt.p[1] - p[1]); if (d < dmin) { dmin = d; best = pt; } }
+  if (best) return { p: [...best.p], tipo: "punto" };
+  if ($("ly-griglia").checked) return { p: [Math.round(p[0] / 0.05) * 0.05, Math.round(p[1] / 0.05) * 0.05], tipo: "griglia" };
+  return { p: [...p], tipo: "libero" };
+}
+function corpoContiene(c, p, tol) {
+  const l = MOT.locale(c, p);
+  if (c.tipo === "asta") return Math.abs(l[0]) <= c.L / 2 + tol && Math.abs(l[1]) <= c.larg / 2 + tol;
+  return Math.abs(l[0]) <= c.a / 2 + tol && Math.abs(l[1]) <= c.b / 2 + tol;
+}
+const corpiIn = (p, tolPx = 4) => S.M.corpi.filter((c) => corpoContiene(c, p, pxM(tolPx))).reverse(); // i piu' recenti prima
+function distSeg(p, a, b) {
+  const d = [b[0] - a[0], b[1] - a[1]], L2 = d[0] * d[0] + d[1] * d[1] || 1e-12;
+  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * d[0] + (p[1] - a[1]) * d[1]) / L2));
+  return Math.hypot(p[0] - a[0] - t * d[0], p[1] - a[1] - t * d[1]);
+}
+const puntoForza = (id, s) => (id ? MOT.mondo(corpoDaId(id), s) : s);
+function puntoCerniera(v) { return MOT.mondo(corpoDaId(v.i), v.si); }
+function centroTorsione(f) {
+  const r = S.M.vincoli.find((v) => v.tipo === "R" && ((v.i === f.i && v.j === f.j) || (v.i === f.j && v.j === f.i)));
+  if (r) return puntoCerniera(r);
+  const c = corpoDaId(f.i); return [c.x, c.y];
+}
+function rotaia(v) {                 // segmento della guida di una prismatica, in coordinate del mondo
+  if (!v.a) { const u = v.ua; return [[v.sa[0] - 0.7 * u[0], v.sa[1] - 0.7 * u[1]], [v.sa[0] + 0.7 * u[0], v.sa[1] + 0.7 * u[1]]]; }
+  const ca = corpoDaId(v.a); return [MOT.mondo(ca, [v.sa[0] - 0.35 * v.ua[0], v.sa[1] - 0.35 * v.ua[1]]), MOT.mondo(ca, [v.sa[0] + 0.35 * v.ua[0], v.sa[1] + 0.35 * v.ua[1]])];
+}
+function colpisci(p) {               // l'elemento sotto il mouse, con una priorita': cerniere, molle, corpi, guide
+  for (const v of S.M.vincoli) if (v.tipo === "R") { const q = puntoCerniera(v); if (Math.hypot(q[0] - p[0], q[1] - p[1]) < pxM(6)) return { tipo: "vincolo", id: v.id }; }
+  for (const f of S.M.forze) {
+    if (f.tipo === "T") { const c = centroTorsione(f), d = Math.hypot(c[0] - p[0], c[1] - p[1]); if (d > pxM(7) && d < pxM(19)) return { tipo: "forza", id: f.id }; }
+    else if (distSeg(p, puntoForza(f.i, f.si), puntoForza(f.j, f.sj)) < pxM(5)) return { tipo: "forza", id: f.id };
+  }
+  const cc = corpiIn(p); if (cc.length) return { tipo: "corpo", id: cc[0].id };
+  for (const v of S.M.vincoli) if (v.tipo === "P") { const [a, b] = rotaia(v); if (distSeg(p, a, b) < pxM(5)) return { tipo: "vincolo", id: v.id }; }
+  return null;
+}
+const elemento = (h) => !h ? null : h.tipo === "corpo" ? corpoDaId(h.id) : h.tipo === "vincolo" ? S.M.vincoli.find((v) => v.id === h.id) : S.M.forze.find((f) => f.id === h.id);
+
+/* ---- disegno ---- */
+function linea(a, b, col, w, tratt) { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.setLineDash(tratt || []); ctx.stroke(); ctx.setLineDash([]); }
+function tratteggioTelaio(a, b, verso) {   // la linea di telaio con i trattini obliqui dalla parte "verso"
+  linea(a, b, "#444", 1.6);
+  const d = [b[0] - a[0], b[1] - a[1]], L = Math.hypot(d[0], d[1]), u = [d[0] / L, d[1] / L], n = [u[1] * verso, -u[0] * verso];
+  for (let s = 4; s < L; s += 6) { const p = [a[0] + u[0] * s, a[1] + u[1] * s]; linea(p, [p[0] + 5 * n[0] - 4 * u[0], p[1] + 5 * n[1] - 4 * u[1]], "#777", 1); }
+}
+function cernieraTelaio(P, sopra) {   // il supporto sta dalla parte opposta al corpo: sopra per un pendolo che pende
+  const s = sopra ? -1 : 1;
+  ctx.beginPath(); ctx.moveTo(P[0], P[1]); ctx.lineTo(P[0] - 8, P[1] + 13 * s); ctx.lineTo(P[0] + 8, P[1] + 13 * s); ctx.closePath();
+  ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = "#444"; ctx.lineWidth = 1.4; ctx.stroke();
+  tratteggioTelaio([P[0] - 12, P[1] + 13 * s], [P[0] + 12, P[1] + 13 * s], -s);
+}
+function perno(P, sel) { ctx.beginPath(); ctx.arc(P[0], P[1], 4.5, 0, 2 * Math.PI); ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = sel ? "#000" : "#222"; ctx.lineWidth = sel ? 2.6 : 1.5; ctx.stroke(); }
+function freccia(P, F, col) {
+  const L = Math.hypot(F[0], F[1]); if (L < 2) return;
+  const Q = [P[0] + F[0], P[1] + F[1]], u = [F[0] / L, F[1] / L];
+  linea(P, Q, col, 2);
+  ctx.beginPath(); ctx.moveTo(Q[0], Q[1]); ctx.lineTo(Q[0] - 8 * u[0] + 4 * u[1], Q[1] - 8 * u[1] - 4 * u[0]); ctx.lineTo(Q[0] - 8 * u[0] - 4 * u[1], Q[1] - 8 * u[1] + 4 * u[0]); ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+}
+function zigzag(A, B, col, w) {
+  const d = [B[0] - A[0], B[1] - A[1]], L = Math.hypot(d[0], d[1]); if (L < 1) return;
+  const u = [d[0] / L, d[1] / L], n = [-u[1], u[0]], N = 10, a = 0.12 * L, amp = 6;
+  ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(A[0] + a * u[0], A[1] + a * u[1]);
+  for (let i = 0; i < N; i++) { const s = a + (L - 2 * a) * (i + 0.5) / N, sg = i % 2 ? -1 : 1; ctx.lineTo(A[0] + s * u[0] + sg * amp * n[0], A[1] + s * u[1] + sg * amp * n[1]); }
+  ctx.lineTo(B[0] - a * u[0], B[1] - a * u[1]); ctx.lineTo(B[0], B[1]); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+}
+function spirale(C, col, w) {
+  ctx.beginPath();
+  for (let i = 0; i <= 80; i++) { const t = i / 80, a = t * 3.6 * Math.PI, r = 8 + 9 * t; const X = C[0] + r * Math.cos(a), Y = C[1] - r * Math.sin(a); if (i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); }
+  ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+}
+function baricentro(P) {
+  ctx.beginPath(); ctx.arc(P[0], P[1], 5, 0, 2 * Math.PI); ctx.fillStyle = "#fff"; ctx.fill();
+  ctx.fillStyle = "#222"; for (const a0 of [0, Math.PI]) { ctx.beginPath(); ctx.moveTo(P[0], P[1]); ctx.arc(P[0], P[1], 5, a0, a0 + Math.PI / 2); ctx.closePath(); ctx.fill(); }
+  ctx.beginPath(); ctx.arc(P[0], P[1], 5, 0, 2 * Math.PI); ctx.strokeStyle = "#222"; ctx.lineWidth = 1; ctx.stroke();
+}
+function disegnaCorpo(c, k, evid) {
+  const col = colore(k), chiaro = mescola(col, 0.8);
+  ctx.lineJoin = "round";
+  if (c.tipo === "asta") {
+    const A = aS(MOT.mondo(c, [-c.L / 2, 0])), B = aS(MOT.mondo(c, [c.L / 2, 0])), w = Math.max(8, c.larg * S.vista.scala);
+    ctx.lineCap = "round";
+    linea(A, B, evid ? "#000" : col, w + (evid ? 5 : 3)); linea(A, B, chiaro, w);
+    ctx.lineCap = "butt";
+  } else {
+    const P = [[-c.a / 2, -c.b / 2], [c.a / 2, -c.b / 2], [c.a / 2, c.b / 2], [-c.a / 2, c.b / 2]].map((s) => aS(MOT.mondo(c, s)));
+    ctx.beginPath(); P.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
+    ctx.fillStyle = chiaro; ctx.fill(); ctx.strokeStyle = evid ? "#000" : col; ctx.lineWidth = evid ? 3.2 : 2; ctx.stroke();
+  }
+  const G = aS([c.x, c.y]);
+  if ($("ly-terne").checked) {
+    const ex = MOT.Rs(c.th, [1, 0]), L = 28;
+    freccia(G, [L * ex[0], -L * ex[1]], col); freccia(G, [-L * ex[1], -L * ex[0]], col);
+  }
+  if ($("ly-bar").checked) baricentro(G);
+  // il numero del corpo: di fianco al baricentro per un'asta, nell'angolo in alto a sinistra per un blocco
+  // (al centro del blocco c'e' spesso una cerniera o l'attacco di una prismatica)
+  let Lp;
+  if (c.tipo === "asta") { const nrm = MOT.Rs(c.th, [0, 1]), off = Math.max(14, c.larg * S.vista.scala / 2 + 10); Lp = [G[0] + off * nrm[0], G[1] - off * nrm[1]]; }
+  else Lp = aS(MOT.mondo(c, [-c.a / 2 + Math.min(pxM(11), c.a / 4), c.b / 2 - Math.min(pxM(11), c.b / 4)]));
+  ctx.beginPath(); ctx.arc(Lp[0], Lp[1], 8, 0, 2 * Math.PI); ctx.fillStyle = col; ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.font = "bold 11px Palatino, Georgia, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(k + 1), Lp[0], Lp[1] + 0.5);
+}
+const eSel = (tipo, id) => (S.sel && S.sel.tipo === tipo && S.sel.id === id) || (S.hover && S.hover.tipo === tipo && S.hover.id === id);
+
+function disegna() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  // griglia: 10 cm, piu' marcata ogni metro
+  if ($("ly-griglia").checked) {
+    const [x0, y1] = aM(0, 0), [x1, y0] = aM(W, H), passo = S.vista.scala * 0.1 < 12 ? 0.5 : 0.1;
+    for (let x = Math.ceil(x0 / passo) * passo; x < x1; x += passo) { const X = aS([x, 0])[0]; linea([X, 0], [X, H], Math.abs(x - Math.round(x)) < 1e-6 ? "#ecdeda" : "#f6f0ee", 1); }
+    for (let y = Math.ceil(y0 / passo) * passo; y < y1; y += passo) { const Y = aS([0, y])[1]; linea([0, Y], [W, Y], Math.abs(y - Math.round(y)) < 1e-6 ? "#ecdeda" : "#f6f0ee", 1); }
+  }
+  // terna fissa {0} nell'origine
+  const O = aS([0, 0]); freccia(O, [34, 0], "#0000a6"); freccia(O, [0, -34], "#0000a6");
+  ctx.fillStyle = "#0000a6"; ctx.font = "italic 13px Palatino, Georgia, serif"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  ctx.fillText("x", O[0] + 36, O[1] + 4); ctx.fillText("y", O[0] - 4, O[1] - 38);
+  if ($("ly-g").checked) { ctx.fillStyle = "#888"; ctx.font = "italic 13px Palatino, Georgia, serif"; freccia([W - 40, 60], [0, 30], "#999"); ctx.fillText("g", W - 33, 80); }
+  // scie
+  if ($("ly-scie").checked) S.M.corpi.forEach((c, k) => { const s = S.scie.get(c.id); if (!s || s.length < 2) return;
+    ctx.beginPath(); s.forEach((p, i) => { const P = aS(p); if (i) ctx.lineTo(P[0], P[1]); else ctx.moveTo(P[0], P[1]); });
+    ctx.strokeStyle = mescola(colore(k), 0.55); ctx.lineWidth = 1.2; ctx.stroke(); });
+  // guide delle prismatiche a telaio, sotto i corpi
+  for (const v of S.M.vincoli) if (v.tipo === "P" && !v.a) {
+    const [a, b] = rotaia(v).map(aS), sel = eSel("vincolo", v.id);
+    const cb = corpoDaId(v.b), off = (cb.tipo === "blocco" ? cb.b / 2 : cb.larg / 2) * S.vista.scala + 2;
+    const d = [b[0] - a[0], b[1] - a[1]], L = Math.hypot(d[0], d[1]), n = [d[1] / L * off, -d[0] / L * off];
+    tratteggioTelaio([a[0] - n[0], a[1] - n[1]], [b[0] - n[0], b[1] - n[1]], 1);
+    linea([a[0] + n[0], a[1] + n[1]], [b[0] + n[0], b[1] + n[1]], "#444", 1.6);
+    if (sel) linea(a, b, "#000", 1.2, [5, 4]);
+  }
+  // molle lineari
+  for (const f of S.M.forze) if (f.tipo === "K") {
+    const A = aS(puntoForza(f.i, f.si)), B = aS(puntoForza(f.j, f.sj)), sel = eSel("forza", f.id);
+    zigzag(A, B, sel ? "#000" : "#666", sel ? 2.6 : 1.5);
+    for (const [id, P, Q] of [[f.i, A, B], [f.j, B, A]]) {
+      if (!id) {   // ancoraggio a telaio: una linea tratteggiata dietro il punto, perpendicolare alla molla
+        const L = Math.hypot(Q[0] - P[0], Q[1] - P[1]) || 1, u = [(Q[0] - P[0]) / L, (Q[1] - P[1]) / L], pr = [-u[1], u[0]], c = [P[0] - 4 * u[0], P[1] - 4 * u[1]];
+        tratteggioTelaio([c[0] - 9 * pr[0], c[1] - 9 * pr[1]], [c[0] + 9 * pr[0], c[1] + 9 * pr[1]], -1);
+      }
+      ctx.beginPath(); ctx.arc(P[0], P[1], 3, 0, 2 * Math.PI); ctx.fillStyle = id ? "#666" : "#fff"; ctx.fill(); ctx.strokeStyle = "#444"; ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+  // corpi
+  S.M.corpi.forEach((c, k) => disegnaCorpo(c, k, eSel("corpo", c.id)));
+  // prismatiche fra corpi: la guida disegnata sul corpo che fa da guida
+  for (const v of S.M.vincoli) if (v.tipo === "P" && v.a) {
+    const [a, b] = rotaia(v).map(aS), sel = eSel("vincolo", v.id);
+    linea(a, b, sel ? "#000" : "#4e2a28", sel ? 3 : 2); linea(a, b, "#fff", 0.8, [4, 3]);
+  }
+  // molle torsionali
+  for (const f of S.M.forze) if (f.tipo === "T") { const sel = eSel("forza", f.id); spirale(aS(centroTorsione(f)), sel ? "#000" : "#666", sel ? 2.4 : 1.4); }
+  // cerniere
+  for (const v of S.M.vincoli) if (v.tipo === "R") { const P = aS(puntoCerniera(v)); if (!v.j) cernieraTelaio(P, corpoDaId(v.i).y < v.sj[1]); perno(P, eSel("vincolo", v.id)); }
+  // reazioni vincolari: la parte di A^T lambda che agisce sul corpo i (o b) nel punto del vincolo.
+  // I lambda sono quelli dello stato disegnato (ricalcolati a ogni fotogramma, S.outScena) e la scala resta fissa
+  // durante il moto, cosi' una freccia cambia lunghezza solo se cambia la forza. La si sceglie quando manca
+  // (dopo una modifica, alla ripartenza, accendendo lo strato): 80 px valgono la reazione piu' grande in quell'istante,
+  // o il peso medio di un corpo se e' maggiore
+  const outR = S.outScena || S.out;
+  if ($("ly-reaz").checked && outR && outR.lam.length === MOT.numRighe(S.M)) {
+    const lam = outR.lam, fr = []; let r = 0;
+    for (const v of S.M.vincoli) {
+      if (v.tipo === "R") { fr.push([puntoCerniera(v), [lam[r], lam[r + 1]]]); }
+      else { const ca = v.a ? corpoDaId(v.a) : null, u = ca ? MOT.Rs(ca.th, v.ua) : v.ua, nn = [-u[1], u[0]], cb = corpoDaId(v.b);
+        fr.push([[cb.x, cb.y], [lam[r] * nn[0], lam[r] * nn[1]]]); }
+      r += 2;
+    }
+    const LREF = 80;
+    if (!S.scalaF) {
+      const pesoMedio = S.M.corpi.reduce((s, c) => s + c.m, 0) * S.M.g / Math.max(1, S.M.corpi.length);
+      S.scalaF = Math.max(pesoMedio, 1e-6, ...fr.map(([, F]) => Math.hypot(F[0], F[1])));
+    }
+    for (const [P, F] of fr) {
+      const L = Math.hypot(F[0], F[1]) / S.scalaF * LREF, fat = L > 320 ? 320 / L : 1;   // le frecce enormi si fermano a 320 px
+      freccia(aS(P), [F[0] / S.scalaF * LREF * fat, -F[1] / S.scalaF * LREF * fat], "#b00020");
+    }
+    // freccia di riferimento, sotto il simbolo della gravita'
+    freccia([W - 30 - LREF, 104], [LREF, 0], "#b00020");
+    ctx.font = "12px Palatino, Georgia, serif"; ctx.fillStyle = "#b00020"; ctx.textAlign = "right";
+    const v = S.scalaF, txt = v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+    ctx.fillText(`reazioni vincolari: questa freccia vale ${txt} N`, W - 28, 124);
+    ctx.textAlign = "left";
+  }
+  // traslazione o rotazione in corso: da dove si e' partiti e di quanto
+  if (S.manip) {
+    const s = S.manip, c = corpoDaId(s.id);
+    if (c) {
+      ctx.font = "13px Palatino, Georgia, serif"; ctx.fillStyle = "#b00020"; ctx.textAlign = "left";
+      if (s.tipo === "trasla") {
+        const A = aS(s.G0), B = aS([c.x, c.y]); freccia(A, [B[0] - A[0], B[1] - A[1]], "#b00020");
+        ctx.fillText(`Δ = (${fmt(s.d[0])}, ${fmt(s.d[1])}) m`, B[0] + 12, B[1] - 12);
+      } else {
+        const P = aS(s.piv), Mo = aS(S.mouse), r0 = 26, a0 = Math.atan2(s.G0[1] - s.piv[1], s.G0[0] - s.piv[0]);
+        linea(P, Mo, "#b00020", 1.2, [5, 4]);
+        ctx.beginPath(); ctx.arc(P[0], P[1], r0, -a0, -(a0 + s.D), s.D > 0); ctx.strokeStyle = "#b00020"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(P[0], P[1], 5, 0, 2 * Math.PI); ctx.fillStyle = "#b00020"; ctx.fill();
+        ctx.fillStyle = "#b00020"; ctx.fillText(`Δθ = ${(s.D * 180 / Math.PI).toFixed(s.D * 180 / Math.PI % 1 ? 1 : 0)}°`, Mo[0] + 12, Mo[1] - 10);
+      }
+    }
+  }
+  // la mano: molla dal mouse
+  if (S.mano && S.gira) { const c = corpoDaId(S.mano.id); if (c) linea(aS(MOT.mondo(c, S.mano.s)), aS(S.mano.p), "#b00020", 1.4, [4, 3]); }
+  // anteprime degli strumenti
+  const ag = ["asta", "blocco", "cerniera", "molla"].includes(S.strumento) ? aggancia(S.mouse) : null;
+  if (S.bozza && S.strumento === "asta") { const A = aS(S.bozza.p1), B = aS(ag.p); ctx.lineCap = "round"; linea(A, B, "#999", 9, [2, 6]); ctx.lineCap = "butt";
+    ctx.fillStyle = "#555"; ctx.font = "12px Palatino, Georgia, serif"; ctx.fillText(Math.hypot(ag.p[0] - S.bozza.p1[0], ag.p[1] - S.bozza.p1[1]).toFixed(2) + " m", B[0] + 10, B[1] - 8); }
+  if (S.bozza && S.strumento === "molla") zigzag(aS(S.bozza.p1), aS(ag.p), "#999", 1.3);
+  if (ag && !S.trascina) { const P = aS(ag.p); ctx.beginPath(); ctx.arc(P[0], P[1], ag.tipo === "punto" ? 7 : 4, 0, 2 * Math.PI); ctx.strokeStyle = ag.tipo === "punto" ? "#b00020" : "#bbb"; ctx.lineWidth = 1.3; ctx.stroke(); }
+  if (!S.M.corpi.length) { ctx.fillStyle = "#999"; ctx.font = "italic 16px Palatino, Georgia, serif"; ctx.textAlign = "center";
+    ctx.fillText("Pagina bianca: scegli un esempio nel pannello, o disegna un'asta con lo strumento Asta", W / 2 + 90, H / 2); ctx.textAlign = "left"; }
+}
+
+/* ---- avvisi ---- */
+let tAvviso = 0;
+function avviso(txt, ms = 3200) { const a = $("avviso"); a.textContent = txt; a.classList.add("vis"); clearTimeout(tAvviso); tAvviso = setTimeout(() => a.classList.remove("vis"), ms); }
+
+/* ---- tasto destro su un corpo: menu per traslarlo o ruotarlo ---- */
+const centroRotazione = (c) => { const v = S.M.vincoli.find((x) => x.tipo === "R" && !x.j && x.i === c.id); return v ? [...v.sj] : [c.x, c.y]; };
+function apriMenu(id, P) {
+  if (S.gira) ferma();
+  const c = corpoDaId(id), cern = S.M.vincoli.some((x) => x.tipo === "R" && !x.j && x.i === id);
+  S.sel = { tipo: "corpo", id }; ricostruisciSel();
+  const m = $("menu-corpo");
+  m.innerHTML = `<div class="tit">corpo ${numCorpo(id)}</div>` +
+    `<button data-t="trasla">&#8596; Trasla</button>` +
+    `<button data-t="ruota">&#10227; Ruota <span class="dim">${cern ? "attorno alla cerniera" : "attorno al baricentro"}</span></button>` +
+    `<button data-t="">Annulla</button>`;
+  m.hidden = false;
+  m.style.left = Math.max(6, Math.min(P[0] + 6, W - m.offsetWidth - 6)) + "px";
+  m.style.top = Math.max(6, Math.min(P[1] + 6, H - m.offsetHeight - 6)) + "px";
+  m.querySelectorAll("button").forEach((b) => { b.onclick = (ev) => {
+    chiudiMenu(); if (!b.dataset.t) return;
+    // il clic sul menu non arriva al canvas: il punto di partenza della mossa e' quello del clic
+    const r = cv.getBoundingClientRect(); S.mouse = aM(ev.clientX - r.left, ev.clientY - r.top);
+    iniziaManip(b.dataset.t, c.id); }; });
+}
+const chiudiMenu = () => { $("menu-corpo").hidden = true; };
+const menuAperto = () => !$("menu-corpo").hidden;
+function iniziaManip(tipo, id) {
+  const c = corpoDaId(id), piv = centroRotazione(c); memorizza();
+  S.manip = { tipo, id, m0: [...S.mouse], G0: [c.x, c.y], th0: c.th, piv, aPrec: Math.atan2(S.mouse[1] - piv[1], S.mouse[0] - piv[0]), dA: 0, d: [0, 0], D: 0 };
+  cv.style.cursor = "move";
+  avviso(tipo === "trasla" ? `Muovi il mouse: il corpo ${numCorpo(id)} trasla. Clic per confermare, Esc o tasto destro per annullare (Maiusc: senza passi di 5 cm)`
+    : `Gira il mouse attorno al punto rosso: il corpo ${numCorpo(id)} ruota. Clic per confermare, Esc o tasto destro per annullare (Maiusc: senza passi di 5°)`, 7000);
+}
+function aggiornaManip(libero) {
+  const s = S.manip, c = corpoDaId(s.id); if (!c) { S.manip = null; return; }
+  let ob, w;
+  if (s.tipo === "trasla") {
+    let d = [S.mouse[0] - s.m0[0], S.mouse[1] - s.m0[1]];
+    if (!libero) d = d.map((x) => Math.round(x / 0.05) * 0.05);
+    s.d = d; ob = [s.G0[0] + d[0], s.G0[1] + d[1], s.th0]; w = [1, 1, 0.5];
+  } else {
+    const a = Math.atan2(S.mouse[1] - s.piv[1], S.mouse[0] - s.piv[0]);
+    let da = a - s.aPrec; da -= 2 * Math.PI * Math.round(da / (2 * Math.PI)); s.dA += da; s.aPrec = a;   // angolo accumulato, senza salti di 2 pi
+    const passo = 5 * Math.PI / 180, D = libero ? s.dA : Math.round(s.dA / passo) * passo;
+    const g = MOT.Rs(D, [s.G0[0] - s.piv[0], s.G0[1] - s.piv[1]]);
+    s.D = D; ob = [s.piv[0] + g[0], s.piv[1] + g[1], s.th0 + D]; w = [0.5, 0.5, 1];
+  }
+  const q = MOT.impacca(S.M).q; MOT.posaCinematica(S.M, q, s.id, ob, w);
+  MOT.spacchetta(S.M, q, new Float64Array(q.length)); sincronizza();
+}
+function confermaManip() { const id = S.manip.id; S.manip = null; cv.style.cursor = "default"; modificato(null); avviso(`Nuova posizione del corpo ${numCorpo(id)}`); }
+function annullaManip() { S.manip = null; cv.style.cursor = "default"; if (S.storia.length) ripristina(S.storia.pop()); S.nuovi = { corpi: new Set(), vincoli: new Set() }; modificato(null); avviso("Annullato"); }
+
+/* ---- modifiche del modello, storia, ripartenza ---- */
+const istantanea = () => JSON.stringify({ corpi: S.M.corpi, vincoli: S.M.vincoli, forze: S.M.forze, g: S.M.g });
+function ripristina(js) {
+  const o = JSON.parse(js); S.M.corpi = o.corpi; S.M.vincoli = o.vincoli; S.M.forze = o.forze; S.M.g = o.g;
+  MOT.prossimoId = 1 + Math.max(0, ...o.corpi.map((c) => c.id), ...o.vincoli.map((v) => v.id), ...o.forze.map((f) => f.id));
+}
+function memorizza() { S.storia.push(istantanea()); if (S.storia.length > 80) S.storia.shift(); }
+function ferma() { S.gira = false; S.mano = null; $("b-play").innerHTML = "&#9654; Avvia"; }
+/* dopo ogni modifica della struttura: velocita' nulle, t = 0, pannello ricostruito con le novita' evidenziate */
+function modificato(prima) {
+  ferma();
+  S.M.corpi.forEach((c) => { c.vx = c.vy = c.w = 0; });
+  if (prima) {
+    const pc = new Set(prima.corpi.map((c) => c.id)), pv = new Set(prima.vincoli.map((v) => v.id));
+    S.nuovi.corpi = new Set(S.M.corpi.filter((c) => !pc.has(c.id)).map((c) => c.id));
+    S.nuovi.vincoli = new Set(S.M.vincoli.filter((v) => !pv.has(v.id)).map((v) => v.id));
+  }
+  if (S.sel && !elemento(S.sel)) S.sel = null;
+  S.st = null; sincronizza(); S.st.t = 0; S.iniziale = null; S.gr = []; S.E0 = null; S.scie.clear(); S.scalaF = 0;
+  ricostruisci();
+}
+function cambia(fn) {                // esegue una modifica della struttura, con storia ed evidenziazione
+  const prima = JSON.parse(istantanea()); memorizza();
+  const esito = fn();
+  if (esito === false) { S.storia.pop(); return false; }
+  modificato(prima); return true;
+}
+function annulla() { if (!S.storia.length) { avviso("Niente da annullare"); return; } ripristina(S.storia.pop()); S.nuovi = { corpi: new Set(), vincoli: new Set() }; modificato(null); }
+function riparti() { if (!S.iniziale) return; ripristina(S.iniziale); S.nuovi = { corpi: new Set(), vincoli: new Set() }; modificato(null); }
+function avviaFerma() {
+  if (S.gira) { ferma(); return; }
+  if (!S.M.corpi.length) { avviso("Non c'e' ancora nessun corpo da simulare"); return; }
+  if (!S.iniziale) { S.iniziale = istantanea(); sincronizza(); S.st.t = 0; }
+  S.gira = true; S.accum = 0; $("b-play").innerHTML = "&#10074;&#10074; Pausa";
+}
+
+/* ---- gli strumenti ---- */
+const ICONE = {
+  sel: '<path d="M6 2 L6 14 L9 11 L11 15 L13 14 L11 10 L15 10 Z" fill="#4e2a28"/>',
+  asta: '<line x1="3" y1="13" x2="19" y2="3" stroke="#0000a6" stroke-width="5" stroke-linecap="round"/><line x1="3" y1="13" x2="19" y2="3" stroke="#ccd" stroke-width="2.6" stroke-linecap="round"/>',
+  blocco: '<rect x="4" y="3" width="14" height="10" fill="#f0d0d0" stroke="#a60000" stroke-width="1.6"/>',
+  cerniera: '<path d="M11 6 L6 14 L16 14 Z" fill="#fff" stroke="#444" stroke-width="1.2"/><circle cx="11" cy="6" r="3.2" fill="#fff" stroke="#222" stroke-width="1.4"/>',
+  prismatica: '<rect x="7" y="3" width="8" height="7" fill="#e8e0f0" stroke="#6a1b9a" stroke-width="1.4"/><line x1="1" y1="12" x2="21" y2="12" stroke="#444" stroke-width="1.4"/><line x1="1" y1="1.5" x2="21" y2="1.5" stroke="#444" stroke-width="1"/>',
+  molla: '<path d="M1 8 L4 8 L6 3 L9 13 L12 3 L15 13 L17 8 L21 8" fill="none" stroke="#555" stroke-width="1.4"/>',
+  torsione: '<path d="M11 8 m-2 0 a2 2 0 1 1 4 0 a4 4 0 1 1 -8 0 a6 6 0 1 1 12 0" fill="none" stroke="#555" stroke-width="1.3"/>',
+  elimina: '<path d="M5 3 L17 13 M17 3 L5 13" stroke="#b00020" stroke-width="2"/>'
+};
+const STRUMENTI = [
+  ["sel", "Seleziona", "V", "Clic su un elemento per vederne i dati. Trascina un corpo: a simulazione ferma lo sposti rispettando i vincoli, avviata gli dai una spinta. Tasto destro su un corpo: lo trasli o lo ruoti. Trascina lo sfondo per spostare la vista."],
+  null,
+  ["asta", "Asta", "A", "Premi, trascina e rilascia. Gli estremi si agganciano ai punti dei corpi (cerchio rosso) e alla griglia. Un corpo nuovo: 3 colonne in più in A, nessuna riga."],
+  ["blocco", "Blocco", "B", "Un clic posa un blocco 30 × 18 cm. Con una prismatica diventa un carrello."],
+  null,
+  ["cerniera", "Cerniera", "C", "Clic su un punto. Un solo corpo lì: cerniera a telaio. Due corpi sovrapposti: cerniera fra i due. 2 righe in più in A."],
+  ["prismatica", "Prismatica", "P", "Clic su un corpo: scorre lungo il proprio asse x, rispetto al telaio o al corpo che ha sotto. 2 righe in più in A."],
+  null,
+  ["molla", "Molla", "M", "Clic sul primo estremo, poi sul secondo (su un corpo o sul telaio). Lunghezza a riposo: quella attuale. Entra in Q, non in A."],
+  ["torsione", "Molla torsionale", "T", "Clic su una cerniera: molla torsionale fra i due corpi che collega, a riposo nell'angolo attuale. Entra in Q."],
+  null,
+  ["elimina", "Elimina", "X", "Clic su un elemento per toglierlo. Togliendo un corpo spariscono anche i suoi vincoli e le sue molle."]
+];
+function scegliStrumento(s) {
+  S.strumento = s; S.bozza = null;
+  document.querySelectorAll("#strum button").forEach((b) => b.classList.toggle("acceso", b.dataset.s === s));
+  $("aiuto-strum").textContent = STRUMENTI.find((x) => x && x[0] === s)[3];
+  cv.style.cursor = s === "sel" ? "default" : "crosshair";
+}
+function costruisciStrumenti() {
+  const box = $("strum");
+  for (const s of STRUMENTI) {
+    if (!s) { const d = document.createElement("div"); d.className = "sep"; box.appendChild(d); continue; }
+    const b = document.createElement("button"); b.dataset.s = s[0];
+    b.innerHTML = `<svg class="ic" viewBox="0 0 22 16">${ICONE[s[0]]}</svg>${s[1]}<span class="k">${s[2]}</span>`;
+    b.title = s[3]; b.onclick = () => scegliStrumento(s[0]); box.appendChild(b);
+  }
+}
+
+/* azioni dei singoli strumenti, su un punto p del mondo */
+function azioneCerniera(p) {
+  const pp = aggancia(p).p, cc = corpiIn(pp, 5);
+  if (!cc.length) { avviso("Qui non c'è nessun corpo da incernierare"); return; }
+  const [ci, cj] = cc;   // i due piu' recenti
+  const gia = S.M.vincoli.some((v) => v.tipo === "R" && ((v.i === ci.id && v.j === (cj ? cj.id : 0)) || (cj && v.i === cj.id && v.j === ci.id)) &&
+    Math.hypot(puntoCerniera(v)[0] - pp[0], puntoCerniera(v)[1] - pp[1]) < 1e-6);
+  if (gia) { avviso("Questa cerniera c'è già"); return; }
+  cambia(() => { MOT.cerniera(S.M, ci, pp, cj || null); });
+  avviso(cj ? `Cerniera fra i corpi ${Math.min(numCorpo(ci.id), numCorpo(cj.id))} e ${Math.max(numCorpo(ci.id), numCorpo(cj.id))}: 2 righe nuove in A, nelle colonne di entrambi`
+    : `Cerniera fra il corpo ${numCorpo(ci.id)} e il telaio: 2 righe nuove in A, solo nelle colonne del corpo ${numCorpo(ci.id)}`);
+}
+function azionePrismatica(p) {
+  const cc = corpiIn(p, 4);
+  if (!cc.length) { avviso("Clicca su un corpo: scorrerà lungo il suo asse x"); return; }
+  const cb = cc[0], ca = cc[1] || null;
+  cambia(() => { MOT.prismatica(S.M, cb, ca, cb.th); });
+  avviso(ca ? `Prismatica: il corpo ${numCorpo(cb.id)} scorre sul corpo ${numCorpo(ca.id)}` : `Prismatica: il corpo ${numCorpo(cb.id)} scorre sul telaio lungo il suo asse x`);
+}
+function azioneMolla(p) {
+  const ag = aggancia(p).p, c = corpiIn(ag, 5)[0] || null;
+  if (!S.bozza) { S.bozza = { p1: ag, c1: c }; return; }
+  const { p1, c1 } = S.bozza; S.bozza = null;
+  if (!c1 && !c) { avviso("Almeno un estremo della molla deve stare su un corpo"); return; }
+  if (c1 && c && c1.id === c.id) { avviso("I due estremi sono sullo stesso corpo: la molla non farebbe nulla"); return; }
+  if (Math.hypot(ag[0] - p1[0], ag[1] - p1[1]) < 0.02) { avviso("Estremi troppo vicini"); return; }
+  cambia(() => { MOT.molla(S.M, c1, p1, c, ag, { k: 60 }); });
+  avviso("Molla aggiunta: cambia Q, non A (guarda la riga Q − G)");
+}
+function azioneTorsione(p) {
+  const h = colpisci(p); let v = h && h.tipo === "vincolo" ? S.M.vincoli.find((x) => x.id === h.id) : null;
+  if (!v || v.tipo !== "R") {    // anche vicino a una cerniera
+    v = S.M.vincoli.find((x) => x.tipo === "R" && Math.hypot(puntoCerniera(x)[0] - p[0], puntoCerniera(x)[1] - p[1]) < pxM(16));
+  }
+  if (!v) { avviso("Clicca su una cerniera"); return; }
+  cambia(() => { MOT.mollaTorsionale(S.M, corpoDaId(v.i), v.j ? corpoDaId(v.j) : null, { k: 3 }); });
+  avviso("Molla torsionale aggiunta: cambia Q, non A");
+}
+function elimina(h) {
+  if (!h) return;
+  cambia(() => {
+    const M = S.M;
+    if (h.tipo === "corpo") {
+      M.corpi = M.corpi.filter((c) => c.id !== h.id);
+      M.vincoli = M.vincoli.filter((v) => (v.tipo === "R" ? v.i !== h.id && v.j !== h.id : v.a !== h.id && v.b !== h.id));
+      M.forze = M.forze.filter((f) => f.i !== h.id && f.j !== h.id);
+    } else if (h.tipo === "vincolo") {
+      M.vincoli = M.vincoli.filter((v) => v.id !== h.id);
+    } else M.forze = M.forze.filter((f) => f.id !== h.id);
+  });
+  S.sel = null;
+}
+
+/* ---- mouse ---- */
+function posMouse(e) { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+cv.addEventListener("pointerdown", (e) => {
+  cv.setPointerCapture(e.pointerId);
+  const P = posMouse(e), p = aM(P[0], P[1]); S.mouse = p; S.mouseS = P;
+  if (S.manip) { if (e.button === 0) confermaManip(); else annullaManip(); return; }
+  if (menuAperto()) { chiudiMenu(); if (e.button !== 2) return; }      // un clic fuori dal menu lo chiude soltanto
+  if (e.button === 2) { const h = colpisci(p); if (h && h.tipo === "corpo") { S.bozza = null; apriMenu(h.id, P); return; } }
+  if (e.button !== 0) { S.pan = { P, cx: S.vista.cx, cy: S.vista.cy }; return; }
+  const st = S.strumento;
+  if (st !== "sel" && S.gira) ferma();
+  if (st === "sel") {
+    const h = colpisci(p); S.sel = h; ricostruisciSel();
+    if (h && h.tipo === "corpo") {
+      const c = corpoDaId(h.id), s = MOT.locale(c, p);
+      if (S.gira) S.mano = { id: c.id, s, p };
+      else { memorizza(); S.trascina = { id: c.id, s, mosso: false }; }
+    } else if (!h) S.pan = { P, cx: S.vista.cx, cy: S.vista.cy };
+  } else if (st === "asta") S.bozza = { p1: aggancia(p).p };
+  else if (st === "blocco") { const pp = aggancia(p).p; cambia(() => { MOT.aggiungiBlocco(S.M, pp); }); avviso("Blocco aggiunto: 3 colonne nuove in A, nessuna riga"); }
+  else if (st === "cerniera") azioneCerniera(p);
+  else if (st === "prismatica") azionePrismatica(p);
+  else if (st === "molla") azioneMolla(p);
+  else if (st === "torsione") azioneTorsione(p);
+  else if (st === "elimina") { const h = colpisci(p); if (h) elimina(h); else avviso("Qui non c'è niente da eliminare"); }
+});
+cv.addEventListener("pointermove", (e) => {
+  const P = posMouse(e), p = aM(P[0], P[1]); S.mouse = p; S.mouseS = P;
+  if (S.pan) { S.vista.cx = S.pan.cx - (P[0] - S.pan.P[0]) / S.vista.scala; S.vista.cy = S.pan.cy + (P[1] - S.pan.P[1]) / S.vista.scala; return; }
+  if (S.manip) { aggiornaManip(e.shiftKey); return; }
+  if (S.mano) { S.mano.p = p; return; }
+  if (S.trascina) {
+    const q = MOT.impacca(S.M).q; MOT.trascinaCinematico(S.M, q, S.trascina.id, S.trascina.s, p);
+    MOT.spacchetta(S.M, q, new Float64Array(q.length)); S.trascina.mosso = true; sincronizza(); return;
+  }
+  S.hover = ["sel", "elimina", "torsione"].includes(S.strumento) ? colpisci(p) : null;
+  cv.style.cursor = S.strumento === "sel" ? (S.hover && S.hover.tipo === "corpo" ? "grab" : "default") : "crosshair";
+});
+cv.addEventListener("pointerup", (e) => {
+  const P = posMouse(e), p = aM(P[0], P[1]);
+  if (S.bozza && S.strumento === "asta") {
+    const p1 = S.bozza.p1, p2 = aggancia(p).p; S.bozza = null;
+    if (Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) > 0.04) { cambia(() => { MOT.aggiungiAsta(S.M, p1, p2); }); avviso("Asta aggiunta: 3 colonne nuove in A, nessuna riga (è un corpo libero)"); }
+  }
+  if (S.trascina) { const t = S.trascina; S.trascina = null; if (t.mosso) modificato(null); else S.storia.pop(); }
+  S.mano = null; S.pan = null;
+});
+cv.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const P = posMouse(e), p0 = aM(P[0], P[1]);
+  S.vista.scala = Math.max(40, Math.min(2000, S.vista.scala * Math.exp(-e.deltaY * 0.0012)));
+  const p1 = aM(P[0], P[1]); S.vista.cx += p0[0] - p1[0]; S.vista.cy += p0[1] - p1[1];
+}, { passive: false });
+cv.addEventListener("contextmenu", (e) => e.preventDefault());
+// in fase di cattura: alcune estensioni del browser fermano Esc sul document, prima che risalga a window
+window.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  const k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && k === "z") { e.preventDefault(); annulla(); return; }
+  if (k === " ") { e.preventDefault(); avviaFerma(); return; }
+  if (k === "escape") { if (menuAperto()) { chiudiMenu(); return; } if (S.manip) { annullaManip(); return; } S.bozza = null; scegliStrumento("sel"); return; }
+  if (S.manip || menuAperto()) return;            // durante una traslazione o una rotazione gli altri tasti tacciono
+  if ((k === "delete" || k === "backspace") && S.sel) { elimina(S.sel); return; }
+  if (k === "r") { riparti(); return; }
+  const s = STRUMENTI.find((x) => x && x[2].toLowerCase() === k); if (s) scegliStrumento(s[0]);
+}, true);
+/* ===================== PANNELLO: tabellone, conteggi, struttura, grafo, grafici ===================== */
+const MENO = "−";
+const fmt = (x) => { const a = Math.abs(x); if (a < 5e-4) return "0"; const s = a >= 100 ? a.toFixed(0) : a >= 10 ? a.toFixed(1) : a.toFixed(2); return (x < 0 ? MENO : "") + s; };
+const fmtE = (x) => { const a = Math.abs(x); if (a === 0) return "0"; if (a < 1e-15) return "<1e" + MENO + "15"; return a.toExponential(0).replace("e-", "e" + MENO); };
+const MASCHERE = { R: [[1, 0, 1], [0, 1, 1]], P: [[1, 1, 1], [0, 0, 1]] };
+const corpiDelVincolo = (v) => (v.tipo === "R" ? [v.i, v.j] : [v.b, v.a]);   // il secondo puo' essere 0 (telaio)
+const nomeVincolo = (v, iv) => (v.tipo === "R" ? "R" : "P") + (iv + 1);
+const subN = (k) => `<sub>${k}</sub>`;
+
+/* maschera strutturale di A: quali elementi sono non nulli per costruzione */
+function mascheraA() {
+  const M = S.M, ix = MOT.indici(M), n = 3 * M.corpi.length, righe = [];
+  M.vincoli.forEach((v, iv) => {
+    const mk = MASCHERE[v.tipo];
+    for (let r = 0; r < 2; r++) { const riga = new Uint8Array(n);
+      corpiDelVincolo(v).forEach((id) => { if (!id) return; const k = ix.get(id); for (let c = 0; c < 3; c++) riga[3 * k + c] = mk[r][c]; });
+      righe.push({ v, iv, r, riga }); }
+  });
+  return righe;
+}
+/* componenti connesse dei corpi attraverso i vincoli fra corpi (il telaio non conta) e, a parte, attraverso le molle */
+function componenti(conMolle) {
+  const M = S.M, pad = new Map(M.corpi.map((c) => [c.id, c.id]));
+  const trova = (x) => { while (pad.get(x) !== x) x = pad.get(x); return x; };
+  const unisci = (a, b) => { if (a && b) pad.set(trova(a), trova(b)); };
+  M.vincoli.forEach((v) => unisci(...corpiDelVincolo(v)));
+  if (conMolle) M.forze.forEach((f) => unisci(f.i, f.j));
+  const gruppi = new Map(); M.corpi.forEach((c, k) => { const r = trova(c.id); if (!gruppi.has(r)) gruppi.set(r, []); gruppi.get(r).push(k + 1); });
+  return [...gruppi.values()];
+}
+function anelli() {     // numero ciclomatico del grafo corpi + telaio con i soli vincoli: E - V + componenti
+  const M = S.M, pad = new Map([[0, 0], ...M.corpi.map((c) => [c.id, c.id])]);
+  const trova = (x) => { while (pad.get(x) !== x) x = pad.get(x); return x; };
+  let E = 0; M.vincoli.forEach((v) => { const [a, b] = corpiDelVincolo(v); E++; pad.set(trova(a), trova(b || 0)); });
+  const comp = new Set([...pad.keys()].map(trova)).size;
+  return E - (M.corpi.length + 1) + comp;
+}
+
+function ricostruisci() {
+  S.out = MOT.accelerazioni(S.M, S.st.q, S.st.v, opzioni());
+  costruisciTabella(); conteggi(); disegnaSpy(); disegnaGrafo(); testi(); ricostruisciSel();
+  S.nuovi = { corpi: new Set(), vincoli: new Set() };
+}
+
+function costruisciTabella() {
+  const M = S.M, N = M.corpi.length, n = 3 * N, tab = $("tab-A");
+  const extra = $("c-extra").checked, vett = $("c-vett").checked, righe = mascheraA();
+  tab.classList.toggle("struttura", !$("c-valori").checked);
+  const nuovaCol = (k) => S.nuovi.corpi.has(M.corpi[k].id);
+  let h = '<tr><th class="lab" colspan="2"></th>';
+  M.corpi.forEach((c, k) => { h += `<th class="corpo${nuovaCol(k) ? " nuovo" : ""}" colspan="3" style="background:${colore(k)}">corpo ${k + 1}</th>`; });
+  if (extra) h += '<th></th><th></th>';
+  h += '</tr><tr><th class="lab" colspan="2"></th>';
+  M.corpi.forEach((c, k) => { ["x", "y", "θ"].forEach((s, j) => { h += `<th class="coord${j === 0 ? " sx" : ""}${nuovaCol(k) ? " nuovo" : ""}" style="color:${colore(k)}">${s}${subN(k + 1)}</th>`; }); });
+  if (extra) h += '<th class="coord" title="residuo del vincolo">φ</th><th class="coord" title="moltiplicatore: reazione vincolare">λ</th>';
+  h += "</tr>";
+  if (!N) h += `<tr><td class="lab" colspan="2">nessun corpo: <i>A</i> non ha colonne</td></tr>`;
+  if (vett && N) {
+    const rv = (id, lab, tit, ultima) => { let s = `<tr class="vett"><td class="lab" colspan="2" title="${tit}">${lab}</td>`;
+      for (let c = 0; c < n; c++) s += `<td id="${id}-${c}" class="${c % 3 === 0 ? "sx" : ""}${nuovaCol(Math.floor(c / 3)) ? " nuovo" : ""}"></td>`;
+      if (extra) s += '<td class="extra"></td><td class="extra"></td>';
+      return s + "</tr>"; };
+    h += rv("vq", "<i>q</i>", "coordinate: m e rad");
+    h += rv("vB", "diag <i>B</i>", "masse (kg) e momenti d'inerzia baricentrici (kg m²)");
+    h += rv("vQ", "<i>Q</i>−<i>G</i>", "forze attive (molle) meno pesi: N e N m");
+  }
+  if (!righe.length && N) h += `<tr class="sepa"><td class="lab" colspan="${2 + n + (extra ? 2 : 0)}"><i>A</i> non ha righe: nessun vincolo, ogni corpo &egrave; libero</td></tr>`;
+  righe.forEach((rg, ir) => {
+    const nuovo = S.nuovi.vincoli.has(rg.v.id) ? " nuovo" : "";
+    const cls = ir === 0 ? "sepa" : rg.r === 0 ? "sepb" : "";
+    const [a, b] = corpiDelVincolo(rg.v);
+    h += `<tr class="${cls}">`;
+    if (rg.r === 0) h += `<td class="lab${nuovo}" rowspan="2"><span class="tag ${rg.v.tipo}">${nomeVincolo(rg.v, rg.iv)}</span> ${numCorpo(a)}–${numCorpo(b)}</td>`;
+    h += `<td class="lab${nuovo}">${rg.v.tipo === "R" ? ["<i>x</i>", "<i>y</i>"][rg.r] : ["⊥", "<i>θ</i>"][rg.r]}</td>`;
+    for (let c = 0; c < n; c++) {
+      const k = Math.floor(c / 3), nz = rg.riga[c];
+      const st = nz ? ` style="background:${mescola(colore(k), 0.84)}"` : "";
+      h += `<td id="a-${ir}-${c}" class="${nz ? "nz" : "z"}${c % 3 === 0 ? " sx" : ""}${nuovo || (nuovaCol(k) ? " nuovo" : "")}"${st}></td>`;
+    }
+    if (extra) h += `<td class="extra${nuovo}" id="phi-${ir}"></td><td class="extra${nuovo}" id="lam-${ir}"></td>`;
+    h += "</tr>";
+  });
+  tab.innerHTML = h;
+  // la nota sotto il tabellone
+  const comp = componenti(false), compM = componenti(true);
+  let nota = `<i>A</i> ha <b>${righe.length}</b> righe e <b>${n}</b> colonne. Le righe di un vincolo a telaio toccano solo le colonne del suo corpo; quelle di un vincolo fra due corpi toccano le colonne di entrambi: &egrave; cos&igrave; che <i>A</i> registra chi &egrave; collegato a chi.`;
+  if (N > 1 && comp.length > 1) {
+    nota += ` Qui i corpi formano ${comp.length} gruppi che non hanno righe in comune, ${comp.map((g) => "{" + g.join(", ") + "}").join(", ")}: riordinando le colonne <i>A</i> &egrave; <b>diagonale a blocchi</b>, e i gruppi sono sistemi indipendenti`;
+    nota += compM.length < comp.length ? ", salvo le molle che li collegano attraverso <i>Q</i>." : ".";
+  } else if (N > 1) nota += " Qui tutti i corpi sono collegati da righe di <i>A</i>: un unico sistema.";
+  $("nota-A").innerHTML = nota;
+}
+
+function aggiornaValori() {
+  if (!S.st) return;
+  const M = S.M, n = 3 * M.corpi.length, out = (S.out = MOT.accelerazioni(M, S.st.q, S.st.v, opzioni()));
+  const val = $("c-valori").checked, set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
+  for (let c = 0; c < n; c++) {
+    const k = Math.floor(c / 3), cp = M.corpi[k];
+    set("vq-" + c, fmt(S.st.q[c])); set("vB-" + c, c % 3 === 2 ? cp.I.toFixed(3) : fmt(cp.m)); set("vQ-" + c, fmt(out.Q[c] - out.G[c]));
+  }
+  const A = out.V.A;
+  for (let r = 0; r < out.V.m; r++) {
+    for (let c = 0; c < n; c++) set(`a-${r}-${c}`, val ? fmt(A[r * n + c]) : "");
+    set("phi-" + r, fmtE(out.V.phi[r])); set("lam-" + r, fmt(out.lam[r]));
+  }
+  conteggi(); aggiornaSel();
+}
+
+function conteggi() {
+  const M = S.M, N = M.corpi.length, n = 3 * N, m = MOT.numRighe(M), r = S.out ? S.out.rango : 0, gdl = n - r, gr = n - m;
+  const rid = m - r, L = anelli();
+  const righe = [
+    ["corpi", "<i>N</i>", N], ["coordinate, colonne di <i>A</i>", "<i>n</i> = 3<i>N</i>", n],
+    ["equazioni di vincolo, righe di <i>A</i>", "<i>m</i>", m], ["rango di <i>A</i>", "<i>r</i>", r],
+    ["<b>gradi di libert&agrave;</b>", "<i>n</i> &minus; <i>r</i>", gdl, true],
+    ["conteggio di Gr&uuml;bler" + (rid > 0 ? ` <span class="no">sbaglia: ${rid} ${rid === 1 ? "riga ridondante" : "righe ridondanti"}</span>` : ""), "3<i>N</i> &minus; <i>m</i>", gr],
+    ["anelli chiusi nel grafo dei vincoli", "<i>L</i>", L],
+    ["incognite del sistema aumentato, <i>q&#776;</i> e <i>&lambda;</i>", "<i>n</i> + <i>m</i>", n + m],
+    ["stato integrato (<i>q</i>, <i>q&#775;</i>)", "2<i>n</i>", 2 * n]
+  ];
+  $("conti").innerHTML = righe.map(([a, b, c, f]) => `<tr${f ? ' class="forte"' : ""}><td>${a}</td><td class="dim">${b}</td><td class="n">${c}</td></tr>`).join("");
+}
+
+/* spy plot: quadratini pieni dove la matrice e' non nulla per costruzione */
+function spy(svg, R, C, cella, divR, divC) {
+  const lato = Math.max(3, Math.min(11, Math.floor(196 / Math.max(R, C, 1))));
+  const w = Math.max(C * lato, 12), hh = Math.max(R * lato, 12);
+  let s = `<rect x="0" y="0" width="${w}" height="${hh}" fill="#fff" stroke="#bbb"/>`;
+  for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) { const f = cella(i, j); if (f) s += `<rect x="${j * lato + 0.5}" y="${i * lato + 0.5}" width="${lato - 1}" height="${lato - 1}" fill="${f}"/>`; }
+  for (const d of divR || []) s += `<line x1="0" y1="${d * lato}" x2="${w}" y2="${d * lato}" stroke="#888" stroke-width="1"/>`;
+  for (const d of divC || []) s += `<line x1="${d * lato}" y1="0" x2="${d * lato}" y2="${hh}" stroke="#888" stroke-width="1"/>`;
+  svg.setAttribute("width", w + 2); svg.setAttribute("height", hh + 2); svg.setAttribute("viewBox", `-1 -1 ${w + 2} ${hh + 2}`);
+  svg.innerHTML = s;
+}
+function disegnaSpy() {
+  const M = S.M, n = 3 * M.corpi.length, righe = mascheraA(), m = righe.length;
+  const colC = (c) => colore(Math.floor(c / 3));
+  spy($("spy-aum"), n + m, n + m, (i, j) => {
+    if (i < n && j < n) return i === j ? mescola(colC(i), 0.35) : null;
+    if (i < n && j >= n) return righe[j - n].riga[i] ? colC(i) : null;          // -A^T
+    if (i >= n && j < n) return righe[i - n].riga[j] ? colC(j) : null;          // A
+    return null;
+  }, [n], [n]);
+  $("dim-aum").textContent = `${n + m} × ${n + m}`;
+  // A B^-1 A^T: non nullo fra due righe che toccano lo stesso corpo
+  const tocca = (r1, r2) => { for (let c = 0; c < n; c++) if (r1.riga[c] && r2.riga[c]) return true; return false; };
+  const inizi = []; righe.forEach((rg, i) => { if (rg.r === 0 && i) inizi.push(i); });
+  spy($("spy-W"), m, m, (i, j) => (tocca(righe[i], righe[j]) ? (righe[i].iv === righe[j].iv ? "#8a6a66" : "#4e2a28") : null), inizi, inizi);
+  $("dim-W").textContent = `${m} × ${m}`;
+  // gruppi di vincoli che non si toccano: blocchi di A B^-1 A^T
+  const comp = componenti(false).filter((g) => S.M.vincoli.some((v) => corpiDelVincolo(v).some((id) => id && g.includes(numCorpo(id)))));
+  let nota = "Nel sistema aumentato <i>B</i> occupa solo la diagonale, e i blocchi <i>A</i> e &minus;<i>A</i><sup>T</sup> hanno i colori delle colonne che toccano. ";
+  if (!m) nota += "Senza vincoli il secondo blocco non c&rsquo;&egrave;: <i>q&#776;</i> = <i>q&#776;</i><sub>free</sub>.";
+  else if (comp.length > 1) nota += `<i>A</i>&thinsp;<i>B</i><sup>&minus;1</sup><i>A</i><sup>T</sup> &egrave; diagonale a blocchi: i moltiplicatori dei gruppi ${comp.map((g) => "{" + g.join(", ") + "}").join(" e ")} si calcolano separatamente, come per sistemi distinti.`;
+  else nota += "In <i>A</i>&thinsp;<i>B</i><sup>&minus;1</sup><i>A</i><sup>T</sup> due vincoli si toccano (quadratino scuro fuori dai blocchi diagonali) se agiscono su uno stesso corpo: qui i moltiplicatori vanno calcolati tutti insieme.";
+  $("nota-W").innerHTML = nota;
+}
+
+/* grafo: nodi nella posizione dei baricentri, il telaio sopra */
+function disegnaGrafo() {
+  const M = S.M, svg = $("grafo"), Wg = 420, Hg = 210;
+  if (!M.corpi.length) { svg.setAttribute("viewBox", `0 0 ${Wg} 60`); svg.innerHTML = `<text x="${Wg / 2}" y="34" text-anchor="middle" fill="#999" font-style="italic">nessun corpo</text>`; return; }
+  const ancore = [];
+  M.vincoli.forEach((v) => { if (v.tipo === "R" && !v.j) ancore.push(v.sj); if (v.tipo === "P" && !v.a) ancore.push(v.sa); });
+  M.forze.forEach((f) => { if (f.tipo === "K") { if (!f.i) ancore.push(f.si); if (!f.j) ancore.push(f.sj); } });
+  const pos = new Map(M.corpi.map((c) => [c.id, [c.x, -c.y]]));
+  const ys = M.corpi.map((c) => -c.y), xs = M.corpi.map((c) => c.x);
+  const g0 = [ancore.length ? ancore.reduce((s, p) => s + p[0], 0) / ancore.length : xs.reduce((a, b) => a + b, 0) / xs.length,
+    Math.min(...ys, ...ancore.map((p) => -p[1])) - 0.25];
+  pos.set(0, g0);
+  let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
+  for (const [, p] of pos) { xmin = Math.min(xmin, p[0]); xmax = Math.max(xmax, p[0]); ymin = Math.min(ymin, p[1]); ymax = Math.max(ymax, p[1]); }
+  const sc = Math.min((Wg - 60) / Math.max(xmax - xmin, 0.3), (Hg - 50) / Math.max(ymax - ymin, 0.3));
+  const P = new Map(); for (const [id, p] of pos) P.set(id, [Wg / 2 + (p[0] - (xmin + xmax) / 2) * sc, Hg / 2 + (p[1] - (ymin + ymax) / 2) * sc]);
+  // un po' di repulsione fra nodi troppo vicini
+  const ids = [...P.keys()];
+  for (let it = 0; it < 40; it++) for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) {
+    const pa = P.get(ids[a]), pb = P.get(ids[b]), d = Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) || 0.1;
+    if (d < 42) { const f = (42 - d) / 2 / d, dx = (pb[0] - pa[0]) * f || 1, dy = (pb[1] - pa[1]) * f; pa[0] -= dx; pa[1] -= dy; pb[0] += dx; pb[1] += dy; }
+  }
+  for (const [, p] of P) { p[0] = Math.max(18, Math.min(Wg - 18, p[0])); p[1] = Math.max(16, Math.min(Hg - 16, p[1])); }
+  let s = "", conta = new Map();
+  const lato = (a, b, cls, et, col) => {
+    const key = [Math.min(a, b), Math.max(a, b)].join("-"), k = conta.get(key) || 0; conta.set(key, k + 1);
+    const A = P.get(a), B = P.get(b), mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2, d = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
+    const off = k === 0 ? 0 : (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 22, cx = mx - (B[1] - A[1]) / d * off, cy = my + (B[0] - A[0]) / d * off;
+    s += `<path d="M${A[0]},${A[1]} Q${cx},${cy} ${B[0]},${B[1]}" fill="none" class="${cls}" stroke="${col}" ${cls === "molla" ? 'stroke-dasharray="5 4" stroke-width="1.3"' : 'stroke-width="2.2"'}/>`;
+    const lx = 0.25 * A[0] + 0.5 * cx + 0.25 * B[0], ly = 0.25 * A[1] + 0.5 * cy + 0.25 * B[1];   // punto medio della curva
+    s += `<text x="${lx}" y="${ly + 4}" text-anchor="middle" font-size="11.5" fill="${col}" stroke="#fff" stroke-width="3" paint-order="stroke">${et}</text>`;
+  };
+  M.vincoli.forEach((v, iv) => { const [a, b] = corpiDelVincolo(v); lato(a, b || 0, "vinc", nomeVincolo(v, iv), S.nuovi.vincoli.has(v.id) ? "#c58a00" : "#4e2a28"); });
+  M.forze.forEach((f) => { if (f.i || f.j) lato(f.i || 0, f.j || 0, "molla", f.tipo === "K" ? "k" : "kₜ", "#888"); });
+  const T = P.get(0);
+  s += `<rect x="${T[0] - 22}" y="${T[1] - 10}" width="44" height="20" fill="#fff" stroke="#444"/><text x="${T[0]}" y="${T[1] + 4.5}" text-anchor="middle" font-size="12">telaio 0</text>`;
+  M.corpi.forEach((c, k) => { const p = P.get(c.id); s += `<circle cx="${p[0]}" cy="${p[1]}" r="12" fill="${colore(k)}"/><text x="${p[0]}" y="${p[1] + 4.5}" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">${k + 1}</text>`; });
+  svg.setAttribute("viewBox", `0 0 ${Wg} ${Hg}`); svg.innerHTML = s;
+}
+
+function testi() {
+  const o = opzioni(), n = 3 * S.M.corpi.length;
+  $("txt-mu").innerHTML = o.baum ? `<i>&mu;</i> = &minus;<i>&omega;<sub>n</sub></i><sup>2</sup>&thinsp;<i>&phi;</i> &minus; 2<i>&omega;<sub>n</sub></i>&thinsp;<i>A</i>&thinsp;<i>q&#775;</i> (Baumgarte, <i>&omega;<sub>n</sub></i> = ${o.wn} rad/s)`
+    : o.proiezione ? "<i>&mu;</i> = 0 e la proiezione su <i>&phi;</i> = 0, <i>A</i>&thinsp;<i>q&#775;</i> = 0 dopo ogni passo" : "<i>&mu;</i> = 0 (nessuna stabilizzazione)";
+  $("dim-stato").textContent = String(2 * n);
+  $("txt-metodo").textContent = { rk4: "Runge-Kutta 4", simplettico: "Eulero semi-implicito", eulero: "Eulero esplicito" }[o.metodo] + ", h = " + (+$("s-h").value * 1000) + " ms";
+  $("v-wn").textContent = $("r-wn").value + " rad/s";
+}
+
+/* ---- riquadro dell'elemento selezionato ---- */
+function campo(et, val, step, unita, fn) {
+  const id = "f" + Math.random().toString(36).slice(2, 8);
+  setTimeout(() => { const e = $(id); if (e) e.onchange = () => { const x = parseFloat(e.value); if (isFinite(x) && x >= 0) { memorizza(); fn(x); S.E0 = null; ricostruisci(); } }; }, 0);
+  return `<div class="riga-p"><span>${et}</span><input type="number" id="${id}" value="${+val.toFixed(4)}" step="${step}" min="0"><span class="val">${unita}</span></div>`;
+}
+function ricostruisciSel() {
+  const box = $("hud-sel"), h = S.sel, e = elemento(h);
+  if (!e) { box.hidden = true; return; }
+  box.hidden = false; let s = "";
+  if (h.tipo === "corpo") {
+    const k = S.M.corpi.indexOf(e), col = colore(k);
+    s += `<div class="tit" style="color:${col}">corpo ${k + 1} &middot; ${e.tipo}</div>`;
+    s += campo("massa <i>m</i>", e.m, 0.1, "kg", (x) => { e.I *= x / e.m; e.m = Math.max(x, 1e-3); });
+    s += campo("<i>I</i> bar.", e.I, 0.001, "kg m²", (x) => { e.I = Math.max(x, 1e-6); });
+    s += `<div class="info">${e.tipo === "asta" ? `lunghezza ${e.L.toFixed(3)} m: <i>I</i> = <i>mL</i>²/12 = ${(e.m * e.L * e.L / 12).toFixed(4)}` : `lati ${e.a} &times; ${e.b} m`}</div>`;
+    s += `<div class="info">colonne di <i>A</i>: ${3 * k + 1}, ${3 * k + 2}, ${3 * k + 3}</div><div class="info mono" id="sel-live"></div>`;
+  } else if (h.tipo === "vincolo") {
+    const iv = S.M.vincoli.indexOf(e), r0 = 2 * iv;
+    if (e.tipo === "R") s += `<div class="tit">cerniera ${nomeVincolo(e, iv)}</div><div class="info">fra il corpo ${numCorpo(e.i)} e ${e.j ? "il corpo " + numCorpo(e.j) : "il telaio"}: <i>&phi;</i> = <i>p</i><sub>${numCorpo(e.i)}</sub> &minus; <i>p</i><sub>${e.j ? numCorpo(e.j) : 0}</sub> = 0, due equazioni.</div>`;
+    else s += `<div class="tit">prismatica ${nomeVincolo(e, iv)}</div><div class="info">il corpo ${numCorpo(e.b)} scorre ${e.a ? "sul corpo " + numCorpo(e.a) : "sul telaio"}: il suo punto resta sulla guida (<i>&phi;</i><sub>&perp;</sub>) e l&rsquo;angolo relativo resta fisso (<i>&phi;</i><sub>&theta;</sub>).</div>`;
+    s += `<div class="info">righe di <i>A</i>: ${r0 + 1} e ${r0 + 2}</div><div class="info mono" id="sel-live"></div>`;
+  } else {
+    if (e.tipo === "K") {
+      s += `<div class="tit">molla</div><div class="info">fra ${e.i ? "il corpo " + numCorpo(e.i) : "il telaio"} e ${e.j ? "il corpo " + numCorpo(e.j) : "il telaio"}: entra in <i>Q</i>.</div>`;
+      s += campo("<i>k</i>", e.k, 5, "N/m", (x) => { e.k = x; }) + campo("<i>c</i>", e.c, 0.5, "N s/m", (x) => { e.c = x; }) + campo("<i>L</i><sub>0</sub>", e.L0, 0.01, "m", (x) => { e.L0 = x; });
+    } else {
+      s += `<div class="tit">molla torsionale</div><div class="info">fra il corpo ${numCorpo(e.i)} e ${e.j ? "il corpo " + numCorpo(e.j) : "il telaio"}: entra in <i>Q</i>.</div>`;
+      s += campo("<i>k</i>", e.k, 0.5, "N m/rad", (x) => { e.k = x; }) + campo("<i>c</i>", e.c, 0.05, "N m s", (x) => { e.c = x; });
+    }
+    s += `<div class="info mono" id="sel-live"></div>`;
+  }
+  s += `<div class="btns" style="margin-top:4px"><button id="b-elimina-sel">Elimina</button><button id="b-chiudi-sel">Chiudi</button></div>`;
+  box.innerHTML = s;
+  $("b-elimina-sel").onclick = () => elimina(S.sel);
+  $("b-chiudi-sel").onclick = () => { S.sel = null; ricostruisciSel(); };
+  aggiornaSel();
+}
+function aggiornaSel() {
+  const el = $("sel-live"), h = S.sel, e = elemento(h); if (!el || !e || !S.out) return;
+  if (h.tipo === "corpo") el.innerHTML = `x = ${fmt(e.x)} m, y = ${fmt(e.y)} m<br>θ = ${fmt(e.th * 180 / Math.PI)}°`;
+  else if (h.tipo === "vincolo") { const r = 2 * S.M.vincoli.indexOf(e), l = S.out.lam;
+    el.innerHTML = e.tipo === "R" ? `λ = (${fmt(l[r])}, ${fmt(l[r + 1])}) N<br><span style="font-family:inherit">forza sul corpo ${numCorpo(e.i)}</span>` : `λ₁ = ${fmt(l[r])} N (normale alla guida)<br>λ₂ = ${fmt(l[r + 1])} N m (coppia)`; }
+  else if (e.tipo === "K") { const a = puntoForza(e.i, e.si), b = puntoForza(e.j, e.sj), L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    el.innerHTML = `L = ${L.toFixed(3)} m, tiro k(L−L₀) = ${fmt(e.k * (L - e.L0))} N`; }
+  else el.textContent = "";
+}
+
+/* ---- grafici ---- */
+function registra() {
+  const M = S.M, st = S.st, V = MOT.vincoliValuta(M, st.q, st.v, MOT.indici(M)), n = st.q.length;
+  let res = 0, resv = 0;
+  for (let i = 0; i < V.m; i++) { res = Math.max(res, Math.abs(V.phi[i])); let s = 0; for (let k = 0; k < n; k++) s += V.A[i * n + k] * st.v[k]; resv = Math.max(resv, Math.abs(s)); }
+  const E = MOT.energia(M, st.q, st.v).E; if (S.E0 === null) S.E0 = E;
+  S.gr.push({ t: st.t, res, resv, dE: E - S.E0, m: V.m });
+  while (S.gr.length && S.gr[0].t < st.t - 10) S.gr.shift();
+  if ($("ly-scie").checked) M.corpi.forEach((c) => { if (!S.scie.has(c.id)) S.scie.set(c.id, []); const s = S.scie.get(c.id); s.push([c.x, c.y]); if (s.length > 900) s.shift(); });
+}
+function grafico(cvs, titolo, serie, yLog) {
+  const w = cvs.clientWidth, h = cvs.clientHeight; if (!w) return;
+  if (cvs.width !== Math.round(w * DPR)) { cvs.width = Math.round(w * DPR); cvs.height = Math.round(h * DPR); }
+  const g = cvs.getContext("2d"); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, w, h);
+  const x0 = 40, x1 = w - 8, y0 = 20, y1 = h - 16, D = S.gr;
+  g.font = "12px Palatino, Georgia, serif"; g.fillStyle = "#4e2a28"; g.textAlign = "left"; g.fillText(titolo, x0, 13);
+  const tN = D.length ? D[D.length - 1].t : 0, tA = Math.max(0, tN - 10), tB = Math.max(10, tN);
+  let lo, hi;
+  if (yLog) { lo = -16; hi = 0; }
+  else { let a = 1e-9; D.forEach((d) => serie.forEach((s) => { a = Math.max(a, Math.abs(s.f(d))); })); const e = Math.pow(10, Math.ceil(Math.log10(a))); hi = a > e / 2 ? e : a > e / 5 ? e / 2 : e / 5; lo = -hi; }
+  const X = (t) => x0 + (t - tA) / (tB - tA) * (x1 - x0), Y = (y) => y1 - (Math.max(lo, Math.min(hi, y)) - lo) / (hi - lo) * (y1 - y0);
+  g.strokeStyle = "#e3d6d2"; g.lineWidth = 1; g.fillStyle = "#888"; g.textAlign = "right"; g.font = "10.5px Consolas, monospace";
+  const tacche = yLog ? [-15, -10, -5, 0] : [lo, 0, hi];
+  tacche.forEach((v) => { g.beginPath(); g.moveTo(x0, Y(v)); g.lineTo(x1, Y(v)); g.stroke(); g.fillText(yLog ? "1e" + v : (Math.abs(v) < 1e-12 ? "0" : v.toPrecision(1)), x0 - 3, Y(v) + 3.5); });
+  g.textAlign = "center"; for (let t = Math.ceil(tA); t <= tB; t += 2) g.fillText(t + " s", X(t), h - 3);
+  serie.forEach((s, i) => {
+    g.beginPath(); let primo = true;
+    D.forEach((d) => { let y = s.f(d); if (yLog) y = y > 0 ? Math.log10(y) : -16; const px = X(d.t), py = Y(y); if (primo) { g.moveTo(px, py); primo = false; } else g.lineTo(px, py); });
+    g.strokeStyle = s.col; g.lineWidth = 1.5; g.stroke();
+    g.fillStyle = s.col; g.textAlign = "right"; g.font = "11.5px Palatino, Georgia, serif"; g.fillText(s.nome, x1 - 4, y0 + 12 + 13 * i);
+  });
+}
+function disegnaGrafici() {
+  if ($("grafico-box").classList.contains("chiuso")) return;
+  grafico($("g-res"), "residuo dei vincoli (scala logaritmica)", [{ f: (d) => d.res, col: "#a60000", nome: "max |φ|" }, { f: (d) => d.resv, col: "#0000a6", nome: "max |A q̇|" }], true);
+  grafico($("g-en"), "energia meccanica, E − E₀ [J]", [{ f: (d) => d.dE, col: "#007300", nome: "E − E₀" }], false);
+}
+
+/* ---- controllo di coerenza del modello: ogni punto d'attacco sta nella materia del suo corpo,
+        ogni molla torsionale ha la sua cerniera, ogni vincolo e' soddisfatto. Avvisa in console. ---- */
+function controllaModello() {
+  const M = S.M, prob = [], tol = 1e-3;
+  const fuori = (id, s, cosa) => { if (!id) return; const c = corpoDaId(id);
+    if (!corpoContiene(c, MOT.mondo(c, s), tol)) prob.push(`${cosa}: punto fuori dal corpo ${numCorpo(id)}`); };
+  M.vincoli.forEach((v, iv) => { const nm = nomeVincolo(v, iv);
+    if (v.tipo === "R") { fuori(v.i, v.si, nm); fuori(v.j, v.sj, nm); } else fuori(v.b, v.sb, nm); });
+  M.forze.forEach((f, k) => {
+    if (f.tipo === "K") { fuori(f.i, f.si, "molla " + (k + 1)); fuori(f.j, f.sj, "molla " + (k + 1)); }
+    else if (!M.vincoli.some((v) => v.tipo === "R" && ((v.i === f.i && v.j === f.j) || (v.i === f.j && v.j === f.i))))
+      prob.push(`molla torsionale ${k + 1}: nessuna cerniera fra i suoi corpi`);
+  });
+  const st = MOT.impacca(M), V = MOT.vincoliValuta(M, st.q, st.v, MOT.indici(M));
+  V.phi.forEach((x, r) => { if (Math.abs(x) > 1e-9) prob.push(`riga ${r + 1} di A: vincolo non soddisfatto, phi = ${x.toExponential(1)}`); });
+  if (prob.length) console.warn("[controllo modello] " + prob.join("; "));
+  return prob;
+}
+
+/* ---- esempi e percorso guidato ---- */
+function centra() {
+  const pts = []; S.M.corpi.forEach((c) => MOT.puntiCorpo(c).forEach((p) => pts.push(MOT.mondo(c, p.s))));
+  S.M.corpi.forEach((c) => { if (c.tipo === "blocco") { pts.push(MOT.mondo(c, [c.a / 2, c.b / 2])); pts.push(MOT.mondo(c, [-c.a / 2, -c.b / 2])); } });
+  S.M.forze.forEach((f) => { if (f.tipo === "K") { pts.push(puntoForza(f.i, f.si)); pts.push(puntoForza(f.j, f.sj)); } });
+  if (!pts.length) return;
+  let xa = Math.min(...pts.map((p) => p[0])), xb = Math.max(...pts.map((p) => p[0])), ya = Math.min(...pts.map((p) => p[1])), yb = Math.max(...pts.map((p) => p[1]));
+  const zonaX0 = W > 700 ? 210 : 10, zonaY1 = H - 150, zw = W - zonaX0 - 20, zh = zonaY1 - 60;
+  const sc = Math.max(80, Math.min(520, 0.75 * Math.min(zw / Math.max(xb - xa, 0.2), zh / Math.max(yb - ya + 0.6, 0.2))));
+  S.vista.scala = sc;
+  const cxS = zonaX0 + zw / 2, cyS = 60 + zh / 2;
+  S.vista.cx = (xa + xb) / 2 - (cxS - W / 2) / sc; S.vista.cy = (ya + yb) / 2 + 0.25 + (cyS - H / 2) / sc;
+}
+function carica(costruttore, prima) {   // nuovo modello da zero
+  memorizza(); MOT.prossimoId = 1; S.M = MOT.nuovoModello(); S.M.g = $("ly-g").checked ? 9.81 : 0;
+  costruttore(S.M); S.sel = null; modificato(prima || null); centra();
+}
+const QA = { O1: [-0.45, 0], O2: [0.45, 0], A: [-0.7, -0.55], B: [0.55, -0.7] };
+const PASSI = [
+  { et: "1 · due pendoli", f(M) { const c1 = MOT.aggiungiAsta(M, QA.O1, QA.A), c2 = MOT.aggiungiAsta(M, QA.O2, QA.B); MOT.cerniera(M, c1, QA.O1, null); MOT.cerniera(M, c2, QA.O2, null); },
+    t: "Due aste incernierate al telaio: <i>n</i> = 6 colonne, <i>m</i> = 4 righe. Le righe di R1 toccano solo le colonne del corpo 1, quelle di R2 solo le colonne del corpo 2: <i>A</i> &egrave; <b>diagonale a blocchi</b>, e anche <i>A</i>&thinsp;<i>B</i><sup>&minus;1</sup><i>A</i><sup>T</sup>. Sono due sistemi indipendenti, con un grado di libert&agrave; ciascuno. Avvia: ogni pendolo oscilla per conto suo." },
+  { et: "2 · + biella", f(M) { MOT.aggiungiAsta(M, QA.A, QA.B); },
+    t: "Una terza asta fra le estremit&agrave;, ancora senza cerniere: 3 colonne nuove, nessuna riga. Il corpo 3 &egrave; libero, e i gradi di libert&agrave; salgono a 9 &minus; 4 = 5. Se avvii, la biella cade." },
+  { et: "3 · cerniera A", f(M) { MOT.cerniera(M, M.corpi[0], QA.A, M.corpi[2]); },
+    t: "Cerniera fra 1 e 3: due righe che toccano le colonne di <i>entrambi</i>. Ora 1 e 3 formano un doppio pendolo, accanto al pendolo 2: <i>A</i> ha ancora due blocchi, {1, 3} e {2}, e i gradi di libert&agrave; sono 9 &minus; 6 = 3." },
+  { et: "4 · cerniera B", f(M) { MOT.cerniera(M, M.corpi[1], QA.B, M.corpi[2]); },
+    t: "L&rsquo;ultima cerniera, fra 2 e 3: le sue due righe toccano le colonne di 2 e di 3 e <b>saldano i due blocchi</b>. Nel grafo si chiude un anello, <i>A</i> non &egrave; pi&ugrave; diagonale a blocchi e <i>A</i>&thinsp;<i>B</i><sup>&minus;1</sup><i>A</i><sup>T</sup> nemmeno. Restano 9 &minus; 8 = 1 grado di libert&agrave;: &egrave; il quadrilatero articolato. <i>B</i> non &egrave; cambiata: la catena chiusa sta tutta in queste due righe." }
+];
+function passoPercorso(k) {
+  memorizza(); MOT.prossimoId = 1; S.M = MOT.nuovoModello(); S.M.g = $("ly-g").checked ? 9.81 : 0;
+  let prima = null;
+  for (let i = 0; i < k; i++) { if (i === k - 1) prima = JSON.parse(istantanea()); PASSI[i].f(S.M); }
+  S.sel = null; modificato(prima); centra();
+  $("racconto").innerHTML = PASSI[k - 1].t;
+  document.querySelectorAll("#passi button").forEach((b, i) => b.classList.toggle("acceso", i === k - 1));
+  $("desc-esempio").innerHTML = "";
+}
+const ESEMPI = [
+  { nome: "Pendolo", f(M) { const c = MOT.aggiungiAsta(M, [0, 0], [0.6, -0.35]); MOT.cerniera(M, c, [0, 0], null); },
+    d: "Un&rsquo;asta incernierata al telaio: 3 colonne, 2 righe, 1 grado di libert&agrave;. La riga <i>Q</i>&minus;<i>G</i> contiene il peso, &minus;<i>mg</i> nella colonna <i>y</i>." },
+  { nome: "Doppio pendolo", f(M) { const c1 = MOT.aggiungiAsta(M, [0, 0], [0.5, 0]), c2 = MOT.aggiungiAsta(M, [0.5, 0], [0.85, 0.3]); MOT.cerniera(M, c1, [0, 0], null); MOT.cerniera(M, c1, [0.5, 0], c2); },
+    d: "Catena aperta di due aste: le righe di R2 toccano le colonne di 1 e di 2, quelle di R1 solo di 1. <i>A</i> &egrave; triangolare a blocchi: la struttura di una catena seriale. Moto caotico." },
+  { nome: "Quadrilatero", f(M) { PASSI.forEach((p) => p.f(M)); }, d: "Il quadrilatero articolato del percorso guidato, gi&agrave; montato: 3 corpi, 4 cerniere, un anello, 1 grado di libert&agrave;." },
+  { nome: "Biella-manovella", f(M) {
+      const O = [-0.3, 0], A = [-0.3 + 0.25 * Math.cos(Math.PI / 3), 0.25 * Math.sin(Math.PI / 3)], C = [A[0] + Math.sqrt(0.49 - A[1] * A[1]), 0];
+      const cr = MOT.aggiungiAsta(M, O, A), bi = MOT.aggiungiAsta(M, A, C), bl = MOT.aggiungiBlocco(M, C, { a: 0.24, b: 0.14, m: 1.5 });
+      MOT.cerniera(M, cr, O, null); MOT.cerniera(M, cr, A, bi); MOT.cerniera(M, bi, C, bl); MOT.prismatica(M, bl, null, 0);
+      MOT.molla(M, bl, C, null, [C[0] + 0.55, 0], { k: 40 }); },
+    d: "Manovella, biella e pistone su una guida orizzontale (prismatica a telaio P4), con una molla sul pistone: 9 colonne, 8 righe, 1 grado di libert&agrave;. La catena &egrave; chiusa attraverso il telaio." },
+  { nome: "Carrello e pendolo", f(M) {
+      const b = MOT.aggiungiBlocco(M, [0, 0], { a: 0.3, b: 0.16, m: 2 }); MOT.prismatica(M, b, null, 0);
+      const p = MOT.aggiungiAsta(M, [0, 0], [0.4, -0.4]); MOT.cerniera(M, p, [0, 0], b);
+      MOT.molla(M, null, [-0.75, 0], b, [-0.15, 0], { k: 50, L0: 0.45 }); },
+    d: "Il pendolo su carrello: prismatica a telaio per il carrello, cerniera fra carrello e asta, molla precaricata fra telaio e carrello. 2 gradi di libert&agrave;: guarda come la molla compare solo nella riga <i>Q</i>&minus;<i>G</i>." },
+  { nome: "Parallelogramma ridondante", f(M) {
+      const d = [0.25, -0.43], cr = [-0.6, 0, 0.6].map((x) => MOT.aggiungiAsta(M, [x, 0], [x + d[0], d[1]]));
+      const bi = MOT.aggiungiAsta(M, [-0.6 + d[0], d[1]], [0.6 + d[0], d[1]]);
+      [-0.6, 0, 0.6].forEach((x, k) => { MOT.cerniera(M, cr[k], [x, 0], null); MOT.cerniera(M, cr[k], [x + d[0], d[1]], bi); }); },
+    d: "Tre manovelle uguali e una biella: 4 corpi, 6 cerniere, 12 righe. Gr&uuml;bler d&agrave; 12 &minus; 12 = 0 gradi di libert&agrave;, ma il meccanismo si muove: le righe di <i>A</i> hanno rango 11, una &egrave; combinazione delle altre. Il solutore lo vede (Cholesky con pivot su <i>A</i>&thinsp;<i>B</i><sup>&minus;1</sup><i>A</i><sup>T</sup>) e mette a zero il moltiplicatore in pi&ugrave;." },
+  { nome: "Molle", f(M) {
+      const b = MOT.aggiungiBlocco(M, [-0.35, -0.55], { a: 0.24, b: 0.16, m: 1 }); MOT.molla(M, null, [-0.35, 0], b, [-0.3, -0.47], { k: 60, L0: 0.3 });
+      const r = MOT.aggiungiAsta(M, [0.3, 0], [0.85, -0.15]); MOT.cerniera(M, r, [0.3, 0], null); MOT.mollaTorsionale(M, r, null, { k: 4 });
+      MOT.molla(M, b, [-0.23, -0.55], r, [0.85, -0.15], { k: 25 }); },   // punti nel mondo: bordo destro del blocco, estremo dell'asta
+    d: "Un blocco appeso a una molla, senza vincoli: le sue 3 colonne in <i>A</i> sono vuote. Un&rsquo;asta incernierata con una molla torsionale, e una molla fra i due. Le molle accoppiano i corpi attraverso <i>Q</i>: nel tabellone <i>A</i> resta diagonale a blocchi." },
+  { nome: "Pagina bianca", f() {}, d: "Nessun corpo. Costruisci il tuo sistema con gli strumenti a sinistra: ogni corpo aggiunge 3 colonne, ogni vincolo 2 righe." }
+];
+
+/* ---- ciclo ---- */
+let tPannello = 0;
+function ciclo(ts) {
+  const dt = Math.min(0.05, (ts - S.tsPrec) / 1000 || 0); S.tsPrec = ts;
+  if (S.gira && S.st) {
+    const h = +$("s-h").value, o = opzioni(), t0 = performance.now(); S.accum += dt * +$("s-vel").value;
+    let k = 0;
+    while (S.accum >= h) { MOT.passo(S.M, S.st, h, o); S.accum -= h; k++; if ((k & 31) === 0 && performance.now() - t0 > 25) { S.accum = 0; break; } }
+    if (!S.st.q.every(Number.isFinite) || S.st.q.some((x) => Math.abs(x) > 1e4)) { avviso("La simulazione è esplosa (passo troppo grande senza stabilizzazione?): si riparte da capo"); riparti(); }
+    else { MOT.spacchetta(S.M, S.st.q, S.st.v); registra(); }
+  }
+  // le reazioni disegnate vanno con lo stato disegnato: lambda ricalcolati a ogni fotogramma (una valutazione, costa poco)
+  S.outScena = $("ly-reaz").checked && S.st && S.M.vincoli.length ? MOT.accelerazioni(S.M, S.st.q, S.st.v, opzioni()) : null;
+  disegna(); disegnaGrafici();
+  if (ts - tPannello > 100) { aggiornaValori(); tPannello = ts; }
+  $("tempo").textContent = "t = " + (S.st ? S.st.t : 0).toFixed(2) + " s";
+  requestAnimationFrame(ciclo);
+}
+
+/* ---- avvio ---- */
+function inizia() {
+  costruisciStrumenti(); scegliStrumento("sel");
+  const pe = $("passi"); PASSI.forEach((p, i) => { const b = document.createElement("button"); b.innerHTML = p.et; b.onclick = () => passoPercorso(i + 1); pe.appendChild(b); });
+  const es = $("esempi"); ESEMPI.forEach((e) => { const b = document.createElement("button"); b.textContent = e.nome;
+    b.onclick = () => { carica(e.f); $("desc-esempio").innerHTML = e.d; document.querySelectorAll("#passi button").forEach((x) => x.classList.remove("acceso"));
+      $("racconto").innerHTML = "Scegli un passo per ripercorrere la costruzione del quadrilatero."; }; es.appendChild(b); });
+  $("b-play").onclick = avviaFerma; $("b-inizio").onclick = riparti;
+  $("b-passo").onclick = () => { if (S.gira) ferma(); if (!S.M.corpi.length) return; if (!S.iniziale) { S.iniziale = istantanea(); } const h = +$("s-h").value, o = opzioni();
+    for (let i = 0; i < Math.round(1 / 60 / h); i++) MOT.passo(S.M, S.st, h, o); MOT.spacchetta(S.M, S.st.q, S.st.v); registra(); };
+  $("b-grafici").onclick = () => { const g = $("grafico-box"); g.classList.toggle("chiuso"); $("b-grafici").innerHTML = g.classList.contains("chiuso") ? "+" : "&ndash;"; };
+  ["c-valori", "c-extra", "c-vett"].forEach((id) => { $(id).onchange = () => { costruisciTabella(); aggiornaValori(); }; });
+  ["s-metodo", "s-h", "r-wn"].forEach((id) => { $(id).oninput = testi; });
+  document.querySelectorAll("input[name=stab]").forEach((e) => { e.onchange = testi; });
+  $("ly-g").onchange = () => { S.M.g = $("ly-g").checked ? 9.81 : 0; S.E0 = null; aggiornaValori(); };
+  $("ly-scie").onchange = () => S.scie.clear();
+  $("ly-reaz").onchange = () => { S.scalaF = 0; };     // riaccendendo lo strato la scala si sceglie di nuovo
+  // separatore del pannello
+  const rz = $("rz"), aside = document.querySelector("aside");
+  rz.addEventListener("pointerdown", (e) => { rz.setPointerCapture(e.pointerId); rz.classList.add("attivo");
+    const x0 = e.clientX, w0 = aside.offsetWidth;
+    const mv = (ev) => { aside.style.flexBasis = Math.max(300, Math.min(window.innerWidth - 360, w0 - (ev.clientX - x0))) + "px"; ridimensiona(); };
+    const up = () => { rz.classList.remove("attivo"); rz.removeEventListener("pointermove", mv); rz.removeEventListener("pointerup", up); };
+    rz.addEventListener("pointermove", mv); rz.addEventListener("pointerup", up); });
+  new ResizeObserver(ridimensiona).observe(cv); ridimensiona();
+  passoPercorso(1); S.storia = [];
+  requestAnimationFrame(ciclo);
+}
+window.addEventListener("load", () => {
+  if (window.renderMathInElement) renderMathInElement(document.body, { delimiters: [{ left: "\\[", right: "\\]", display: true }, { left: "\\(", right: "\\)", display: false }], throwOnError: false });
+});
+inizia();
+</script>
+</body>
+</html>

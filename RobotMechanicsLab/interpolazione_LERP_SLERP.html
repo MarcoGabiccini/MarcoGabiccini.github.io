@@ -1,0 +1,627 @@
+<!doctype html>
+<!-- (c) 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini, Universita' di Pisa. Tutti i diritti riservati. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LERP e SLERP</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap">
+<style>
+  :root {
+    --ground: #f2f4f8;
+    --panel: #ffffff;
+    --canvas: #fbfcfe;
+    --ink: #1a1e2b;
+    --muted: #5b6577;
+    --line: #d4d9e3;
+    --ghost: #a3abb9;
+    --s: #1436a8;          /* orientazione iniziale: blu, come nella dispensa */
+    --b: #a8201a;          /* orientazione finale: rosso */
+    --ok: #17714a;
+    --ok-bg: #e0f2e8;
+    --var: #8f5400;
+    --var-bg: #fbecd2;
+    --serif: "STIX Two Text", "Cambria Math", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #11141b; --panel: #191d27; --canvas: #151922; --ink: #e7eaf1;
+      --muted: #9aa4b7; --line: #2b3241; --ghost: #5a6376;
+      --s: #7ea5ff; --b: #ff8377;
+      --ok: #74d6a4; --ok-bg: #15342a; --var: #f1b961; --var-bg: #392b11;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #11141b; --panel: #191d27; --canvas: #151922; --ink: #e7eaf1;
+    --muted: #9aa4b7; --line: #2b3241; --ghost: #5a6376;
+    --s: #7ea5ff; --b: #ff8377;
+    --ok: #74d6a4; --ok-bg: #15342a; --var: #f1b961; --var-bg: #392b11;
+  }
+
+  body { background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 1180px; margin-inline: auto; padding-inline: 20px; padding-block: 28px 40px; display: flex; flex-direction: column; gap: 22px; }
+
+  .m { font-family: var(--serif); font-style: italic; font-size: 1.08em; white-space: nowrap; }
+  .m b { font-weight: 600; }
+  .m .rm { font-style: normal; }
+  .m sub, .m sup { font-size: 0.72em; line-height: 0; }
+  .cs { color: var(--s); } .cb { color: var(--b); }
+
+  header .eyebrow { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+  header h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(28px, 4vw, 40px); line-height: 1.12; text-wrap: balance; }
+  header .lede { margin: 10px 0 0; max-width: 68ch; color: var(--muted); font-size: 16px; }
+
+  /* ---- controlli ---- */
+  .controls { display: flex; flex-wrap: wrap; gap: 14px 26px; align-items: end; padding: 14px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  .ctl { display: flex; flex-direction: column; gap: 4px; min-width: 130px; flex: 1 1 130px; }
+  .ctl label, .ctl .lab { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
+  .ctl output { font-family: var(--mono); font-size: 12px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  input[type="range"] { width: 100%; accent-color: var(--s); margin: 0; }
+  .btns { display: flex; gap: 8px; flex: 0 0 auto; }
+  button { font: 500 14px var(--sans); color: var(--ink); background: var(--ground); border: 1px solid var(--line); border-radius: 4px; padding: 8px 14px; cursor: pointer; }
+  button.primary { background: var(--s); border-color: var(--s); color: var(--panel); min-width: 86px; }
+  button:hover { filter: brightness(1.06); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--s); outline-offset: 2px; }
+  .checks { display: flex; flex-wrap: wrap; gap: 6px 16px; flex: 1 1 240px; font-size: 13px; }
+  .checks label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .checks input { accent-color: var(--s); }
+  .pose { display: flex; flex-wrap: wrap; gap: 12px 26px; align-items: end; padding: 12px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  .pose > .tag { flex: 0 0 auto; align-self: center; font-size: 13px; font-weight: 500; min-width: 128px; }
+  .pose .ctl { min-width: 110px; flex: 1 1 110px; }
+  .pose .seq { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+  .pose .seq .lab { font-size: 12px; color: var(--muted); }
+  .pose .seq .note { flex: 1 1 260px; font-size: 12.5px; color: var(--muted); }
+
+  /* ---- viste ---- */
+  .views { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  @media (max-width: 860px) { .views { grid-template-columns: minmax(0, 1fr); } }
+  .view { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; min-width: 0; }
+  .view > .head { padding: 14px 18px 10px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; justify-content: space-between; }
+  .view h2 { margin: 0; font: 600 19px/1.25 var(--serif); }
+  .view .sub { margin: 4px 0 0; font-size: 13.5px; color: var(--muted); }
+  .modes { display: flex; gap: 6px; }
+  .modes button { padding: 4px 10px; font-size: 12.5px; border-radius: 999px; }
+  .modes button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+  .stage { position: relative; background: var(--canvas); border-block: 1px solid var(--line); }
+  canvas { display: block; width: 100%; max-width: 100%; touch-action: pan-y; }
+  .stage canvas { aspect-ratio: 1 / 0.82; cursor: grab; }
+  .stage canvas:active { cursor: grabbing; }
+
+  .monitor { padding: 12px 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .row { display: grid; grid-template-columns: 74px minmax(0, 1fr) 84px; gap: 10px; align-items: center; }
+  .row .sym { font-size: 16px; }
+  .cells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .cell { display: flex; flex-direction: column; gap: 3px; }
+  .cell .num { font: 500 15px var(--mono); font-variant-numeric: tabular-nums; white-space: pre; }
+  .cell .axis { font: italic 12px var(--serif); color: var(--muted); }
+  .cell .top { display: flex; justify-content: space-between; align-items: baseline; }
+  .track { position: relative; height: 3px; border-radius: 2px; background: var(--line); }
+  .track::before { content: ""; position: absolute; left: 50%; top: -2px; width: 1px; height: 7px; background: var(--ghost); }
+  .track i { position: absolute; top: -3px; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: currentColor; }
+  .pill { justify-self: end; font-size: 11.5px; font-weight: 500; letter-spacing: 0.02em; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill.ok { color: var(--ok); background: var(--ok-bg); }
+  .pill.var { color: var(--var); background: var(--var-bg); }
+  .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--muted); }
+  .facts b { font: 500 14px var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* ---- grafico condiviso ---- */
+  .chart { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px 30px; padding: 18px 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  @media (max-width: 760px) { .chart { grid-template-columns: minmax(0, 1fr); } }
+  .chart h2 { margin: 0 0 8px; font: 600 17px/1.25 var(--serif); }
+  .chart canvas { aspect-ratio: 1 / 0.42; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend i { width: 22px; height: 0; border-top: 2px solid var(--ink); }
+  .legend i.dash { border-top-style: dashed; border-color: var(--muted); }
+  .chart .text p { margin: 0 0 8px; max-width: 62ch; font-size: 14px; }
+  .chart .text p:last-child { margin-bottom: 0; }
+  .hint { font-size: 12.5px; color: var(--muted); margin: -8px 2px 0; }
+  /* chi ha fatto la pagina */
+  .credito { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted);
+             display: flex; flex-wrap: wrap; gap: 2px 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Meccanica dei Robot · Capitolo 2</p>
+    <h1>LERP e SLERP</h1>
+    <p class="lede">Due modi di passare da un'orientazione <span class="m cs">R<sub>i</sub></span> a un'orientazione <span class="m cb">R<sub>f</sub></span> in un tempo assegnato: interpolare linearmente i parametri, oppure ruotare attorno all'asse della rotazione relativa. Il corpo arriva nello stesso posto; la velocità angolare con cui ci arriva no.</p>
+  </header>
+
+  <section class="controls" aria-label="Controlli dell'animazione">
+    <div class="btns">
+      <button class="primary" id="play" type="button">Pausa</button>
+      <button id="rewind" type="button" title="Torna all'istante iniziale">t = 0</button>
+    </div>
+    <div class="ctl">
+      <label for="t"><span>Istante <span class="m">t</span></span><output id="tOut">0,35</output></label>
+      <input id="t" type="range" min="0" max="1" step="0.002" value="0.35">
+    </div>
+    <div class="ctl">
+      <label for="T"><span>Durata del moto</span><output id="TOut">4,0 s</output></label>
+      <input id="T" type="range" min="1" max="10" step="0.5" value="4">
+    </div>
+    <div class="checks">
+      <label><input id="showTrace" type="checkbox" checked> tracce dei versori</label>
+      <label><input id="showBody" type="checkbox" checked> corpo rigido</label>
+      <label><input id="showEnds" type="checkbox" checked> pose agli estremi</label>
+      <label><input id="showAxis" type="checkbox" checked> velocità angolare <span class="m"><b>ω</b>(t)</span></label>
+    </div>
+  </section>
+
+  <section class="pose" aria-label="Orientazioni agli estremi">
+    <div class="seq">
+      <span class="lab">Sequenza degli angoli</span>
+      <div class="modes" role="group" aria-label="Sequenza degli angoli di Eulero">
+        <button id="seqZYZ" type="button" aria-pressed="true">ZYZ</button>
+        <button id="seqZYX" type="button" aria-pressed="false">ZYX</button>
+      </div>
+      <span class="note">Il passaggio mantiene le orientazioni di partenza <span class="m cs">R<sub>i</sub></span> e di arrivo <span class="m cb">R<sub>f</sub></span>: cambiano solo i tre angoli che le descrivono.</span>
+    </div>
+    <span class="tag cs">Iniziale <span class="m">R<sub>i</sub></span> (<span class="seqName">ZYZ</span>)</span>
+    <div class="ctl"><label for="pi0"><span class="m">ψ<sub>i</sub></span><output id="pi0Out">−74°</output></label><input id="pi0" type="range" min="-180" max="180" step="5" value="-74"></div>
+    <div class="ctl"><label for="th0"><span class="m">θ<sub>i</sub></span><output id="th0Out">30°</output></label><input id="th0" type="range" min="0" max="180" step="5" value="30"></div>
+    <div class="ctl"><label for="ph0"><span class="m">φ<sub>i</sub></span><output id="ph0Out">40°</output></label><input id="ph0" type="range" min="-180" max="180" step="5" value="40"></div>
+    <span class="tag cb">Finale <span class="m">R<sub>f</sub></span> (<span class="seqName">ZYZ</span>)</span>
+    <div class="ctl"><label for="pi1"><span class="m">ψ<sub>f</sub></span><output id="pi1Out">140°</output></label><input id="pi1" type="range" min="-180" max="180" step="5" value="140"></div>
+    <div class="ctl"><label for="th1"><span class="m">θ<sub>f</sub></span><output id="th1Out">80°</output></label><input id="th1" type="range" min="0" max="180" step="5" value="80"></div>
+    <div class="ctl"><label for="ph1"><span class="m">φ<sub>f</sub></span><output id="ph1Out">−60°</output></label><input id="ph1" type="range" min="-180" max="180" step="5" value="-60"></div>
+  </section>
+  <p class="hint">Trascina una delle due viste per cambiare il punto di osservazione: si muovono insieme.</p>
+
+  <section class="views">
+    <article class="view">
+      <div class="head">
+        <div>
+          <h2>LERP</h2>
+          <p class="sub" id="subL">I tre angoli ZYZ interpolati linearmente.</p>
+        </div>
+        <div class="modes" role="group" aria-label="Parametri interpolati a sinistra">
+          <button id="modeE" type="button" aria-pressed="true">angoli ZYZ</button>
+          <button id="modeQ" type="button" aria-pressed="false">quaternioni</button>
+        </div>
+      </div>
+      <div class="stage"><canvas id="cvL" aria-label="Corpo rigido interpolato con la LERP"></canvas></div>
+      <div class="monitor" id="monL"></div>
+    </article>
+
+    <article class="view">
+      <div class="head">
+        <div>
+          <h2>SLERP</h2>
+          <p class="sub">Rotazione uniforme attorno all'asse <span class="m"><b>n</b></span> della rotazione relativa: <span class="m"><b>ω</b></span> non si muove.</p>
+        </div>
+      </div>
+      <div class="stage"><canvas id="cvR" aria-label="Corpo rigido interpolato con la SLERP"></canvas></div>
+      <div class="monitor" id="monR"></div>
+    </article>
+  </section>
+
+  <section class="chart" aria-label="Modulo della velocità angolare">
+    <div>
+      <h2>Modulo della velocità angolare <span class="m">‖ω(t)‖</span></h2>
+      <canvas id="cvW" aria-label="Grafico del modulo della velocità angolare in funzione di t"></canvas>
+      <div class="legend">
+        <span><i></i> SLERP</span>
+        <span><i class="dash"></i> LERP</span>
+        <span>linea verticale: istante corrente</span>
+      </div>
+    </div>
+    <div class="text">
+      <p><strong>La SLERP è una retta orizzontale.</strong> L'asse di rotazione è fermo e l'angolo cresce in proporzione a <span class="m">t</span>: la velocità angolare vale <span class="m">θ<span class="rm">/</span>T</span> dall'inizio alla fine, in modulo, direzione e verso.</p>
+      <p><strong>La LERP no.</strong> Interpolare linearmente tre angoli di Eulero, o i quattro numeri di un quaternione, non corrisponde a nessun moto uniforme: il modulo varia, e varia anche la direzione dell'asse istantaneo di rotazione. Nelle viste è la freccia <span class="m"><b>ω</b></span>, lunga in proporzione al modulo: a destra è inchiodata sull'asse <span class="m"><b>n</b></span>, a sinistra si sposta e si allunga.</p>
+      <p>Le due interpolazioni sui quaternioni percorrono lo stesso arco: il cammino è identico, cambia solo la legge oraria. Quella sugli angoli di Eulero percorre un cammino più lungo.</p>
+    </div>
+  </section>
+  <footer class="credito"><span>Realizzato da Ing. Eugeniu Grabovic</span><span>&copy; 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini &mdash; Tutti i diritti riservati</span></footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+  const AX = 1.25;                          // lunghezza degli assi disegnati e raggio delle tracce
+  const BODY = [0.62, 0.38, 0.10];          // semilati del parallelepipedo solidale al corpo
+
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const st = { t: 0.35, T: 4, hold: 0, playing: !reduced, mode: "E", seq: "ZYZ", camAz: 38, camEl: 22,
+               xi: [-74, 30, 40], xf: [140, 80, -60],
+               showTrace: true, showBody: true, showEnds: true, showAxis: true };
+
+  /* ---------- algebra ---------- */
+  const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+  const add = (a, b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2]];
+  const mul = (a, k) => [a[0]*k, a[1]*k, a[2]*k];
+  const col = (R, j) => [R[0][j], R[1][j], R[2][j]];
+  const mv = (R, v) => [dot(R[0], v), dot(R[1], v), dot(R[2], v)];
+  const mm = (A, B) => [0,1,2].map(i => [0,1,2].map(j => A[i][0]*B[0][j] + A[i][1]*B[1][j] + A[i][2]*B[2][j]));
+  const mtm = (A, B) => [0,1,2].map(i => [0,1,2].map(j => A[0][i]*B[0][j] + A[1][i]*B[1][j] + A[2][i]*B[2][j]));
+  const rotZ = (a) => [[Math.cos(a), -Math.sin(a), 0], [Math.sin(a), Math.cos(a), 0], [0, 0, 1]];
+  const rotY = (a) => [[Math.cos(a), 0, Math.sin(a)], [0, 1, 0], [-Math.sin(a), 0, Math.cos(a)]];
+  const rotX = (a) => [[1, 0, 0], [0, Math.cos(a), -Math.sin(a)], [0, Math.sin(a), Math.cos(a)]];
+  const eul = (seq, x) => mm(mm(rotZ(x[0]), rotY(x[1])), seq === "ZYX" ? rotX(x[2]) : rotZ(x[2]));
+  function rotToEul(seq, R) {                // inversa delle due sequenze; in singolarita' si pone phi = 0
+    if (seq === "ZYX") {
+      const c = Math.hypot(R[0][0], R[1][0]), th = Math.atan2(-R[2][0], c);
+      if (c < 1e-7) return [Math.atan2(-R[0][1], R[1][1]), th, 0];
+      return [Math.atan2(R[1][0], R[0][0]), th, Math.atan2(R[2][1], R[2][2])];
+    }
+    const s = Math.hypot(R[0][2], R[1][2]), th = Math.atan2(s, R[2][2]);
+    if (s < 1e-7) return [R[2][2] > 0 ? Math.atan2(R[1][0], R[0][0]) : Math.atan2(-R[1][0], -R[0][0]), th, 0];
+    return [Math.atan2(R[1][2], R[0][2]), th, Math.atan2(R[2][1], -R[2][0])];
+  }
+
+  function rotToQuat(R) {                    // q0 >= 0
+    const tr = R[0][0] + R[1][1] + R[2][2];
+    const q0 = 0.5 * Math.sqrt(Math.max(0, 1 + tr));
+    if (q0 > 1e-8) return [q0, (R[2][1]-R[1][2])/(4*q0), (R[0][2]-R[2][0])/(4*q0), (R[1][0]-R[0][1])/(4*q0)];
+    const d = [R[0][0], R[1][1], R[2][2]], k = d.indexOf(Math.max(...d));   // theta = pi: si legge la diagonale
+    const v = [0, 0, 0];
+    v[k] = Math.sqrt(Math.max(0, (d[k] + 1) / 2));
+    const o1 = (k+1) % 3, o2 = (k+2) % 3;
+    v[o1] = (R[k][o1] + R[o1][k]) / (4*v[k]);
+    v[o2] = (R[k][o2] + R[o2][k]) / (4*v[k]);
+    return [0, v[0], v[1], v[2]];
+  }
+  function quatToRot(q) {
+    const [w, x, y, z] = q;
+    return [[1-2*(y*y+z*z), 2*(x*y-w*z),   2*(x*z+w*y)],
+            [2*(x*y+w*z),   1-2*(x*x+z*z), 2*(y*z-w*x)],
+            [2*(x*z-w*y),   2*(y*z+w*x),   1-2*(x*x+y*y)]];
+  }
+  const qdot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3];
+  const qnorm = (q) => { const n = Math.hypot(q[0], q[1], q[2], q[3]) || 1; return q.map(v => v / n); };
+  function axisAngle(R) {                    // asse e angolo di una rotazione, theta in [0, pi]
+    const c = Math.max(-1, Math.min(1, (R[0][0] + R[1][1] + R[2][2] - 1) / 2));
+    const th = Math.acos(c), s = Math.sin(th);
+    if (s < 1e-9) return { n: [0, 0, 1], th };
+    return { n: [(R[2][1]-R[1][2])/(2*s), (R[0][2]-R[2][0])/(2*s), (R[1][0]-R[0][1])/(2*s)], th };
+  }
+
+  /* ---------- le due interpolazioni ---------- */
+  const S = {};                              // stato derivato dagli estremi, ricalcolato quando cambiano
+  function rebuild() {
+    const xi = st.xi.map(a => a * D2R), xf = st.xf.map(a => a * D2R);
+    S.xi = xi; S.xf = xf;
+    S.Ri = eul(st.seq, xi);
+    S.Rf = eul(st.seq, xf);
+    S.Qi = rotToQuat(S.Ri);
+    S.Qf = rotToQuat(S.Rf);
+    if (qdot(S.Qi, S.Qf) < 0) S.Qf = S.Qf.map(v => -v);        // arco breve
+    S.om = Math.acos(Math.max(-1, Math.min(1, qdot(S.Qi, S.Qf))));   // Omega = theta/2
+    const aa = axisAngle(mtm(S.Ri, S.Rf));
+    S.th = aa.th;
+    S.nBody = aa.n;
+    S.nSpat = mv(S.Ri, aa.n);                                   // l'asse visto dalla terna fissa
+    sampleCurves();
+  }
+  function Rat(mode, t) {
+    if (mode === "S") {                                         // SLERP, formula (2.27)
+      if (S.om < 1e-6) return quatToRot(qnorm(S.Qi.map((v, k) => (1-t)*v + t*S.Qf[k])));
+      const a = Math.sin((1-t)*S.om) / Math.sin(S.om), b = Math.sin(t*S.om) / Math.sin(S.om);
+      return quatToRot(S.Qi.map((v, k) => a*v + b*S.Qf[k]));
+    }
+    if (mode === "Q") {                                         // LERP normalizzata, formula (2.24)
+      return quatToRot(qnorm(S.Qi.map((v, k) => (1-t)*v + t*S.Qf[k])));
+    }
+    return eul(st.seq, [0, 1, 2].map(k => (1-t)*S.xi[k] + t*S.xf[k]));   // LERP sugli angoli di Eulero
+  }
+  function omega(mode, t) {                  // omega^ = Rdot R^T, per differenze centrali: misurata, non imposta
+    const h = 2e-4, A = Rat(mode, t + h), B = Rat(mode, t - h), R = Rat(mode, t);
+    const W = [0,1,2].map(i => [0,1,2].map(j =>
+      ((A[i][0]-B[i][0])*R[j][0] + (A[i][1]-B[i][1])*R[j][1] + (A[i][2]-B[i][2])*R[j][2]) / (2*h)));
+    return [W[2][1], W[0][2], W[1][0]].map(v => v / st.T);      // rad/s, con t = tempo / T
+  }
+
+  const NS = 160;                            // campioni delle curve
+  function sampleCurves() {
+    S.curve = {}; S.trace = {}; S.len = {}; S.wmax = 0;
+    for (const mode of ["S", st.mode]) {
+      const w = new Float64Array(NS + 1), tip = [[], [], []];
+      let L = 0, Rprev = null;
+      for (let k = 0; k <= NS; k++) {
+        const t = k / NS, R = Rat(mode, t);
+        w[k] = Math.hypot(...omega(mode, t));
+        for (let j = 0; j < 3; j++) tip[j].push(mul(col(R, j), AX));
+        if (Rprev) L += axisAngle(mtm(Rprev, R)).th;
+        Rprev = R;
+      }
+      S.curve[mode] = w; S.trace[mode] = tip; S.len[mode] = L;
+      S.wmax = Math.max(S.wmax, ...w);
+    }
+    S.wmax = Math.max(S.wmax, 1e-6);
+  }
+
+  /* ---------- colori dal tema ---------- */
+  let C = {};
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    for (const k of ["ink", "muted", "line", "ghost", "s", "b", "canvas", "panel"]) C[k] = cs.getPropertyValue("--" + k).trim();
+  }
+  readColors();
+  setInterval(readColors, 600);
+
+  /* ---------- monitor ---------- */
+  function buildMonitor(host, id) {
+    host.innerHTML = `
+      <div class="row">
+        <span class="sym m">[<b>ω</b>]<sub>s</sub></span>
+        <span class="cells">${["x","y","z"].map((a, i) => `
+          <span class="cell"><span class="top"><span class="num" id="${id}${i}"></span><span class="axis">${a}<sub>s</sub></span></span>
+          <span class="track"><i id="${id}${i}t"></i></span></span>`).join("")}
+        </span>
+        <span class="pill" id="${id}pill"></span>
+      </div>
+      <div class="facts">
+        <span>modulo <span class="m">‖ω‖</span> <b id="${id}mag"></b> °/s</span>
+        <span>angolo percorso <b id="${id}ang"></b>°</span>
+        <span>cammino totale <b id="${id}len"></b>°</span>
+        <span>scarto <span class="m">‖ω‖<sub>max</sub> <span class="rm">−</span> ‖ω‖<sub>min</sub></span> <b id="${id}spread"></b>°/s</span>
+      </div>`;
+  }
+  buildMonitor($("monL"), "L"); buildMonitor($("monR"), "R");
+
+  const fmt = (v, d = 1) => { if (Math.abs(v) < 5e-3) v = 0; return (v < 0 ? "−" : " ") + Math.abs(v).toFixed(d); };
+  function setRow(id, w, mode) {
+    const wmax = S.wmax * R2D || 1;
+    for (let i = 0; i < 3; i++) {
+      $(id + i).textContent = fmt(w[i] * R2D);
+      $(id + i + "t").style.left = Math.max(0, Math.min(100, (w[i] * R2D / wmax + 1) / 2 * 100)) + "%";
+    }
+    const c = S.curve[mode], lo = Math.min(...c), hi = Math.max(...c), spread = (hi - lo) * R2D;
+    const pill = $(id + "pill"), costante = spread < 0.05;
+    pill.textContent = costante ? "costante" : "varia";
+    pill.className = "pill " + (costante ? "ok" : "var");
+    $(id + "mag").textContent = (Math.hypot(...w) * R2D).toFixed(1);
+    $(id + "spread").textContent = spread.toFixed(1);
+    $(id + "len").textContent = (S.len[mode] * R2D).toFixed(1);
+    $(id + "ang").textContent = (axisAngle(mtm(S.Ri, Rat(mode, st.t))).th * R2D).toFixed(1);
+  }
+
+  /* ---------- vista 3D ---------- */
+  const SERIF = '"STIX Two Text", "Cambria Math", Georgia, serif';
+  function makeView(canvas, getMode) {
+    const ctx = canvas.getContext("2d");
+    let W = 0, H = 0, dpr = 1;
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      W = canvas.clientWidth; H = canvas.clientHeight;
+      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    }
+    new ResizeObserver(resize).observe(canvas);
+    resize();
+
+    let cam;
+    function setCam() {
+      const a = st.camAz * D2R, e = st.camEl * D2R;
+      cam = { right: [-Math.sin(a), Math.cos(a), 0],
+              up: [-Math.sin(e)*Math.cos(a), -Math.sin(e)*Math.sin(a), Math.cos(e)],
+              fwd: [Math.cos(e)*Math.cos(a), Math.cos(e)*Math.sin(a), Math.sin(e)],
+              s: Math.min(W, H / 0.82) / 3.4, cx: W / 2, cy: H * 0.53 };
+    }
+    const pr = (v) => [cam.cx + cam.s * dot(v, cam.right), cam.cy - cam.s * dot(v, cam.up)];
+
+    function line(a, b, color, w, dash, alpha) {
+      const A = pr(a), B = pr(b);
+      ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha; ctx.strokeStyle = color; ctx.lineWidth = w;
+      ctx.setLineDash(dash || []); ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke(); ctx.restore();
+    }
+    function arrow(a, b, color, w, head, alpha) {
+      const A = pr(a), B = pr(b), dx = B[0]-A[0], dy = B[1]-A[1], L = Math.hypot(dx, dy) || 1;
+      const ux = dx / L, uy = dy / L, h = Math.min(head, L * 0.6);
+      ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha; ctx.strokeStyle = color; ctx.fillStyle = color;
+      ctx.lineWidth = w; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0] - ux*h*0.8, B[1] - uy*h*0.8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(B[0], B[1]);
+      ctx.lineTo(B[0] - ux*h - uy*h*0.42, B[1] - uy*h + ux*h*0.42);
+      ctx.lineTo(B[0] - ux*h + uy*h*0.42, B[1] - uy*h - ux*h*0.42);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      return { B, ux, uy };
+    }
+    function label(x, y, base, subTxt, color, bold) {
+      ctx.save(); ctx.fillStyle = color; ctx.textBaseline = "middle";
+      ctx.font = `italic ${bold ? 600 : 400} 16px ${SERIF}`; const w1 = ctx.measureText(base).width;
+      ctx.font = `italic 400 11px ${SERIF}`; const w2 = subTxt ? ctx.measureText(subTxt).width : 0;
+      let x0 = Math.max(4, Math.min(W - w1 - w2 - 4, x - (w1 + w2) / 2));
+      y = Math.max(10, Math.min(H - 10, y));
+      ctx.font = `italic ${bold ? 600 : 400} 16px ${SERIF}`; ctx.fillText(base, x0, y);
+      if (subTxt) { ctx.font = `italic 400 11px ${SERIF}`; ctx.fillText(subTxt, x0 + w1 + 1, y + 5); }
+      ctx.restore();
+    }
+    function frame(R, color, tag, width, alpha, named) {
+      const names = ["x", "y", "z"];
+      for (let j = 0; j < 3; j++) {
+        const e = mul(col(R, j), AX);
+        const t = arrow([0,0,0], e, color, width, named ? 9 : 7, alpha);
+        if (named) label(t.B[0] + t.ux * 14, t.B[1] + t.uy * 14, names[j], tag, color, false);
+      }
+    }
+    function brick(R, color, fillA, edgeA) {  // il corpo rigido: facce ordinate per profondita'
+      const V = [];
+      for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1])
+        V.push(mv(R, [sx*BODY[0], sy*BODY[1], sz*BODY[2]]));
+      const F = [[0,1,3,2],[4,6,7,5],[0,4,5,1],[2,3,7,6],[0,2,6,4],[1,5,7,3]];
+      F.map(f => ({ f, d: f.reduce((s, i) => s + dot(V[i], cam.fwd), 0) / 4 }))
+       .sort((a, b) => a.d - b.d)
+       .forEach(({ f }) => {
+         ctx.save(); ctx.beginPath();
+         f.forEach((i, k) => { const P = pr(V[i]); k ? ctx.lineTo(P[0], P[1]) : ctx.moveTo(P[0], P[1]); });
+         ctx.closePath();
+         ctx.globalAlpha = fillA; ctx.fillStyle = color; ctx.fill();
+         ctx.globalAlpha = edgeA; ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke();
+         ctx.restore();
+       });
+    }
+    function draw() {
+      const mode = getMode(), R = Rat(mode, st.t);
+      setCam();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+      if (st.showAxis) {                      // velocita' angolare misurata: asse istantaneo e modulo
+        const w = omega(mode, st.t), mag = Math.hypot(...w);
+        if (mag > 1e-9) {
+          const u = mul(w, 1 / mag), L = 0.55 + 1.05 * (mag / S.wmax);   // stessa scala nei due pannelli
+          line(mul(u, -0.95), [0, 0, 0], C.muted, 1.2, [5, 5], 0.45);    // l'asse istantaneo, prolungato
+          const t = arrow([0, 0, 0], mul(u, L), C.muted, 2, 11, 0.85);
+          label(t.B[0] + t.ux * 16, t.B[1] + t.uy * 16, "ω", "", C.muted, true);
+        }
+      }
+      if (st.showTrace) {
+        const tip = S.trace[mode];
+        for (let j = 0; j < 3; j++) {
+          ctx.save(); ctx.globalAlpha = 0.85; ctx.strokeStyle = C.ghost; ctx.lineWidth = 1.2; ctx.beginPath();
+          tip[j].forEach((v, k) => { const P = pr(v); k ? ctx.lineTo(P[0], P[1]) : ctx.moveTo(P[0], P[1]); });
+          ctx.stroke(); ctx.restore();
+          ctx.save(); ctx.fillStyle = C.ghost;           // pallini a intervalli uguali di t
+          for (let k = 0; k <= NS; k += NS / 20) { const P = pr(tip[j][k]); ctx.beginPath(); ctx.arc(P[0], P[1], 1.7, 0, 7); ctx.fill(); }
+          ctx.restore();
+        }
+      }
+      if (st.showEnds) {                      // pose agli estremi: corpo velato + terna
+        if (st.showBody) { brick(S.Ri, C.s, 0.07, 0.30); brick(S.Rf, C.b, 0.07, 0.30); }
+        frame(S.Ri, C.s, "i", 1.4, 0.75, true);
+        frame(S.Rf, C.b, "f", 1.4, 0.75, true);
+      }
+      if (st.showBody) brick(R, C.ink, 0.10, 0.42);
+      frame(R, C.ink, "", 2.2, 1, false);
+      ctx.save(); ctx.fillStyle = C.ink; const O = pr([0,0,0]);
+      ctx.beginPath(); ctx.arc(O[0], O[1], 3.2, 0, 7); ctx.fill(); ctx.restore();
+    }
+
+    let drag = null;
+    canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      st.camAz -= (e.clientX - drag.x) * 0.45;
+      if (e.pointerType === "mouse") st.camEl = Math.max(-8, Math.min(86, st.camEl + (e.clientY - drag.y) * 0.35));
+      drag = { x: e.clientX, y: e.clientY };
+    });
+    const end = () => { drag = null; };
+    canvas.addEventListener("pointerup", end); canvas.addEventListener("pointercancel", end);
+    return { draw };
+  }
+  const VL = makeView($("cvL"), () => st.mode), VR = makeView($("cvR"), () => "S");
+
+  /* ---------- grafico di ||omega|| ---------- */
+  const cw = $("cvW"), ctxW = cw.getContext("2d");
+  let WW = 0, WH = 0, wdpr = 1;
+  function sizeChart() {
+    wdpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    WW = cw.clientWidth; WH = cw.clientHeight;
+    cw.width = Math.round(WW * wdpr); cw.height = Math.round(WH * wdpr);
+  }
+  new ResizeObserver(sizeChart).observe(cw);
+  sizeChart();
+  function drawChart() {
+    if (!WW) return;
+    const L = 46, Rp = 10, Tp = 12, B = 26, w = WW - L - Rp, h = WH - Tp - B;
+    const top = Math.max(1, Math.ceil(S.wmax * R2D / 10) * 10);
+    const X = (t) => L + t * w, Y = (v) => Tp + h * (1 - v / top);
+    ctxW.setTransform(wdpr, 0, 0, wdpr, 0, 0);
+    ctxW.clearRect(0, 0, WW, WH);
+    ctxW.font = '11px "IBM Plex Mono", ui-monospace, monospace';
+    ctxW.strokeStyle = C.line; ctxW.fillStyle = C.muted; ctxW.lineWidth = 1;
+    for (let k = 0; k <= 4; k++) {                       // griglia orizzontale con i valori
+      const v = top * k / 4, y = Y(v);
+      ctxW.globalAlpha = k ? 0.6 : 1;
+      ctxW.beginPath(); ctxW.moveTo(L, y); ctxW.lineTo(L + w, y); ctxW.stroke();
+      ctxW.globalAlpha = 1; ctxW.textAlign = "right"; ctxW.textBaseline = "middle";
+      ctxW.fillText(v.toFixed(0), L - 8, y);
+    }
+    ctxW.textAlign = "center"; ctxW.textBaseline = "top";
+    for (const t of [0, 0.25, 0.5, 0.75, 1]) ctxW.fillText(t.toFixed(2).replace(".", ","), X(t), Tp + h + 7);
+    ctxW.save(); ctxW.translate(12, Tp + h / 2); ctxW.rotate(-Math.PI / 2);
+    ctxW.textAlign = "center"; ctxW.textBaseline = "middle"; ctxW.fillText("°/s", 0, 0); ctxW.restore();
+    ctxW.textAlign = "right"; ctxW.fillText("t", X(1), Tp + h + 7 + 14);
+    const curve = (mode, color, dash, width) => {
+      const c = S.curve[mode];
+      ctxW.save(); ctxW.strokeStyle = color; ctxW.lineWidth = width; ctxW.setLineDash(dash); ctxW.lineJoin = "round";
+      ctxW.beginPath();
+      for (let k = 0; k <= NS; k++) { const P = [X(k / NS), Y(c[k] * R2D)]; k ? ctxW.lineTo(P[0], P[1]) : ctxW.moveTo(P[0], P[1]); }
+      ctxW.stroke(); ctxW.restore();
+    };
+    curve(st.mode, C.muted, [6, 4], 1.8);
+    curve("S", C.ink, [], 2.2);
+    ctxW.save(); ctxW.strokeStyle = C.ghost; ctxW.lineWidth = 1;    // istante corrente
+    ctxW.beginPath(); ctxW.moveTo(X(st.t), Tp); ctxW.lineTo(X(st.t), Tp + h); ctxW.stroke();
+    for (const [mode, color] of [[st.mode, C.muted], ["S", C.ink]]) {
+      const v = S.curve[mode][Math.round(st.t * NS)] * R2D;
+      ctxW.fillStyle = color; ctxW.beginPath(); ctxW.arc(X(st.t), Y(v), 3.4, 0, 7); ctxW.fill();
+    }
+    ctxW.restore();
+  }
+
+  /* ---------- controlli ---------- */
+  const playBtn = $("play");
+  const syncPlay = () => { playBtn.textContent = st.playing ? "Pausa" : "Avvia"; };
+  playBtn.addEventListener("click", () => { if (st.t >= 1) { st.t = 0; st.hold = 0; } st.playing = !st.playing; syncPlay(); });
+  $("rewind").addEventListener("click", () => { st.t = 0; st.hold = 0; });
+  $("t").addEventListener("input", (e) => { st.t = +e.target.value; st.playing = false; syncPlay(); });
+  $("T").addEventListener("input", (e) => { st.T = +e.target.value; rebuild(); });
+  for (const k of ["showTrace", "showBody", "showEnds", "showAxis"])
+    $(k).addEventListener("change", (e) => { st[k] = e.target.checked; });
+  const angIds = [["pi0", "xi", 0], ["th0", "xi", 1], ["ph0", "xi", 2], ["pi1", "xf", 0], ["th1", "xf", 1], ["ph1", "xf", 2]];
+  for (const [id, which, k] of angIds)
+    $(id).addEventListener("input", (e) => { st[which][k] = +e.target.value; rebuild(); });
+  const setMode = (m) => {
+    st.mode = m;
+    $("modeE").setAttribute("aria-pressed", m === "E");
+    $("modeQ").setAttribute("aria-pressed", m === "Q");
+    $("subL").textContent = m === "E" ? `I tre angoli ${st.seq} interpolati linearmente.`
+                                      : "I quattro numeri del quaternione interpolati linearmente, poi normalizzati.";
+    rebuild();
+  };
+  const setSeq = (q) => {                    // stesse R_i e R_f, riscritte nei tre angoli dell'altra sequenza
+    if (q === st.seq) return;
+    st.seq = q;
+    st.xi = rotToEul(q, S.Ri).map(a => a * R2D);
+    st.xf = rotToEul(q, S.Rf).map(a => a * R2D);
+    $("seqZYZ").setAttribute("aria-pressed", q === "ZYZ");
+    $("seqZYX").setAttribute("aria-pressed", q === "ZYX");
+    for (const el of document.querySelectorAll(".seqName")) el.textContent = q;
+    $("modeE").textContent = "angoli " + q;
+    for (const id of ["th0", "th1"]) { $(id).min = q === "ZYX" ? -90 : 0; $(id).max = q === "ZYX" ? 90 : 180; }
+    for (const [id, which, k] of angIds) $(id).value = st[which][k];
+    setMode(st.mode);
+  };
+  $("seqZYZ").addEventListener("click", () => setSeq("ZYZ"));
+  $("seqZYX").addEventListener("click", () => setSeq("ZYX"));
+  $("modeE").addEventListener("click", () => setMode("E"));
+  $("modeQ").addEventListener("click", () => setMode("Q"));
+  syncPlay();
+  rebuild();
+
+  /* ---------- ciclo ---------- */
+  const deg = (v) => {                       // interi dai cursori, un decimale dopo un cambio di sequenza
+    const r = Math.round(v * 10) / 10;
+    return (r < 0 ? "−" : "") + (Number.isInteger(r) ? String(Math.abs(r)) : Math.abs(r).toFixed(1).replace(".", ",")) + "°";
+  };
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (st.playing) {
+      if (st.t >= 1) {                       // breve pausa a fine corsa, poi si ricomincia
+        st.hold += dt;
+        if (st.hold > 0.8) { st.t = 0; st.hold = 0; }
+      } else {
+        st.t = Math.min(1, st.t + dt / st.T);
+      }
+    }
+    VL.draw(); VR.draw(); drawChart();
+    setRow("L", omega(st.mode, st.t), st.mode);
+    setRow("R", omega("S", st.t), "S");
+    if (document.activeElement !== $("t")) $("t").value = st.t;
+    $("tOut").textContent = st.t.toFixed(2).replace(".", ",");
+    $("TOut").textContent = st.T.toFixed(1).replace(".", ",") + " s";
+    for (const [id, which, k] of angIds) $(id + "Out").textContent = deg(st[which][k]);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,440 @@
+<!doctype html>
+<!-- (c) 2026 Prof. Marco Gabiccini, Universita' di Pisa. Tutti i diritti riservati.
+     Landing page di Robot Mechanics Lab: le pagine interattive della dispensa di Meccanica dei Robot, raggruppate
+     per capitolo. Le schede sono la fonte anche per Dashboard_animazioni/pubblica_sito.py, che copia sul sito la
+     landing e le pagine dei loro href (data-autori: gli autori della pagina, per i meta delle copie). -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Prof. Marco Gabiccini">
+<meta name="description" content="Animazioni e simulatori interattivi che accompagnano la dispensa di Meccanica dei Robot (Universit&agrave; di Pisa), raggruppati per capitolo.">
+<title>Robot Mechanics Lab &mdash; Meccanica dei Robot</title>
+<style>
+  :root {
+    /* come le figure della dispensa e le pagine del laboratorio: carta bianca, rosina, i colori dei frame */
+    --paper: #ffffff; --ink: #262626; --dim: #6b6b6b; --rule: #e3d6d2; --rule2: #c9b5b0;
+    --rosina: #f1cdc5; --rosinaL: #fbe9e5; --rosinaC: #4e2a28;
+    --colS: #0000a6; --colB: #a60000; --colC: #007300; --colD: #d96c00; --grigio: #8c8c8c;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Latin Modern Roman", "CMU Serif", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    font-size: 16px; line-height: 1.45;
+  }
+  a { color: inherit; }
+  .pagina { max-width: 1120px; margin: 0 auto; padding: 22px 24px 40px; }
+  @media (max-width: 520px) { .pagina { padding: 16px 16px 32px; } }
+
+  /* intestazione */
+  .su { display: inline-block; font-size: 13.5px; color: var(--dim); text-decoration: none; margin-bottom: 18px; }
+  .su:hover { color: var(--rosinaC); text-decoration: underline; }
+  .sopra { margin: 0; font-variant: small-caps; letter-spacing: 0.08em; color: var(--rosinaC); font-size: 15px; }
+  h1 { font-size: 34px; font-weight: normal; margin: 2px 0 4px; line-height: 1.15; }
+  .sub { margin: 0 0 14px; font-style: italic; color: var(--dim); font-size: 17px; }
+  .contesto { margin: 0; max-width: 78ch; padding: 10px 14px; background: var(--rosinaL); border-left: 3px solid var(--rosinaC);
+              font-size: 15px; }
+  .contesto p { margin: 0; }
+  .contesto p + p { margin-top: 4px; color: #4a4a4a; }
+
+  /* indice dei capitoli */
+  .indice { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 4px; padding: 0; list-style: none; }
+  .indice a { display: inline-block; font-size: 14px; text-decoration: none; padding: 3px 10px; border: 1px solid var(--rule2);
+              background: var(--rosinaL); color: var(--rosinaC); border-radius: 2px; }
+  .indice a:hover { background: var(--rosina); }
+
+  /* capitoli */
+  .capitolo { margin-top: 30px; scroll-margin-top: 12px; }
+  .capitolo h2 { font-weight: normal; margin: 0 0 12px; padding-bottom: 4px; border-bottom: 1px solid var(--rule);
+                 display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
+  .capitolo h2 .num { font-variant: small-caps; letter-spacing: 0.08em; color: var(--rosinaC); font-size: 15px; }
+  .capitolo h2 .tit { font-size: 21px; }
+  .griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+  @media (max-width: 400px) { .griglia { grid-template-columns: 1fr; } }
+
+  /* schede */
+  .scheda { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px 12px; border: 1px solid var(--rule);
+            background: var(--paper); text-decoration: none; color: var(--ink); border-radius: 2px;
+            transition: background 0.15s, border-color 0.15s, box-shadow 0.15s; }
+  .scheda:hover { background: var(--rosinaL); border-color: var(--rule2); box-shadow: 0 1px 4px rgba(78, 42, 40, 0.12); }
+  .scheda:focus-visible { outline: 2px solid var(--rosinaC); outline-offset: 2px; }
+  .icona { flex: 0 0 64px; width: 64px; height: 64px; background: var(--paper); border: 1px solid var(--rule); border-radius: 2px; }
+  .corpo { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .scheda h3 { margin: 0; font-size: 17.5px; font-weight: normal; line-height: 1.25; color: var(--ink); }
+  .scheda:hover h3 { color: var(--rosinaC); }
+  .scheda p { margin: 0; font-size: 14.5px; color: #4a4a4a; line-height: 1.4; }
+  .scheda .piede { margin-top: 2px; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; font-size: 13px; color: var(--dim); }
+  .tipo { font-variant: small-caps; letter-spacing: 0.05em; color: var(--rosinaC); }
+  /* nel maiuscoletto di Palatino le cifre diventano minuscole: le cifre restano normali */
+  .n { font-variant: normal; letter-spacing: 0; }
+  .autori { font-style: italic; }
+
+  footer { margin-top: 44px; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--dim); }
+  footer p { margin: 0 0 4px; }
+</style>
+</head>
+<body>
+<!-- punte di freccia per le icone, una per colore -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <defs>
+    <marker id="pK" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0.6 L8,4 L0,7.4 z" fill="#262626"/></marker>
+    <marker id="pS" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0.6 L8,4 L0,7.4 z" fill="#0000a6"/></marker>
+    <marker id="pB" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0.6 L8,4 L0,7.4 z" fill="#a60000"/></marker>
+    <marker id="pC" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0.6 L8,4 L0,7.4 z" fill="#007300"/></marker>
+    <marker id="pD" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0.6 L8,4 L0,7.4 z" fill="#d96c00"/></marker>
+    <pattern id="tratteggio" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="#8c8c8c" stroke-width="1"/></pattern>
+  </defs>
+</svg>
+
+<div class="pagina">
+<header>
+  <a class="su" href="https://marcogabiccini.github.io/">&larr; marcogabiccini.github.io</a>
+  <p class="sopra">Robot Mechanics Lab</p>
+  <h1>Meccanica dei Robot</h1>
+  <p class="sub">Animazioni e simulatori interattivi della dispensa, capitolo per capitolo</p>
+  <div class="contesto">
+    <p>Pagine per il corso di <i>Meccanica dei Robot</i>, Universit&agrave; di Pisa. Ogni scheda apre una pagina che funziona
+      nel browser, senza installare nulla.</p>
+    <p>Nelle pagine 3D si gira la vista trascinando (tasto destro: sposta; rotella: zoom); le presentazioni a scene si
+      scorrono con le frecce &larr; &rarr;.</p>
+  </div>
+  <ul class="indice" aria-label="Capitoli">
+    <li><a href="#cap1">Cap. 1</a></li>
+    <li><a href="#cap2">Cap. 2</a></li>
+    <li><a href="#cap5">Cap. 5</a></li>
+    <li><a href="#cap7">Cap. 7</a></li>
+    <li><a href="#cap9">Cap. 9</a></li>
+    <li><a href="#cap10">Cap. 10</a></li>
+    <li><a href="#cap11">Cap. 11</a></li>
+    <li><a href="#cap12">Cap. 12</a></li>
+  </ul>
+</header>
+
+<main>
+
+<section class="capitolo" id="cap1">
+  <h2><span class="num">Capitolo <span class="n">1</span></span><span class="tit">Rotazioni e gruppo SO(3)</span></h2>
+  <div class="griglia">
+    <a class="scheda" href="doppio_ruolo_Rsb.html" data-autori="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M44,42 A26,26 0 0 0 40.5,29" fill="none" stroke="#8c8c8c" stroke-width="1" stroke-dasharray="2 2"/>
+        <line x1="18" y1="44" x2="52" y2="44" stroke="#0000a6" stroke-width="1.8" marker-end="url(#pS)"/>
+        <line x1="18" y1="44" x2="18" y2="10" stroke="#0000a6" stroke-width="1.8" marker-end="url(#pS)"/>
+        <line x1="18" y1="44" x2="47" y2="27.5" stroke="#a60000" stroke-width="1.8" marker-end="url(#pB)"/>
+        <line x1="18" y1="44" x2="1.5" y2="15" stroke="#a60000" stroke-width="1.8" marker-end="url(#pB)"/>
+        <line x1="18" y1="44" x2="35" y2="17" stroke="#262626" stroke-width="1.6" marker-end="url(#pK)"/>
+        <circle cx="18" cy="44" r="2.2" fill="#262626"/>
+      </svg>
+      <div class="corpo">
+        <h3>Doppio ruolo di <i>R</i><sub>sb</sub></h3>
+        <p>Una sola matrice di rotazione, due letture: il vettore resta fermo e cambia la terna in cui lo si legge, oppure il vettore &egrave; solidale alla terna mobile e ruota con lei.</p>
+        <p class="piede"><span class="tipo">animazione</span><span class="autori">di Ing. Eugeniu Grabovic e Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="capitolo" id="cap2">
+  <h2><span class="num">Capitolo <span class="n">2</span></span><span class="tit">Parametrizzazioni dell&rsquo;orientazione</span></h2>
+  <div class="griglia">
+    <a class="scheda" href="interpolazione_LERP_SLERP.html" data-autori="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M7.6,40 A26,26 0 0 1 56.4,40" fill="none" stroke="#007300" stroke-width="1.8"/>
+        <line x1="7.6" y1="40" x2="56.4" y2="40" stroke="#d96c00" stroke-width="1.6" stroke-dasharray="4 3"/>
+        <line x1="32" y1="49" x2="32" y2="14" stroke="#8c8c8c" stroke-width="0.8" stroke-dasharray="1.5 2"/>
+        <circle cx="32" cy="23" r="2.2" fill="#007300"/>
+        <circle cx="32" cy="40" r="2.2" fill="#d96c00"/>
+        <circle cx="7.6" cy="40" r="3.2" fill="#0000a6"/>
+        <circle cx="56.4" cy="40" r="3.2" fill="#a60000"/>
+      </svg>
+      <div class="corpo">
+        <h3>LERP e SLERP</h3>
+        <p>Da <i>R</i><sub>i</sub> a <i>R</i><sub>f</sub> in un tempo assegnato: interpolare linearmente i parametri o ruotare attorno all&rsquo;asse della rotazione relativa. Il corpo arriva nello stesso posto, la velocit&agrave; angolare no.</p>
+        <p class="piede"><span class="tipo">animazione</span><span class="autori">di Ing. Eugeniu Grabovic e Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="capitolo" id="cap5">
+  <h2><span class="num">Capitolo <span class="n">5</span></span><span class="tit">Denavit-Hartenberg e cinematica inversa</span></h2>
+  <div class="griglia">
+    <a class="scheda" href="antropomorfo.html" data-autori="Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="10" y="55" width="26" height="4" fill="#d9d9d9" stroke="#8c8c8c" stroke-width="0.8"/>
+        <rect x="19.5" y="40" width="7" height="15" fill="#d9d9d9" stroke="#8c8c8c" stroke-width="0.8"/>
+        <polyline points="23,38 43,43 53,33" fill="none" stroke="#8c8c8c" stroke-width="1.2" stroke-dasharray="3 2"/>
+        <polyline points="23,38 37,19 53,33" fill="none" stroke="#4e2a28" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="23,38 37,19 53,33" fill="none" stroke="#f1cdc5" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="23" cy="38" r="3.4" fill="#fff" stroke="#4e2a28" stroke-width="1.2"/>
+        <circle cx="37" cy="19" r="3.4" fill="#fff" stroke="#4e2a28" stroke-width="1.2"/>
+        <circle cx="53" cy="33" r="2.6" fill="#fff" stroke="#4e2a28" stroke-width="1.2"/>
+        <path d="M57,30 L60,33 M57,30 L55,32.5 M60,33 L57.5,35 M55,32.5 L60.5,38.5" fill="none" stroke="#262626" stroke-width="1.4" stroke-linecap="round"/>
+        <line x1="53" y1="33" x2="53" y2="21" stroke="#a60000" stroke-width="1.4" marker-end="url(#pB)"/>
+      </svg>
+      <div class="corpo">
+        <h3>Manipolatore antropomorfo: cinematica inversa</h3>
+        <p>Si assegna la postura della pinza e si sceglie fra le quattro soluzioni della struttura portante e le due del polso; il disaccoppiamento un passo alla volta, leggi di moto nei giunti.</p>
+        <p class="piede"><span class="tipo"><span class="n">3</span>D interattivo</span><span class="autori">di Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="capitolo" id="cap7">
+  <h2><span class="num">Capitolo <span class="n">7</span></span><span class="tit">Cinematica differenziale dalla parametrizzazione D-H</span></h2>
+  <div class="griglia">
+    <a class="scheda" href="fourspaces_RR.html" data-autori="Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="4" y="18" width="24" height="24" fill="#fbe9e5" stroke="#c9b5b0" stroke-width="0.8"/>
+        <rect x="36" y="18" width="24" height="24" fill="#fbe9e5" stroke="#c9b5b0" stroke-width="0.8"/>
+        <line x1="6" y1="36" x2="26" y2="24" stroke="#0000a6" stroke-width="1.8"/>
+        <line x1="12" y1="20" x2="20" y2="40" stroke="#0000a6" stroke-width="1.4" stroke-dasharray="3 2"/>
+        <line x1="38" y1="26" x2="58" y2="34" stroke="#a60000" stroke-width="1.8"/>
+        <line x1="44" y1="40" x2="52" y2="20" stroke="#a60000" stroke-width="1.4" stroke-dasharray="3 2"/>
+        <path d="M37,12 Q32,6 27,12" fill="none" stroke="#262626" stroke-width="1.2" marker-end="url(#pK)"/>
+        <path d="M27,48 Q32,54 37,48" fill="none" stroke="#262626" stroke-width="1.2" marker-end="url(#pK)"/>
+      </svg>
+      <div class="corpo">
+        <h3>Quattro sottospazi del braccio RR</h3>
+        <p>Immagine e nucleo di <i>J</i> e di <i>J</i><sup>T</sup> per la posizione di <i>O</i><sub>2</sub>: ellissi delle velocit&agrave; e delle forze, statica con i bracci delle forze, automovimenti in singolarit&agrave;.</p>
+        <p class="piede"><span class="tipo">interattiva</span><span class="autori">di Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+    <a class="scheda" href="sottospazi_RR.html" data-autori="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <line x1="8" y1="52" x2="24" y2="52" stroke="#8c8c8c" stroke-width="1"/>
+        <rect x="8" y="52" width="16" height="4" fill="url(#tratteggio)"/>
+        <g transform="rotate(-38 44 18)"><ellipse cx="44" cy="18" rx="15" ry="5.5" fill="rgba(38,38,38,0.08)" stroke="#262626" stroke-width="1"/></g>
+        <line x1="31" y1="28" x2="57" y2="8" stroke="#8c8c8c" stroke-width="0.8" stroke-dasharray="1.5 2"/>
+        <polyline points="16,50 34,36 44,18" fill="none" stroke="#b9c0cc" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="16" cy="50" r="3" fill="#fff" stroke="#262626" stroke-width="1.2"/>
+        <circle cx="34" cy="36" r="3" fill="#fff" stroke="#262626" stroke-width="1.2"/>
+        <circle cx="44" cy="18" r="2" fill="#262626"/>
+      </svg>
+      <div class="corpo">
+        <h3>Sottospazi del braccio RR</h3>
+        <p>Verso la singolarit&agrave;, braccio disteso o ripiegato: come cambiano l&rsquo;immagine e il nucleo di <i>J</i> e di <i>J</i><sup>T</sup>, nello spazio dell&rsquo;end-effector e in quello dei giunti.</p>
+        <p class="piede"><span class="tipo">interattiva</span><span class="autori">di Ing. Eugeniu Grabovic e Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+    <a class="scheda" href="sottospazi_RRR.html" data-autori="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <line x1="4" y1="54" x2="20" y2="54" stroke="#8c8c8c" stroke-width="1"/>
+        <rect x="4" y="54" width="16" height="4" fill="url(#tratteggio)"/>
+        <polyline points="12,52 32,44 42,27 54,14" fill="none" stroke="#8c8c8c" stroke-width="1.2" stroke-dasharray="3 2"/>
+        <polyline points="12,52 22,31 41,32 54,14" fill="none" stroke="#b9c0cc" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="52" r="3" fill="#fff" stroke="#262626" stroke-width="1.2"/>
+        <circle cx="22" cy="31" r="3" fill="#fff" stroke="#262626" stroke-width="1.2"/>
+        <circle cx="41" cy="32" r="3" fill="#fff" stroke="#262626" stroke-width="1.2"/>
+        <circle cx="54" cy="14" r="2.4" fill="#a60000"/>
+      </svg>
+      <div class="corpo">
+        <h3>Sottospazi del braccio RRR</h3>
+        <p>Un braccio planare a tre giunti: ridondante per la sola posizione, quadrato per la posa. Il compito sceglie righe e colonne di <i>J</i>; verso le singolarit&agrave; cambiano immagine e nucleo.</p>
+        <p class="piede"><span class="tipo">interattiva</span><span class="autori">di Ing. Eugeniu Grabovic e Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+    <a class="scheda" href="antropomorfo-sottospazi.html" data-autori="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <g transform="rotate(-20 32 33)">
+          <ellipse cx="32" cy="33" rx="25" ry="15" fill="#fbe9e5" stroke="#4e2a28" stroke-width="1"/>
+          <ellipse cx="32" cy="33" rx="25" ry="6" fill="none" stroke="#4e2a28" stroke-width="0.8" stroke-dasharray="2.5 2"/>
+        </g>
+        <line x1="32" y1="33" x2="54" y2="25" stroke="#a60000" stroke-width="1.6" marker-end="url(#pB)"/>
+        <line x1="32" y1="33" x2="38" y2="17" stroke="#007300" stroke-width="1.6" marker-end="url(#pC)"/>
+        <line x1="32" y1="33" x2="24" y2="40" stroke="#0000a6" stroke-width="1.6" marker-end="url(#pS)"/>
+        <circle cx="32" cy="33" r="2" fill="#262626"/>
+      </svg>
+      <div class="corpo">
+        <h3>Sottospazi dell&rsquo;antropomorfo</h3>
+        <p>I quattro sottospazi dello Jacobiano sul robot vero: compito scelto per righe e colonne, rango e valori singolari, indicatori di spalla, gomito e polso, ellissoide delle velocit&agrave;, automovimenti.</p>
+        <p class="piede"><span class="tipo"><span class="n">3</span>D interattivo</span><span class="autori">di Ing. Eugeniu Grabovic e Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="capitolo" id="cap9">
+  <h2><span class="num">Capitolo <span class="n">9</span></span><span class="tit">CLIK: inversione cinematica in anello chiuso</span></h2>
+  <div class="griglia">
+    <a class="scheda" href="orientazione_quaternione.html" data-autori="Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <line x1="24" y1="42" x2="54" y2="48" stroke="#0000a6" stroke-width="1.8" marker-end="url(#pS)"/>
+        <line x1="24" y1="42" x2="24" y2="10" stroke="#0000a6" stroke-width="1.8" marker-end="url(#pS)"/>
+        <line x1="24" y1="42" x2="8" y2="56" stroke="#0000a6" stroke-width="1.8" marker-end="url(#pS)"/>
+        <line x1="24" y1="42" x2="51" y2="27" stroke="#a60000" stroke-width="1.5" stroke-dasharray="3.5 2.2" marker-end="url(#pB)"/>
+        <line x1="24" y1="42" x2="38" y2="12" stroke="#a60000" stroke-width="1.5" stroke-dasharray="3.5 2.2" marker-end="url(#pB)"/>
+        <path d="M49,44 Q54,36 49,31" fill="none" stroke="#007300" stroke-width="1.6" marker-end="url(#pC)"/>
+        <circle cx="24" cy="42" r="3" fill="#fff" stroke="#262626" stroke-width="1.2"/>
+      </svg>
+      <div class="corpo">
+        <h3>Errore di orientazione col quaternione</h3>
+        <p>Un biplano giocattolo insegue la postura desiderata con &omega; = &omega;<sub>d</sub> + <i>K</i><sub>o</sub> &Delta;<i>q</i>: errore in assi fissi o correnti, la regola del segno del quaternione e il giro lungo.</p>
+        <p class="piede"><span class="tipo"><span class="n">3</span>D &middot; simulazione</span><span class="autori">di Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+    <a class="scheda" href="schema_clik_RRR.html" data-autori="Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <line x1="2" y1="24" x2="7.5" y2="24" stroke="#262626" stroke-width="1.2" marker-end="url(#pK)"/>
+        <circle cx="11" cy="24" r="3.6" fill="#fff" stroke="#262626" stroke-width="1.2"/>
+        <line x1="14.6" y1="24" x2="20" y2="24" stroke="#262626" stroke-width="1.2" marker-end="url(#pK)"/>
+        <rect x="20" y="17" width="14" height="14" fill="#fbe9e5" stroke="#4e2a28" stroke-width="1"/>
+        <line x1="34" y1="24" x2="40" y2="24" stroke="#262626" stroke-width="1.2" marker-end="url(#pK)"/>
+        <rect x="40" y="17" width="14" height="14" fill="#fbe9e5" stroke="#4e2a28" stroke-width="1"/>
+        <polyline points="54,24 61,24 61,46 11,46 11,28.5" fill="none" stroke="#262626" stroke-width="1.2" marker-end="url(#pK)"/>
+        <rect x="27" y="40" width="14" height="12" fill="#fff" stroke="#4e2a28" stroke-width="1"/>
+        <path d="M24,24 h6 M27,21 v6" stroke="#4e2a28" stroke-width="1"/>
+        <text x="47" y="27.6" font-size="9" text-anchor="middle" fill="#4e2a28" font-style="italic" font-family="Georgia, serif">J&#8314;</text>
+        <text x="34" y="49" font-size="8" text-anchor="middle" fill="#4e2a28" font-style="italic" font-family="Georgia, serif">f</text>
+      </svg>
+      <div class="corpo">
+        <h3>Schema CLIK ridondante</h3>
+        <p>Lo schema a blocchi della CLIK per un braccio RRR planare: moto prescritto, errore e retroazione, pseudo-inversa e proiettore nel nucleo, e il braccio che si muove insieme ai segnali.</p>
+        <p class="piede"><span class="tipo">schema a blocchi &middot; simulazione</span><span class="autori">di Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="capitolo" id="cap10">
+  <h2><span class="num">Capitolo <span class="n">10</span></span><span class="tit">Dinamica lagrangiana dei manipolatori</span></h2>
+  <div class="griglia">
+    <a class="scheda" href="christoffel.html" data-autori="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M10,24 L22,12 L52,12 L40,24 z" fill="#fbe9e5" stroke="#4e2a28" stroke-width="1"/>
+        <path d="M40,24 L52,12 L52,42 L40,54 z" fill="#f6dcd6" stroke="#4e2a28" stroke-width="1"/>
+        <rect x="10" y="24" width="30" height="30" fill="#fff" stroke="#4e2a28" stroke-width="1"/>
+        <path d="M20,24 V54 M30,24 V54 M10,34 H40 M10,44 H40" stroke="#c9b5b0" stroke-width="0.8"/>
+        <path d="M14,20 H44 M18,16 H48 M20,24 L32,12 M30,24 L42,12" stroke="#c9b5b0" stroke-width="0.8"/>
+        <path d="M40,34 L52,22 M40,44 L52,32 M44,20 V50 M48,16 V46" stroke="#c9b5b0" stroke-width="0.8"/>
+        <rect x="20" y="34" width="10" height="10" fill="#d96c00" fill-opacity="0.75"/>
+        <rect x="10" y="44" width="10" height="10" fill="#007300" fill-opacity="0.55"/>
+      </svg>
+      <div class="corpo">
+        <h3>Christoffel e antisimmetria</h3>
+        <p>L&rsquo;arbitrariet&agrave; di <i>C</i>, il bilancio dell&rsquo;energia, i simboli di Christoffel (il cubo) e l&rsquo;antisimmetria di <i>&#7682;</i>&nbsp;&minus;&nbsp;2<i>C</i>; e perch&eacute; conta nel controllo.</p>
+        <p class="piede"><span class="tipo">presentazione a scene</span><span class="autori">di Ing. Eugeniu Grabovic e Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+    <a class="scheda" href="antropomorfo-attuatori.html" data-autori="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <line x1="4" y1="56" x2="20" y2="56" stroke="#8c8c8c" stroke-width="1"/>
+        <rect x="4" y="56" width="16" height="4" fill="url(#tratteggio)"/>
+        <polyline points="12,54 28,24 56,34" fill="none" stroke="#4e2a28" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="12,54 28,24 56,34" fill="none" stroke="#f1cdc5" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="19" y1="41" x2="33" y2="39" stroke="#8c8c8c" stroke-width="5" stroke-linecap="round"/>
+        <line x1="33" y1="39" x2="46" y2="31" stroke="#262626" stroke-width="1.6"/>
+        <circle cx="19" cy="41" r="1.8" fill="#262626"/>
+        <circle cx="46" cy="31" r="1.8" fill="#262626"/>
+        <line x1="46" y1="31" x2="56" y2="25" stroke="#007300" stroke-width="1.6" marker-end="url(#pC)"/>
+        <line x1="19" y1="41" x2="8" y2="42.5" stroke="#007300" stroke-width="1.6" marker-end="url(#pC)"/>
+        <circle cx="12" cy="54" r="3" fill="#fff" stroke="#4e2a28" stroke-width="1.2"/>
+        <circle cx="28" cy="24" r="3" fill="#fff" stroke="#4e2a28" stroke-width="1.2"/>
+      </svg>
+      <div class="corpo">
+        <h3>Attuatori fra due corpi</h3>
+        <p>Le forze generalizzate di attuatori montati fra due corpi: motore nel giunto, pistone fra due link, cavo con verricello, rinvio a parallelogramma.</p>
+        <p class="piede"><span class="tipo"><span class="n">3</span>D &middot; presentazione a scene</span><span class="autori">di Ing. Eugeniu Grabovic e Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="capitolo" id="cap11">
+  <h2><span class="num">Capitolo <span class="n">11</span></span><span class="tit">Dinamica vincolata e catene cinematiche chiuse</span></h2>
+  <div class="griglia">
+    <a class="scheda" href="dinamica_vincolata_piano.html" data-autori="Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <line x1="6" y1="52" x2="20" y2="52" stroke="#8c8c8c" stroke-width="1"/>
+        <rect x="6" y="52" width="14" height="4" fill="url(#tratteggio)"/>
+        <line x1="44" y1="52" x2="58" y2="52" stroke="#8c8c8c" stroke-width="1"/>
+        <rect x="44" y="52" width="14" height="4" fill="url(#tratteggio)"/>
+        <path d="M13,52 L10,48 H16 z M51,52 L48,48 H54 z" fill="#d9d9d9" stroke="#8c8c8c" stroke-width="0.8"/>
+        <line x1="13" y1="46" x2="18" y2="18" stroke="#0000a6" stroke-opacity="0.35" stroke-width="5" stroke-linecap="round"/>
+        <line x1="51" y1="46" x2="46" y2="24" stroke="#a60000" stroke-opacity="0.35" stroke-width="5" stroke-linecap="round"/>
+        <line x1="18" y1="18" x2="46" y2="24" stroke="#007300" stroke-opacity="0.35" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="13" cy="46" r="2.6" fill="#fff" stroke="#262626" stroke-width="1.1"/>
+        <circle cx="51" cy="46" r="2.6" fill="#fff" stroke="#262626" stroke-width="1.1"/>
+        <circle cx="18" cy="18" r="2.6" fill="#fff" stroke="#262626" stroke-width="1.1"/>
+        <circle cx="46" cy="24" r="2.6" fill="#fff" stroke="#262626" stroke-width="1.1"/>
+        <line x1="32" y1="21" x2="32" y2="36" stroke="#a60000" stroke-width="1.5" marker-end="url(#pB)"/>
+      </svg>
+      <div class="corpo">
+        <h3>Dinamica vincolata nel piano</h3>
+        <p>Corpi rigidi, cerniere, prismatiche e molle si costruiscono col mouse: la topologia finisce nella matrice dei vincoli <i>A</i>, che si forma sotto gli occhi, e il sistema aumentato si integra con Baumgarte o con la proiezione.</p>
+        <p class="piede"><span class="tipo">simulatore</span><span class="autori">di Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="capitolo" id="cap12">
+  <h2><span class="num">Capitolo <span class="n">12</span></span><span class="tit">Gruppi di Lie: dinamica e RNEA</span></h2>
+  <div class="griglia">
+    <a class="scheda" href="algoritmo_RNEA.html" data-autori="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <line x1="4" y1="56" x2="20" y2="56" stroke="#8c8c8c" stroke-width="1"/>
+        <rect x="4" y="56" width="16" height="4" fill="url(#tratteggio)"/>
+        <polyline points="12,54 22,36 40,30 50,14" fill="none" stroke="#b9c0cc" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="54" r="2.8" fill="#fff" stroke="#262626" stroke-width="1.1"/>
+        <circle cx="22" cy="36" r="2.8" fill="#fff" stroke="#262626" stroke-width="1.1"/>
+        <circle cx="40" cy="30" r="2.8" fill="#fff" stroke="#262626" stroke-width="1.1"/>
+        <path d="M5,44 Q10,26 26,22 Q36,19 42,10" fill="none" stroke="#007300" stroke-width="1.6" marker-end="url(#pC)"/>
+        <path d="M58,24 Q52,40 36,42 Q28,44 25,52" fill="none" stroke="#d96c00" stroke-width="1.6" marker-end="url(#pD)"/>
+      </svg>
+      <div class="corpo">
+        <h3>Algoritmo RNEA</h3>
+        <p>La dinamica inversa di un braccio planare, un passo alla volta: i twist salgono dalla base all&rsquo;ultimo link, i wrench scendono, e ogni coppia &egrave; la proiezione del wrench sul twist del giunto.</p>
+        <p class="piede"><span class="tipo">passo per passo</span><span class="autori">di Ing. Eugeniu Grabovic e Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+    <a class="scheda" href="antropomorfo-rnea.html" data-autori="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <line x1="6" y1="52" x2="20" y2="38" stroke="#8c8c8c" stroke-width="4" stroke-linecap="round" stroke-opacity="0.45" stroke-dasharray="1 0"/>
+        <line x1="44" y1="26" x2="58" y2="12" stroke="#8c8c8c" stroke-width="4" stroke-linecap="round" stroke-opacity="0.45"/>
+        <line x1="20" y1="38" x2="44" y2="26" stroke="#4e2a28" stroke-width="8" stroke-linecap="round"/>
+        <line x1="20" y1="38" x2="44" y2="26" stroke="#f1cdc5" stroke-width="5.6" stroke-linecap="round"/>
+        <circle cx="20" cy="38" r="3" fill="#fff" stroke="#4e2a28" stroke-width="1.2"/>
+        <circle cx="44" cy="26" r="3" fill="#fff" stroke="#4e2a28" stroke-width="1.2"/>
+        <line x1="32" y1="32" x2="44" y2="50" stroke="#0000a6" stroke-width="1.6" marker-end="url(#pS)"/>
+        <path d="M24,18 A9,4 0 1 0 36,15" fill="none" stroke="#d96c00" stroke-width="1.6" marker-end="url(#pD)"/>
+        <line x1="32" y1="32" x2="30" y2="11" stroke="#d96c00" stroke-width="1" stroke-dasharray="2 1.6"/>
+      </svg>
+      <div class="corpo">
+        <h3>RNEA passo per passo</h3>
+        <p>L&rsquo;algoritmo ricorsivo di Newton-Eulero in 24 scene sulla struttura portante dell&rsquo;antropomorfo: velocit&agrave; e accelerazioni dei link, wrench d&rsquo;inerzia, corpo libero, coppie come proiezioni sugli assi.</p>
+        <p class="piede"><span class="tipo"><span class="n">3</span>D &middot; presentazione a scene</span><span class="autori">di Ing. Eugeniu Grabovic e Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+    <a class="scheda" href="antropomorfo-aba.html" data-autori="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+      <svg class="icona" viewBox="0 0 64 64" aria-hidden="true">
+        <line x1="4" y1="56" x2="18" y2="56" stroke="#8c8c8c" stroke-width="1"/>
+        <rect x="4" y="56" width="14" height="4" fill="url(#tratteggio)"/>
+        <g transform="rotate(-30 40 26)"><ellipse cx="40" cy="26" rx="21" ry="11" fill="#fbe9e5" fill-opacity="0.8" stroke="#4e2a28" stroke-width="1" stroke-dasharray="3 2"/></g>
+        <polyline points="11,54 22,36 38,30 52,16" fill="none" stroke="#4e2a28" stroke-width="6.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="11,54 22,36 38,30 52,16" fill="none" stroke="#f1cdc5" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="11" cy="54" r="2.8" fill="#fff" stroke="#4e2a28" stroke-width="1.1"/>
+        <circle cx="22" cy="36" r="2.8" fill="#fff" stroke="#a60000" stroke-width="1.6"/>
+        <circle cx="38" cy="30" r="2.8" fill="#fff" stroke="#4e2a28" stroke-width="1.1"/>
+      </svg>
+      <div class="corpo">
+        <h3>ABA passo per passo</h3>
+        <p>L&rsquo;algoritmo del corpo articolato in 18 scene: inerzie articolate e bias, le tre passate sulla catena, poi i tre link con i numeri e infine il moto simulato.</p>
+        <p class="piede"><span class="tipo"><span class="n">3</span>D &middot; presentazione a scene</span><span class="autori">di Ing. Eugeniu Grabovic e Prof. Marco Gabiccini</span></p>
+      </div>
+    </a>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>&copy; 2026 Prof. Marco Gabiccini, Universit&agrave; di Pisa &mdash; Tutti i diritti riservati. Le pagine realizzate da Ing. Eugeniu Grabovic sono &copy; 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini, come indicato sulle loro schede.</p>
+  <p>Le pagine 3D usano three.js; alcune pagine scrivono le formule con KaTeX (entrambi con licenza MIT).</p>
+</footer>
+</div>
+</body>
+</html>

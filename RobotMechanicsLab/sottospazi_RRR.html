@@ -1,0 +1,886 @@
+<!doctype html>
+<!-- (c) 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini, Universita' di Pisa. Tutti i diritti riservati. -->
+<!-- Copia per il sito di Dashboard_animazioni/sottospazi_RRR.html, nel repository della dispensa (scheletro aggiunto da pubblica_sito.py). -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+<meta name="copyright" content="&copy; 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini. Tutti i diritti riservati.">
+<title>Sottospazi del braccio RRR</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap">
+<style>
+  /* Layout: compito e configurazione in alto; il piano del braccio grande a sinistra, lo spazio del compito e lo
+     spazio dei giunti a destra; sotto rango, sottospazi e il monitor del modo. Stessa tavolozza della pagina RR. */
+  :root {
+    --ground: #f2f4f8;
+    --panel: #ffffff;
+    --canvas: #fbfcfe;
+    --ink: #1a1e2b;
+    --muted: #5b6577;
+    --line: #d4d9e3;
+    --ghost: #a3abb9;
+    --link: #b9c0cc;
+    --ws: #eef1f6;
+    --ell: rgba(26, 30, 43, 0.07);
+    --plane: rgba(26, 30, 43, 0.06);
+    --s: #1436a8;          /* frame {S0}: blu, come nella dispensa */
+    --ok: #17714a; --ok-bg: #e0f2e8;
+    --var: #8f5400; --var-bg: #fbecd2;
+    --serif: "STIX Two Text", "Cambria Math", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #11141b; --panel: #191d27; --canvas: #151922; --ink: #e7eaf1;
+      --muted: #9aa4b7; --line: #2b3241; --ghost: #5a6376; --link: #4a5263;
+      --ws: #1c2130; --ell: rgba(231, 234, 241, 0.08); --plane: rgba(231, 234, 241, 0.07); --s: #7ea5ff;
+      --ok: #74d6a4; --ok-bg: #15342a; --var: #f1b961; --var-bg: #392b11;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #11141b; --panel: #191d27; --canvas: #151922; --ink: #e7eaf1;
+    --muted: #9aa4b7; --line: #2b3241; --ghost: #5a6376; --link: #4a5263;
+    --ws: #1c2130; --ell: rgba(231, 234, 241, 0.08); --plane: rgba(231, 234, 241, 0.07); --s: #7ea5ff;
+    --ok: #74d6a4; --ok-bg: #15342a; --var: #f1b961; --var-bg: #392b11;
+    color-scheme: dark;
+  }
+
+  [hidden] { display: none !important; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 1240px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 40px; display: flex; flex-direction: column; gap: 18px; }
+
+  .m { font-family: var(--serif); font-style: italic; font-size: 1.08em; white-space: nowrap; }
+  .m .rm { font-style: normal; }
+  .qd { position: relative; display: inline-block; }
+  .qd::after { content: "˙"; position: absolute; left: 0.2em; top: -0.42em; font-style: normal; }
+
+  header .eyebrow { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+  header h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(28px, 4vw, 40px); line-height: 1.12; text-wrap: balance; }
+  header .lede { margin: 10px 0 0; max-width: 78ch; color: var(--muted); font-size: 16px; }
+
+  /* ---- comandi ---- */
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; padding: 14px 18px; }
+  .controls > .tag { flex: 0 0 auto; align-self: center; font-size: 13px; font-weight: 600; min-width: 112px; }
+  .ctl { display: flex; flex-direction: column; gap: 4px; min-width: 110px; flex: 1 1 110px; }
+  .ctl label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
+  .ctl output { font-family: var(--mono); font-size: 12px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .ctl.off { opacity: 0.35; }
+  .stack { display: flex; flex-direction: column; gap: 10px; flex: 1 1 240px; min-width: 200px; max-width: 420px; }
+  .stack .ctl { flex: 0 0 auto; }
+  input[type="range"] { width: 100%; accent-color: var(--ink); margin: 0; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 0 100%; }
+  button { font: 500 13.5px var(--sans); color: var(--ink); background: var(--ground); border: 1px solid var(--line); border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--ghost); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--s); outline-offset: 2px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button { border-radius: 999px; padding: 5px 14px; }
+  .controls > .seg { align-self: center; min-width: 112px; }
+  .seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+  .checks { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; font-size: 14px; }
+  .checks .lab { font-size: 12px; color: var(--muted); min-width: 150px; }
+  .checks label { cursor: pointer; white-space: nowrap; }
+  .grow { flex: 1 0 100%; display: flex; flex-wrap: wrap; gap: 8px 28px; }
+  .summary { font-size: 14px; flex: 1 0 100%; color: var(--muted); }
+  .summary b { color: var(--ink); font-weight: 600; }
+
+  /* ---- viste ---- */
+  .views { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .side { display: grid; grid-template-rows: auto auto; gap: 18px; min-width: 0; }
+  @media (max-width: 900px) { .views { grid-template-columns: minmax(0, 1fr); } }
+  .view { display: flex; flex-direction: column; min-width: 0; }
+  .view > .head { padding: 12px 18px 8px; }
+  .view h2 { margin: 0; font: 600 18px/1.25 var(--serif); }
+  .view .sub { margin: 3px 0 0; font-size: 13px; color: var(--muted); }
+  .stage { background: var(--canvas); border-block: 1px solid var(--line); }
+  .stage svg { display: block; width: 100%; height: auto; touch-action: none; }
+  .stage svg.drag { cursor: grab; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 8px 18px 12px; font-size: 12.5px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend svg { width: 30px; height: 8px; }
+
+  /* ---- svg ---- */
+  .ws { fill: var(--ws); stroke: var(--line); fill-rule: evenodd; }
+  .axis { stroke: var(--line); stroke-width: 1; }
+  .axt { fill: var(--muted); font: italic 13px var(--serif); }
+  .unit { fill: none; stroke: var(--line); stroke-dasharray: 3 4; }
+  .frame { stroke: var(--s); stroke-width: 1.6; } .frame-h { fill: var(--s); }
+  .frame-t { fill: var(--s); font: italic 14px var(--serif); }
+  .lnk { stroke: var(--link); stroke-width: 9; stroke-linecap: round; }
+  .jnt { fill: var(--panel); stroke: var(--ink); stroke-width: 2; }
+  .jnt.lock { fill: var(--ink); }
+  .pt { fill: var(--ink); }
+  .ring { fill: var(--panel); stroke: var(--ink); stroke-width: 1.6; }
+  .hatch { stroke: var(--muted); stroke-width: 1; }
+  .sR { stroke: var(--ink); stroke-width: 1.3; stroke-dasharray: 8 5; fill: none; }
+  .sN { stroke: var(--ink); stroke-width: 1.3; stroke-dasharray: 10 4 2 4; fill: none; }
+  .pl { fill: var(--plane); stroke: var(--ghost); stroke-width: 1; }
+  .ell { fill: var(--ell); stroke: var(--muted); stroke-width: 1.2; }
+  .act { stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 10 4 2 4; }
+  .trace { fill: none; stroke: var(--muted); stroke-width: 1.4; }
+  .arc { fill: none; stroke: var(--ink); stroke-width: 1.6; } .arc-h { fill: var(--ink); }
+  .v1 { stroke: var(--ink); } .v1-h { fill: var(--ink); }
+  .v2 { stroke: var(--muted); } .v2-h { fill: var(--muted); }
+  .v3 { stroke: var(--muted); stroke-dasharray: 5 3; } .v3-h { fill: var(--muted); }
+  .comp { stroke: var(--ghost); stroke-width: 1; stroke-dasharray: 2 3; }
+  .lb { fill: var(--ink); font: italic 15px var(--serif); }
+  .lbm { fill: var(--muted); font: italic 13.5px var(--serif); }
+  .lbs { fill: var(--muted); font: 11.5px var(--sans); }
+  .halo { paint-order: stroke; stroke: var(--canvas); stroke-width: 4px; stroke-linejoin: round; }
+
+  /* ---- monitor ---- */
+  .monitor { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.5fr) minmax(0, 1fr); gap: 18px; }
+  @media (max-width: 1040px) { .monitor { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .monitor .tbl { grid-column: 1 / -1; order: 3; } }
+  @media (max-width: 640px) { .monitor { grid-template-columns: minmax(0, 1fr); } }
+  .card { padding: 14px 18px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .card h3 { margin: 0; font: 600 16px/1.3 var(--serif); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .pill { font: 500 11.5px var(--sans); letter-spacing: 0.02em; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill.ok { color: var(--ok); background: var(--ok-bg); }
+  .pill.var { color: var(--var); background: var(--var-bg); }
+  .pill.sing { color: var(--panel); background: var(--ink); }
+  .kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; font-size: 13px; color: var(--muted); align-items: baseline; }
+  .kv b { font: 500 13.5px var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .sv { display: grid; grid-template-columns: 30px minmax(0, 1fr) 64px; gap: 4px 10px; align-items: center; font-size: 13px; }
+  .sv .bar { height: 8px; background: var(--ws); border-radius: 2px; position: relative; overflow: hidden; }
+  .sv .bar span { position: absolute; inset: 0 auto 0 0; background: var(--ink); }
+  .sv .num { font: 500 12.5px var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 4px 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 6px 8px; border-bottom: 1px dashed var(--line); vertical-align: top; }
+  td.n { font: 500 13px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr.zero td:not(:first-child) { color: var(--ghost); }
+  table.J { width: auto; font: 500 12.5px var(--mono); font-variant-numeric: tabular-nums; }
+  table.J td { border: none; padding: 2px 8px; text-align: right; color: var(--ghost); }
+  table.J td.in { color: var(--ink); background: var(--ws); }
+  table.J th { border: none; padding: 2px 8px; font: italic 13px var(--serif); text-align: right; }
+  table.J th.in { color: var(--ink); }
+  .basis { display: inline-flex; flex-direction: column; align-items: flex-end; font: 500 12px var(--mono); padding: 3px 7px; margin: 0 4px 4px 0; border-radius: 4px; }
+  .basis[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+  .note { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+  .obs { padding: 16px 20px; }
+  .obs h2 { margin: 0 0 8px; font: 600 17px/1.25 var(--serif); }
+  .obs ol { margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: 6px; max-width: 84ch; font-size: 14px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  /* chi ha fatto la pagina */
+  .credito { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted);
+             display: flex; flex-wrap: wrap; gap: 2px 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Meccanica dei Robot · Capitolo 7 · Jacobiano</p>
+    <h1>I quattro sottospazi del braccio RRR</h1>
+    <p class="lede">Un braccio planare a tre giunti rotoidali. Il compito sceglie le componenti del twist di <span class="m">O</span><sub>3</sub> (righe di <span class="m">J</span>) e i giunti attivi (colonne): lo stesso braccio è ridondante per la sola posizione, quadrato per la posa. Si portano i giunti verso una singolarità e si guarda come cambiano l'immagine e il nucleo di <span class="m">J</span> e di <span class="m">J</span><sup class="rm">T</sup>.</p>
+  </header>
+
+  <section class="panel controls" aria-label="Compito">
+    <span class="tag">Compito</span>
+    <div class="seg" role="group" aria-label="Compito" id="presets">
+      <button type="button" data-p="pos">Posizione di <span class="m">O</span><sub>3</sub> · 2×3, ridondante</button>
+      <button type="button" data-p="posa">Posa di <span class="m">O</span><sub>3</sub> · 3×3</button>
+      <button type="button" data-p="rr">Posizione, <span class="m">q</span><sub>3</sub> bloccato · 2×2</button>
+      <button type="button" data-p="dif">Posa, <span class="m">q</span><sub>1</sub> bloccato · 3×2, difettivo</button>
+    </div>
+    <div class="grow">
+      <div class="checks"><span class="lab">componenti del twist (righe)</span>
+        <label><input type="checkbox" id="r0"> <span class="m">v<sub>x</sub></span></label>
+        <label><input type="checkbox" id="r1"> <span class="m">v<sub>y</sub></span></label>
+        <label><input type="checkbox" id="r2"> <span class="m">ω</span></label></div>
+      <div class="checks"><span class="lab">giunti attivi (colonne)</span>
+        <label><input type="checkbox" id="g0"> <span class="m">q</span><sub>1</sub></label>
+        <label><input type="checkbox" id="g1"> <span class="m">q</span><sub>2</sub></label>
+        <label><input type="checkbox" id="g2"> <span class="m">q</span><sub>3</sub></label></div>
+    </div>
+    <p class="summary" id="summary"></p>
+  </section>
+
+  <section class="panel controls" aria-label="Configurazione del braccio">
+    <span class="tag">Configurazione</span>
+    <div class="stack">
+    <div class="ctl" id="cq0"><label for="q0"><span><span class="m">q</span><sub>1</sub></span><output id="q0o"></output></label><input id="q0" type="range" min="-180" max="180" step="1"></div>
+    <div class="ctl" id="cq1"><label for="q1"><span><span class="m">q</span><sub>2</sub></span><output id="q1o"></output></label><input id="q1" type="range" min="-180" max="180" step="1"></div>
+    <div class="ctl" id="cq2"><label for="q2"><span><span class="m">q</span><sub>3</sub></span><output id="q2o"></output></label><input id="q2" type="range" min="-180" max="180" step="1"></div>
+    </div>
+    <div class="stack">
+    <div class="ctl"><label for="l0"><span><span class="m">ℓ</span><sub>1</sub></span><output id="l0o"></output></label><input id="l0" type="range" min="0.1" max="0.6" step="0.01"></div>
+    <div class="ctl"><label for="l1"><span><span class="m">ℓ</span><sub>2</sub></span><output id="l1o"></output></label><input id="l1" type="range" min="0.1" max="0.6" step="0.01"></div>
+    <div class="ctl"><label for="l2"><span><span class="m">ℓ</span><sub>3</sub></span><output id="l2o"></output></label><input id="l2" type="range" min="0.05" max="0.6" step="0.01"></div>
+    </div>
+    <div class="btns">
+      <button type="button" id="cReg">Regolare: <span class="m">q</span> = (30°, 60°, −45°)</button>
+      <button type="button" id="cS2"><span class="m">q</span><sub>2</sub> = 0</button>
+      <button type="button" id="cS3"><span class="m">q</span><sub>3</sub> = 0</button>
+      <button type="button" id="cAll">Tutto disteso: <span class="m">q</span><sub>2</sub> = <span class="m">q</span><sub>3</sub> = 0</button>
+      <button type="button" id="cNear">Vicino: <span class="m">q</span><sub>2</sub> = 5°</button>
+    </div>
+  </section>
+
+  <section class="panel controls" aria-label="Cinematica o statica">
+    <div class="seg" role="group" aria-label="Modo">
+      <button type="button" id="mKin" aria-pressed="true">Cinematica</button>
+      <button type="button" id="mSta" aria-pressed="false">Statica</button>
+    </div>
+    <div class="stack" data-mode="kin">
+    <div class="ctl" id="cqd0"><label for="qd0"><span><span class="m"><span class="qd">q</span></span><sub>1</sub></span><output id="qd0o"></output></label><input id="qd0" type="range" min="-1.5" max="1.5" step="0.01"></div>
+    <div class="ctl" id="cqd1"><label for="qd1"><span><span class="m"><span class="qd">q</span></span><sub>2</sub></span><output id="qd1o"></output></label><input id="qd1" type="range" min="-1.5" max="1.5" step="0.01"></div>
+    <div class="ctl" id="cqd2"><label for="qd2"><span><span class="m"><span class="qd">q</span></span><sub>3</sub></span><output id="qd2o"></output></label><input id="qd2" type="range" min="-1.5" max="1.5" step="0.01"></div>
+    </div>
+    <div class="stack" data-mode="sta" hidden>
+    <div class="ctl" id="cw0"><label for="w0"><span><span class="m">f<sub>x</sub></span></span><output id="w0o"></output></label><input id="w0" type="range" min="-20" max="20" step="0.1"></div>
+    <div class="ctl" id="cw1"><label for="w1"><span><span class="m">f<sub>y</sub></span></span><output id="w1o"></output></label><input id="w1" type="range" min="-20" max="20" step="0.1"></div>
+    <div class="ctl" id="cw2"><label for="w2"><span><span class="m">m</span></span><output id="w2o"></output></label><input id="w2" type="range" min="-5" max="5" step="0.05"></div>
+    </div>
+    <div class="btns">
+      <button type="button" id="bZero">Azzera</button>
+      <button type="button" id="bAuto" data-mode="kin">Avvia l'automovimento</button>
+      <button type="button" id="bBack" data-mode="kin">Torna alla configurazione di partenza</button>
+      <button type="button" id="bStruct" data-mode="sta" hidden>Wrench strutturale</button>
+    </div>
+    <p class="note" id="autoNote" data-mode="kin"></p>
+  </section>
+
+  <div class="views">
+    <section class="panel view">
+      <div class="head">
+        <h2>Il piano del braccio</h2>
+        <p class="sub" id="subA"></p>
+      </div>
+      <div class="stage"><svg id="svgA" viewBox="0 0 560 500" role="img" aria-label="Braccio RRR nel piano, con il twist o il wrench di O3"></svg></div>
+      <div class="legend">
+        <span><svg viewBox="0 0 30 8"><line class="sR" x1="0" y1="4" x2="30" y2="4"/></svg>𝓡(J), compito di posizione</span>
+        <span><svg viewBox="0 0 30 8"><line class="sN" x1="0" y1="4" x2="30" y2="4"/></svg>direzione persa / retta d'azione</span>
+        <span><svg viewBox="0 0 30 8"><circle class="ring" cx="15" cy="4" r="3.2"/></svg>centro di istantanea rotazione C₃ del link 3 rispetto al telaio</span>
+        <span><svg viewBox="0 0 30 8"><rect x="10" y="0" width="8" height="8" fill="currentColor"/></svg>giunto bloccato</span>
+      </div>
+    </section>
+    <div class="side">
+      <section class="panel view">
+        <div class="head">
+          <h2 id="hB"></h2>
+          <p class="sub" id="subB"></p>
+        </div>
+        <div class="stage"><svg id="svgB" viewBox="0 0 360 290" role="img" aria-label="Spazio del compito"></svg></div>
+      </section>
+      <section class="panel view">
+        <div class="head">
+          <h2 id="hC"></h2>
+          <p class="sub" id="subC"></p>
+        </div>
+        <div class="stage"><svg id="svgC" viewBox="0 0 360 290" role="img" aria-label="Spazio dei giunti"></svg></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="monitor">
+    <section class="panel card">
+      <h3>Rango <span class="pill" id="state"></span></h3>
+      <div class="kv" id="kvRank"></div>
+      <div class="sv" id="sv"></div>
+      <div class="scroll"><table class="J" id="Jtab"></table></div>
+      <p class="note">Rango numerico: si contano i valori singolari sopra 10⁻⁹ <span class="m">σ</span><sub>1</sub>. In evidenza le righe e le colonne del compito.</p>
+    </section>
+    <section class="panel card tbl">
+      <h3>I quattro sottospazi</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>sottospazio</th><th>dim</th><th>base ortonormale</th><th>significato meccanico</th></tr></thead>
+        <tbody id="tSub"></tbody>
+      </table></div>
+      <p class="note">Un clic su un vettore di base lo mostra: un twist di 𝓡(<span class="m">J</span>) o un automovimento di 𝓝(<span class="m">J</span>) in cinematica, un wrench strutturale di 𝓝(<span class="m">J</span><sup class="rm">T</sup>) o le coppie di 𝓡(<span class="m">J</span><sup class="rm">T</sup>) in statica. Con il compito di posa le basi mescolano m/s e rad/s (N e N m): dipendono dalle unità, i sottospazi no.</p>
+    </section>
+    <section class="panel card">
+      <h3 id="hMode"></h3>
+      <div class="kv" id="kvMode"></div>
+      <div class="kv" id="kvPow"></div>
+    </section>
+  </div>
+
+  <section class="panel obs">
+    <h2>Che cosa guardare</h2>
+    <ol>
+      <li>Compito «Posizione di <span class="m">O</span><sub>3</sub>»: il braccio è ridondante, e 𝓝(<span class="m">J</span>) ha dimensione 1 in ogni configurazione regolare. Avviare l'automovimento: <span class="m">O</span><sub>3</sub> resta fermo e i tre link si muovono come un quadrilatero articolato con telaio <span class="m">O</span><sub>0</sub><span class="m">O</span><sub>3</sub>.</li>
+      <li>Con lo stesso compito, «Tutto disteso»: i tre giunti e <span class="m">O</span><sub>3</sub> sono allineati e il rango scende a 1. L'ellisse diventa un segmento, la direzione persa è lungo il braccio, e 𝓝(<span class="m">J</span>) ha dimensione 2.</li>
+      <li>Compito «Posa»: la singolarità è <span class="m">q</span><sub>2</sub> = 0, qualunque sia <span class="m">q</span><sub>3</sub>. In statica, «Wrench strutturale» dà una forza con la retta d'azione per <span class="m">O</span><sub>0</sub>, <span class="m">O</span><sub>1</sub> e <span class="m">O</span><sub>2</sub>: ha momento nullo attorno ai tre assi, e <span class="m">τ</span> = 0.</li>
+      <li>In cinematica, con il compito di posa, il twist del link 3 è una rotazione rispetto al telaio attorno al centro di istantanea rotazione <span class="m">C</span><sub>3</sub>. I centri relativi dei link consecutivi sono i giunti. Per <span class="m">q</span><sub>2</sub> = 0 ogni <span class="m">C</span><sub>3</sub> realizzabile sta sulla retta per <span class="m">O</span><sub>0</sub>, <span class="m">O</span><sub>1</sub> e <span class="m">O</span><sub>2</sub>: un twist con il centro fuori da questa retta non è realizzabile.</li>
+      <li>«Posizione, <span class="m">q</span><sub>3</sub> bloccato» è il braccio RR della dispensa, con il terzo link rigido. «Posa, <span class="m">q</span><sub>1</sub> bloccato» è difettivo: 𝓝(<span class="m">J</span><sup class="rm">T</sup>) ha dimensione 1 anche in configurazione regolare, ed è la forza per <span class="m">O</span><sub>1</sub> e <span class="m">O</span><sub>2</sub>.</li>
+      <li>In ogni caso la potenza è la stessa ai due lati: <span class="m">w</span><sup class="rm">T</sup><span class="m">V</span> = <span class="m">τ</span><sup class="rm">T</sup><span class="m"><span class="qd">q</span></span>.</li>
+    </ol>
+  </section>
+  <footer class="credito"><span>Realizzato da Ing. Eugeniu Grabovic</span><span>&copy; 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini &mdash; Tutti i diritti riservati</span></footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const D2R = Math.PI / 180;
+
+  // ---------- stato: q in gradi, l in m, qd in rad/s, w = (fx, fy, m) in N e N m ----------
+  const PRESET = {
+    pos: { righe: [0, 1], giunti: [0, 1, 2] },
+    posa: { righe: [0, 1, 2], giunti: [0, 1, 2] },
+    rr: { righe: [0, 1], giunti: [0, 1] },
+    dif: { righe: [0, 1, 2], giunti: [1, 2] },
+  };
+  const Q_REG = [30, 60, -45];
+  const st = { preset: "pos", righe: [0, 1], giunti: [0, 1, 2], q: Q_REG.slice(), l: [0.5, 0.35, 0.2], modo: "kin",
+    qd: [0.6, -0.4, 0.5], w: [0, -10, 0], scelta: null, auto: null, vista: { B: [35, 22], C: [35, 22] } };
+  const tracce = { O1: [], O2: [], O3: [] };
+
+  // ---------- formattazione (virgola decimale) ----------
+  function fmt(x, n = 3) {
+    if (!isFinite(x)) return "∞";
+    if (Math.abs(x) < 0.5 * Math.pow(10, -n)) x = 0;
+    return x.toFixed(n).replace(".", ",").replace(/^-/, "−");
+  }
+  const vec = (v, n = 3) => "(" + v.map((x) => fmt(x, n)).join("; ") + ")";
+  const QD_HTML = (s) => s.replace(/q̇/g, '<span class="qd">q</span>');
+  const QD_SVG = (s) => s.replace(/q̇(\S*)/g, 'q<tspan dx="-0.4em" dy="-0.5em">˙</tspan><tspan dx="0.1em" dy="0.5em">$1</tspan>');
+  const NR = ["vx", "vy", "ω"], NRH = ['<span class="m">v<sub>x</sub></span>', '<span class="m">v<sub>y</sub></span>', '<span class="m">ω</span>'];
+  const NW = ["fx", "fy", "m"];
+  const NG = ["q̇1", "q̇2", "q̇3"], NT = ["τ1", "τ2", "τ3"];
+
+  // ---------- algebra ----------
+  const dot = (a, b) => a.reduce((s, x, i) => s + x * b[i], 0);
+  const nrm = (a) => Math.sqrt(dot(a, a));
+  const sc = (a, k) => a.map((x) => x * k);
+  const add = (a, b, k = 1) => a.map((x, i) => x + k * b[i]);
+  const mul = (A, x) => A.map((r) => dot(r, x));
+  const tr = (A) => (A.length ? A[0].map((_, j) => A.map((r) => r[j])) : []);
+  const col = (A, j) => A.map((r) => r[j]);
+  const perp = (a) => [-a[1], a[0]];
+  function orienta(v) {
+    let k = 0;
+    v.forEach((x, i) => { if (Math.abs(x) > Math.abs(v[k]) + 1e-12) k = i; });
+    return v[k] < 0 ? sc(v, -1) : v;
+  }
+  /** SVD per rotazioni di Jacobi su un lato: A = U S V^T, U (m x m) e V (n x n) complete, valori decrescenti. */
+  function svd(A, tol = 1e-9) {
+    const m = A.length, n = A[0].length, B = A.map((r) => r.slice());
+    const V = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)));
+    for (let giro = 0; giro < 60; giro++) {
+      let ruotato = false;
+      for (let p = 0; p < n - 1; p++) for (let q = p + 1; q < n; q++) {
+        let a = 0, b = 0, c = 0;
+        for (let i = 0; i < m; i++) { a += B[i][p] * B[i][p]; b += B[i][q] * B[i][q]; c += B[i][p] * B[i][q]; }
+        if (Math.abs(c) <= 1e-15 * Math.sqrt(a * b) || Math.abs(c) < 1e-300) continue;
+        ruotato = true;
+        const z = (b - a) / (2 * c), t = Math.sign(z || 1) / (Math.abs(z) + Math.sqrt(1 + z * z));
+        const cs = 1 / Math.sqrt(1 + t * t), sn = cs * t;
+        for (let i = 0; i < m; i++) { const x = B[i][p], y = B[i][q]; B[i][p] = cs * x - sn * y; B[i][q] = sn * x + cs * y; }
+        for (let i = 0; i < n; i++) { const x = V[i][p], y = V[i][q]; V[i][p] = cs * x - sn * y; V[i][q] = sn * x + cs * y; }
+      }
+      if (!ruotato) break;
+    }
+    const sig = Array.from({ length: n }, (_, j) => Math.sqrt(B.reduce((s, r) => s + r[j] * r[j], 0)));
+    const ord = sig.map((_, j) => j).sort((x, y) => sig[y] - sig[x]);
+    const s = ord.map((j) => sig[j]).slice(0, Math.min(m, n));
+    const Vo = V.map((r) => ord.map((j) => r[j]));
+    const r = s.filter((x) => x > tol * Math.max(1e-12, s[0] || 0)).length;
+    const cols = [];
+    for (let k = 0; k < r; k++) cols.push(B.map((riga) => riga[ord[k]] / s[k]));
+    for (let e = 0; e < m && cols.length < m; e++) {
+      let u = Array(m).fill(0); u[e] = 1;
+      for (let rip = 0; rip < 2; rip++) for (const c of cols) u = add(u, c, -dot(u, c));
+      const l = nrm(u);
+      if (l > 1e-6) cols.push(sc(u, 1 / l));
+    }
+    const U = Array.from({ length: m }, (_, i) => cols.map((c) => c[i]));
+    return { U, s, V: Vo, r, m, n };
+  }
+  const base = (A, da, a) => Array.from({ length: a - da }, (_, k) => orienta(col(A, da + k)));
+  function scomponi(x, baseR) {
+    let xr = Array(x.length).fill(0);
+    for (const b of baseR) xr = add(xr, b, dot(b, x));
+    return { r: xr, n: add(x, xr, -1) };
+  }
+  function pinv(D, y) {
+    let x = Array(D.n).fill(0);
+    for (let k = 0; k < D.r; k++) x = add(x, col(D.V, k), dot(col(D.U, k), y) / D.s[k]);
+    return x;
+  }
+  function suNucleo(D, x) {
+    let y = Array(D.n).fill(0);
+    for (let k = D.r; k < D.n; k++) { const c = col(D.V, k); y = add(y, c, dot(c, x)); }
+    return y;
+  }
+  function det(A) {
+    const n = A.length, M = A.map((r) => r.slice());
+    let d = 1;
+    for (let c = 0; c < n; c++) {
+      let p = c;
+      for (let i = c + 1; i < n; i++) if (Math.abs(M[i][c]) > Math.abs(M[p][c])) p = i;
+      if (Math.abs(M[p][c]) < 1e-300) return 0;
+      if (p !== c) { [M[p], M[c]] = [M[c], M[p]]; d = -d; }
+      d *= M[c][c];
+      for (let i = c + 1; i < n; i++) { const f = M[i][c] / M[c][c]; for (let j = c; j < n; j++) M[i][j] -= f * M[c][j]; }
+    }
+    return d;
+  }
+
+  // ---------- modello ----------
+  const embR = (x) => { const y = [0, 0, 0]; st.righe.forEach((r, i) => { y[r] = x[i]; }); return y; };
+  const embG = (x) => { const y = [0, 0, 0]; st.giunti.forEach((g, i) => { y[g] = x[i]; }); return y; };
+  function cinematica(q) {
+    const [l1, l2, l3] = st.l, a1 = q[0] * D2R, a2 = a1 + q[1] * D2R, a3 = a2 + q[2] * D2R;
+    const O1 = [l1 * Math.cos(a1), l1 * Math.sin(a1)];
+    const O2 = [O1[0] + l2 * Math.cos(a2), O1[1] + l2 * Math.sin(a2)];
+    const O3 = [O2[0] + l3 * Math.cos(a3), O2[1] + l3 * Math.sin(a3)];
+    const O = [[0, 0], O1, O2, O3];
+    // colonna i: (k x O_{i-1}O_3, 1), con k x r = perp(r) nel piano
+    const J = [[0, 0, 0], [0, 0, 0], [1, 1, 1]];
+    for (let i = 0; i < 3; i++) { const v = perp(add(O3, O[i], -1)); J[0][i] = v[0]; J[1][i] = v[1]; }
+    return { O, J, phi: a3 };
+  }
+  function modello() {
+    const K = cinematica(st.q);
+    const Js = st.righe.map((r) => st.giunti.map((g) => K.J[r][g]));
+    const D = svd(Js);
+    const S = { RJ: base(D.U, 0, D.r), NJt: base(D.U, D.r, D.m), RJt: base(D.V, 0, D.r), NJ: base(D.V, D.r, D.n) };
+    const qdS = st.giunti.map((g) => st.qd[g]), wS = st.righe.map((r) => st.w[r]);
+    const Vs = mul(Js, qdS), tauS = mul(tr(Js), wS);
+    const mn = Math.min(D.m, D.n), ratio = D.s[mn - 1] / D.s[0];
+    const sing = D.r < mn, near = !sing && ratio < 0.06;
+    return { ...K, Js, D, S, qdS, wS, Vs, tauS, m: D.m, n: D.n, r: D.r, mn, ratio, sing, near };
+  }
+
+  // ---------- disegno svg ----------
+  const P = (x, y) => x.toFixed(1) + "," + y.toFixed(1);
+  function arrow(g, a, b, cls, w) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy);
+    if (L < 2) return;
+    const ux = dx / L, uy = dy / L, h = Math.min(11, 0.5 * L), hw = h * 0.42;
+    const bx = b[0] - ux * h, by = b[1] - uy * h;
+    g.push(`<line class="${cls}" x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke-width="${w}"/>`);
+    g.push(`<polygon class="${cls}-h" points="${P(b[0], b[1])} ${P(bx - uy * hw, by + ux * hw)} ${P(bx + uy * hw, by - ux * hw)}"/>`);
+  }
+  const line = (g, a, b, cls) => g.push(`<line class="${cls}" x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}"/>`);
+  function lineThrough(g, p, d, cls, L = 2000) { line(g, [p[0] - L * d[0], p[1] - L * d[1]], [p[0] + L * d[0], p[1] + L * d[1]], cls); }
+  function label(g, x, y, txt, cls, anchor, W, H) {
+    x = Math.min(Math.max(x, 14), W - 14); y = Math.min(Math.max(y, 16), H - 8);
+    g.push(`<text class="${cls} halo" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}">${QD_SVG(txt)}</text>`);
+  }
+  function poly(g, pts, cls, chiuso = true) {
+    g.push(`<${chiuso ? "polygon" : "polyline"} class="${cls}" points="${pts.map((p) => P(p[0], p[1])).join(" ")}"/>`);
+  }
+  // arco orientato (verso antiorario per phi > 0 nel mondo, cioe' orario nello svg con y verso il basso)
+  function arco(g, c, r, phi, cls) {
+    if (Math.abs(phi) < 0.02) return;
+    const pts = [];
+    for (let i = 0; i <= 40; i++) { const t = (phi * i) / 40 - Math.PI / 2; pts.push([c[0] + r * Math.cos(t), c[1] - r * Math.sin(t)]); }
+    poly(g, pts, cls, false);
+    const e = pts[40], t = phi - Math.PI / 2, s = Math.sign(phi), d = [-s * Math.sin(t), -s * Math.cos(t)];
+    const h = 8, hw = 3.4, b = [e[0] - d[0] * h, e[1] - d[1] * h];
+    g.push(`<polygon class="${cls}-h" points="${P(e[0] + d[0] * 2, e[1] + d[1] * 2)} ${P(b[0] - d[1] * hw, b[1] + d[0] * hw)} ${P(b[0] + d[1] * hw, b[1] - d[0] * hw)}"/>`);
+  }
+
+  // ----- vista A: il piano del braccio -----
+  const WA = 560, HA = 500, cA = [270, 270];
+  let kA = 200;
+  const toA = (p) => [cA[0] + kA * p[0], cA[1] - kA * p[1]];
+  const dA = (d) => [d[0], -d[1]];
+  const K = { v: 0.35, f: 0.018, m: 0.12, ell: 0.3, arcQd: 100 * D2R, arcTau: 30 * D2R };   // m per (m/s), m per N, ...
+
+  function drawA(M) {
+    const g = [], [l1, l2, l3] = st.l, R = l1 + l2 + l3;
+    kA = 215 / R;
+    const rmin = Math.max(0, 2 * Math.max(l1, l2, l3) - R);
+    const O = M.O.map(toA), O3 = M.O[3], O3s = O[3];
+    // spazio di lavoro di O3 (corona)
+    g.push(`<path class="ws" d="M ${cA[0] + kA * R} ${cA[1]} a ${kA * R} ${kA * R} 0 1 0 ${-2 * kA * R} 0 a ${kA * R} ${kA * R} 0 1 0 ${2 * kA * R} 0 Z` +
+      (rmin > 1e-6 ? ` M ${cA[0] + kA * rmin} ${cA[1]} a ${kA * rmin} ${kA * rmin} 0 1 0 ${-2 * kA * rmin} 0 a ${kA * rmin} ${kA * rmin} 0 1 0 ${2 * kA * rmin} 0 Z` : "") + `"/>`);
+    // telaio e frame {S0}
+    g.push(`<line class="hatch" x1="${O[0][0] - 16}" y1="${O[0][1] + 9}" x2="${O[0][0] + 16}" y2="${O[0][1] + 9}"/>`);
+    for (let i = -16; i < 16; i += 5) g.push(`<line class="hatch" x1="${O[0][0] + i}" y1="${O[0][1] + 15}" x2="${O[0][0] + i + 5}" y2="${O[0][1] + 9}"/>`);
+    arrow(g, O[0], [O[0][0] + 48, O[0][1]], "frame", 1.6);
+    arrow(g, O[0], [O[0][0], O[0][1] - 48], "frame", 1.6);
+    g.push(`<text class="frame-t" x="${O[0][0] + 52}" y="${O[0][1] + 16}">x₀</text><text class="frame-t" x="${O[0][0] - 22}" y="${O[0][1] - 44}">y₀</text>`);
+
+    const lin = st.righe.every((r) => r < 2);
+    // ellisse delle velocita' di O3 e direzioni perse (compito di sola posizione)
+    if (lin && st.modo === "kin") {
+      const { U, s, r } = M.D, ax = [];
+      for (let k = 0; k < M.m; k++) {
+        const u = [0, 0]; st.righe.forEach((rr, i) => { u[rr] = U[i][k]; });
+        const sk = k < s.length ? s[k] : 0;
+        ax.push(sc(dA(u), kA * K.ell * sk));
+        if (k >= r) lineThrough(g, O3s, dA(u), "act");
+      }
+      if (ax.length === 1) ax.push([0, 0]);
+      const pts = [];
+      for (let i = 0; i <= 72; i++) { const t = (i / 72) * 2 * Math.PI; pts.push([O3s[0] + ax[0][0] * Math.cos(t) + ax[1][0] * Math.sin(t), O3s[1] + ax[0][1] * Math.cos(t) + ax[1][1] * Math.sin(t)]); }
+      poly(g, pts, "ell");
+      if (M.r === 1 && M.m === 2) {
+        // R(J): la retta dei twist realizzabili, e la direzione persa lungo il braccio
+        const u = [0, 0]; st.righe.forEach((rr, i) => { u[rr] = U[i][0]; });
+        lineThrough(g, O3s, dA(u), "sR");
+        // l'etichetta sulla direzione persa, dalla parte dove c'e' posto
+        const n = perp(dA(u));
+        for (const sgn of [1, -1]) {
+          const x = O3s[0] + sgn * 110 * n[0], y = O3s[1] + sgn * 110 * n[1];
+          if (x > 80 && x < WA - 80 && y > 30 && y < HA - 20) { label(g, x, y - 10, "direzione persa", "lbm", "middle", WA, HA); break; }
+        }
+      }
+    }
+    // tracce dell'automovimento
+    for (const k of ["O1", "O2", "O3"]) if (tracce[k].length > 1) poly(g, tracce[k].map(toA), "trace", false);
+    // braccio
+    line(g, O[0], O[1], "lnk"); line(g, O[1], O[2], "lnk"); line(g, O[2], O[3], "lnk");
+    for (let i = 0; i < 3; i++) {
+      if (st.giunti.includes(i)) g.push(`<circle class="jnt" cx="${O[i][0].toFixed(1)}" cy="${O[i][1].toFixed(1)}" r="7"/>`);
+      else g.push(`<rect class="jnt lock" x="${(O[i][0] - 6.5).toFixed(1)}" y="${(O[i][1] - 6.5).toFixed(1)}" width="13" height="13"/>`);
+    }
+    g.push(`<circle class="pt" cx="${O3s[0].toFixed(1)}" cy="${O3s[1].toFixed(1)}" r="4.5"/>`);
+    label(g, O[0][0] - 14, O[0][1] + 24, "O₀", "lb", "middle", WA, HA);
+    label(g, O[1][0] + 14, O[1][1] + 20, "O₁", "lb", "start", WA, HA);
+    label(g, O[2][0] + 14, O[2][1] + 20, "O₂", "lb", "start", WA, HA);
+    label(g, O3s[0] + 12, O3s[1] + 22, "O₃", "lb", "start", WA, HA);
+
+    // archi ai giunti: velocita' o coppie
+    const val = st.modo === "kin" ? st.qd : embG(M.tauS), gain = st.modo === "kin" ? K.arcQd : K.arcTau;
+    for (let i = 0; i < 3; i++) if (st.giunti.includes(i)) {
+      const phi = Math.max(-330 * D2R, Math.min(330 * D2R, val[i] * gain));
+      arco(g, O[i], 17, phi, "arc");
+    }
+
+    // twist di O3 (cinematica) o wrench (statica), con le componenti del compito
+    if (st.modo === "kin") {
+      const V = embR(M.Vs), v = [V[0], V[1]], om = V[2];
+      if (nrm(v) > 1e-6) { const b = toA(add(O3, v, K.v)); arrow(g, O3s, b, "v1", 2.2); label(g, b[0] + 8, b[1] - 6, "v", "lb", "start", WA, HA); }
+      if (Math.abs(om) > 1e-6 && st.righe.includes(2)) {
+        const C = add(O3, perp(v), 1 / om), Cs = toA(C);
+        const dentro = Cs[0] > -200 && Cs[0] < WA + 200 && Cs[1] > -200 && Cs[1] < HA + 200;
+        if (dentro && nrm(v) > 1e-6) {
+          line(g, Cs, O3s, "comp");
+          g.push(`<circle class="ring" cx="${Cs[0].toFixed(1)}" cy="${Cs[1].toFixed(1)}" r="5"/>`);
+          label(g, Cs[0] + 9, Cs[1] - 9, "C₃", "lb", "start", WA, HA);
+        }
+        arco(g, dentro && nrm(v) > 1e-6 ? Cs : O3s, 24, Math.max(-5.5, Math.min(5.5, om * 2.5)), "arc");
+      }
+    } else {
+      const w = embR(M.wS), f = [w[0], w[1]], mo = w[2];
+      if (nrm(f) > 1e-6) {
+        const A = add(O3, perp(f), -mo / dot(f, f)), As = toA(A), u = dA(sc(f, 1 / nrm(f)));
+        lineThrough(g, As, u, "act");
+        const b = toA(add(A, f, K.f));
+        arrow(g, As, b, "v1", 2.6);
+        label(g, b[0] + 8, b[1] - 6, "f", "lb", "start", WA, HA);
+        if (nrm(add(As, O3s, -1)) > 3) line(g, As, O3s, "comp");
+      } else if (Math.abs(mo) > 1e-6) {
+        arco(g, O3s, 26, Math.max(-5.5, Math.min(5.5, mo * 1.2)), "arc");
+        label(g, O3s[0] + 30, O3s[1] - 24, "m", "lb", "start", WA, HA);
+      }
+    }
+    $("svgA").innerHTML = g.join("");
+    const tipo = st.modo === "kin" ? "velocità di O₃ e archi delle velocità dei giunti" : "forza sulla retta d'azione e archi delle coppie ai giunti";
+    $("subA").textContent = `Scala 1 m = ${Math.round(kA)} px · ${tipo}. ` +
+      (st.modo === "kin" && lin ? "L'ellisse è l'immagine delle velocità dei giunti di norma 1." : "");
+  }
+
+  // ----- viste B e C: spazi di dimensione 1, 2 o 3 (proiezione ortografica, trascinabile) -----
+  const WS = 360, HS = 290, cS = [180, 150], kS = 82;
+  function proiettore(d, vista) {
+    if (d < 3) return (p) => [cS[0] + kS * (p[0] || 0), cS[1] - kS * (d === 2 ? p[1] : 0)];
+    const az = vista[0] * D2R, el = vista[1] * D2R;
+    const R = [-Math.sin(az), Math.cos(az), 0], U = [-Math.sin(el) * Math.cos(az), -Math.sin(el) * Math.sin(az), Math.cos(el)];
+    return (p) => [cS[0] + kS * dot(p, R), cS[1] - kS * dot(p, U)];
+  }
+  /** Disegna uno spazio R^d: assi, la sfera (cerchio) unitaria, il sottospazio 'imm' (base, ripiena se un piano) e
+   *  il suo complemento 'nuc', i vettori x = x_r + x_n e, se c'e', l'ellisse (immagine della palla unitaria). */
+  function drawSpace(id, d, nomi, vista, imm, nuc, vettori, ell) {
+    const g = [], pr = proiettore(d, vista), O = pr([0, 0, 0]);
+    // assi
+    for (let i = 0; i < d; i++) {
+      const e = [0, 0, 0]; e[i] = 1.55;
+      const a = pr(sc(e, -1)), b = pr(e);
+      line(g, a, b, "axis");
+      label(g, b[0] + (b[0] >= O[0] ? 6 : -6), b[1] + 4, nomi[i], "lbm", b[0] >= O[0] ? "start" : "end", WS, HS);
+    }
+    // sfera unitaria: cerchi nei piani coordinati (d = 3) o cerchio (d = 2)
+    const cerchio = (u, v) => Array.from({ length: 73 }, (_, i) => { const t = (i / 72) * 2 * Math.PI; return pr(add(sc(u, Math.cos(t)), sc(v, Math.sin(t)))); });
+    if (d === 2) poly(g, cerchio([1, 0, 0], [0, 1, 0]), "unit");
+    if (d === 3) g.push(`<circle class="unit" cx="${cS[0]}" cy="${cS[1]}" r="${kS}"/>`);
+    // sottospazi: retta (dim 1) o piano (dim 2) per l'origine
+    const sotto = (B, cls) => {
+      const b3 = B.map((v) => [v[0] || 0, v[1] || 0, v[2] || 0]);
+      if (b3.length === 1) line(g, pr(sc(b3[0], -1.5)), pr(sc(b3[0], 1.5)), cls);
+      else if (b3.length === 2 && d === 3) {
+        const pts = cerchio(sc(b3[0], 1.35), sc(b3[1], 1.35));
+        poly(g, pts, "pl");
+        poly(g, pts, cls);
+      }
+    };
+    if (ell && d >= 2) {
+      const [a1, a2, a3] = ell.map((v) => [v[0] || 0, v[1] || 0, v[2] || 0]);
+      poly(g, cerchio(a1, a2), "ell");
+      if (d === 3 && a3) { poly(g, cerchio(a1, a3), "ell"); poly(g, cerchio(a2, a3), "ell"); }
+    }
+    sotto(imm, "sR");
+    sotto(nuc, "sN");
+    // vettori
+    for (const v of vettori) {
+      const p = [v.x[0] || 0, v.x[1] || 0, v.x[2] || 0];
+      if (nrm(p) < 1e-6) continue;
+      if (v.da) { line(g, pr(v.da), pr(p), "comp"); continue; }
+      const b = pr(p);
+      arrow(g, O, b, v.cls, v.w || 1.6);
+      if (v.nome) label(g, b[0] + 7, b[1] - 6, v.nome, v.cls === "v1" ? "lb" : "lbm", "start", WS, HS);
+    }
+    $(id).innerHTML = g.join("");
+    $(id).classList.toggle("drag", d === 3);
+  }
+
+  function drawSpaces(M) {
+    const nomiR = st.righe.map((r) => (st.modo === "kin" ? NR : NW)[r]);
+    const nomiG = st.giunti.map((j) => (st.modo === "kin" ? NG : NT)[j]);
+    const RJ = M.S.RJ, NJt = M.S.NJt, RJt = M.S.RJt, NJ = M.S.NJ;
+    const kin = st.modo === "kin";
+    // scala: 1 unita' = 1 rad/s, 1 m/s (cinematica); 10 N, 10 N m (statica)
+    const kw = 0.1;
+    if (kin) {
+      const qs = scomponi(M.qdS, RJt);
+      const ell = Array.from({ length: M.m }, (_, k) => sc(col(M.D.U, k), k < M.D.s.length ? M.D.s[k] : 0));
+      drawSpace("svgB", M.m, nomiR, st.vista.B, RJ, NJt, [{ x: M.Vs, cls: "v1", w: 2, nome: "V" }], M.m >= 2 ? ell : null);
+      drawSpace("svgC", M.n, nomiG, st.vista.C, RJt, NJ, [
+        { x: qs.r, cls: "v2", nome: "q̇r" }, { x: qs.n, cls: "v3", nome: "q̇n" }, { x: M.qdS, cls: "v1", w: 2, nome: "q̇" },
+        { x: M.qdS, da: qs.r }], null);
+    } else {
+      const ws = scomponi(M.wS, RJ);
+      drawSpace("svgB", M.m, nomiR, st.vista.B, RJ, NJt, [
+        { x: sc(ws.r, kw), cls: "v2", nome: "wr" }, { x: sc(ws.n, kw), cls: "v3", nome: "wn" }, { x: sc(M.wS, kw), cls: "v1", w: 2, nome: "w" },
+        { x: sc(M.wS, kw), da: sc(ws.r, kw) }], null);
+      drawSpace("svgC", M.n, nomiG, st.vista.C, RJt, NJ, [{ x: sc(M.tauS, kw), cls: "v1", w: 2, nome: "τ" }], null);
+    }
+    const sp = (d) => `<span class="m">ℝ</span><sup>${d}</sup>`;
+    $("hB").innerHTML = `Spazio del compito ${sp(M.m)}`;
+    $("hC").innerHTML = `Spazio dei giunti ${sp(M.n)}`;
+    const drag = (d) => (d === 3 ? " Trascina per ruotare." : "");
+    $("subB").innerHTML = (kin ? "Twist <span class=\"m\">V</span> = <span class=\"m\">J</span> " + QD_HTML("<span class=\"m\">q̇</span>") + ", ellisse/ellissoide delle velocità; tratteggio 𝓡(<span class=\"m\">J</span>), tratto e punto 𝓝(<span class=\"m\">J</span><sup class=\"rm\">T</sup>). 1 unità = 1 m/s, 1 rad/s."
+      : "Wrench <span class=\"m\">w</span> = <span class=\"m\">w</span><sub>r</sub> + <span class=\"m\">w</span><sub>n</sub>; tratteggio 𝓡(<span class=\"m\">J</span>), tratto e punto 𝓝(<span class=\"m\">J</span><sup class=\"rm\">T</sup>). 1 unità = 10 N, 10 N m.") + drag(M.m);
+    $("subC").innerHTML = (kin ? QD_HTML("<span class=\"m\">q̇</span> = <span class=\"m\">q̇</span><sub>r</sub> + <span class=\"m\">q̇</span><sub>n</sub>") + "; tratteggio 𝓡(<span class=\"m\">J</span><sup class=\"rm\">T</sup>), tratto e punto 𝓝(<span class=\"m\">J</span>). 1 unità = 1 rad/s."
+      : "Coppie <span class=\"m\">τ</span> = <span class=\"m\">J</span><sup class=\"rm\">T</sup><span class=\"m\">w</span>, sempre in 𝓡(<span class=\"m\">J</span><sup class=\"rm\">T</sup>). 1 unità = 10 N m.") + drag(M.n);
+  }
+
+  // ---------- monitor ----------
+  function monitor(M) {
+    const { D, S, m, n, r, mn } = M;
+    const cls = m === n ? "quadrato" : n > m ? "ridondante" : "difettivo";
+    $("summary").innerHTML = `<span class="m">J</span><sub>c</sub> ∈ <span class="m">ℝ</span><sup>${m}×${n}</sup>: braccio <b>${cls}</b> per questo compito` +
+      (n > m ? ` (ridondanza ${n - m})` : n < m ? ` (mancano ${m - n} giunti)` : "") + ".";
+    const pill = $("state");
+    pill.textContent = M.sing ? "singolare" : M.near ? "vicino alla singolarità" : "regolare";
+    pill.className = "pill " + (M.sing ? "sing" : M.near ? "var" : "ok");
+    let kv = `<span>rango <span class="m">r</span></span><b>${r} su ${mn}</b>`;
+    if (m === n) kv += `<span>det <span class="m">J</span><sub>c</sub></span><b>${fmt(det(M.Js), 4)}</b>`;
+    kv += `<span><span class="m">σ</span><sub>min</sub>/<span class="m">σ</span><sub>max</sub></span><b>${fmt(M.ratio, 4)}</b>`;
+    kv += `<span><span class="m">s</span><sub>2</sub>, <span class="m">s</span><sub>3</sub></span><b>${fmt(Math.sin(st.q[1] * D2R), 3)}; ${fmt(Math.sin(st.q[2] * D2R), 3)}</b>`;
+    $("kvRank").innerHTML = kv;
+    $("sv").innerHTML = D.s.map((s, i) => `<span class="m">σ<sub>${i + 1}</sub></span><span class="bar"><span style="width:${(100 * s) / D.s[0]}%"></span></span><span class="num">${fmt(s, 4)}</span>`).join("");
+    let t = `<tr><th></th>${[0, 1, 2].map((j) => `<th class="${st.giunti.includes(j) ? "in" : ""}">q${["₁", "₂", "₃"][j]}</th>`).join("")}</tr>`;
+    for (let i = 0; i < 3; i++) {
+      t += `<tr><th class="${st.righe.includes(i) ? "in" : ""}">${NRH[i]}</th>` + M.J[i].map((x, j) =>
+        `<td class="${st.righe.includes(i) && st.giunti.includes(j) ? "in" : ""}">${fmt(x, 3)}</td>`).join("") + "</tr>";
+    }
+    $("Jtab").innerHTML = t;
+    // i quattro sottospazi
+    const nomiR = st.righe.map((i) => NR[i]), nomiG = st.giunti.map((j) => "q" + (j + 1));
+    const bott = (B, tipo, nomi) => B.length ? B.map((b, k) => {
+      const on = st.scelta && st.scelta.tipo === tipo && st.scelta.k === k;
+      return `<button type="button" class="basis" data-tipo="${tipo}" data-k="${k}" aria-pressed="${on}">${b.map((x, i) => `${nomi[i]} ${fmt(x, 3)}`).join("<br>")}</button>`;
+    }).join("") : "{0}";
+    const riga = (nome, d, B, tipo, nomi, sig) => `<tr class="${d ? "" : "zero"}"><td>${nome}</td><td class="n">${d}</td><td class="n">${bott(B, tipo, nomi)}</td><td>${sig}</td></tr>`;
+    $("tSub").innerHTML =
+      riga(`𝓡(<span class="m">J</span>) ⊂ <span class="m">ℝ</span><sup>${m}</sup>`, r, S.RJ, "RJ", nomiR, "twist realizzabili di <span class=\"m\">O</span><sub>3</sub>") +
+      riga(`𝓝(<span class="m">J</span><sup class="rm">T</sup>) ⊂ <span class="m">ℝ</span><sup>${m}</sup>`, m - r, S.NJt, "NJt", nomiR, "wrench strutturali: <span class=\"m\">τ</span> = 0, li sostiene il telaio") +
+      riga(`𝓡(<span class="m">J</span><sup class="rm">T</sup>) ⊂ <span class="m">ℝ</span><sup>${n}</sup>`, r, S.RJt, "RJt", nomiG, "coppie che equilibrano un wrench in <span class=\"m\">O</span><sub>3</sub>") +
+      riga(`𝓝(<span class="m">J</span>) ⊂ <span class="m">ℝ</span><sup>${n}</sup>`, n - r, S.NJ, "NJ", nomiG, "automovimenti: i giunti si muovono, <span class=\"m\">O</span><sub>3</sub> no");
+    // modo
+    const kin = st.modo === "kin";
+    $("hMode").textContent = kin ? "Cinematica" : "Statica";
+    const qs = scomponi(M.qdS, S.RJt), ws = scomponi(M.wS, S.RJ);
+    $("kvMode").innerHTML = QD_HTML(kin
+      ? `<span>componenti</span><b>(${st.righe.map((i) => NR[i]).join("; ")})</b>
+         <span><span class="m">V</span> = <span class="m">J q̇</span></span><b>${vec(M.Vs)}</b>
+         <span><span class="m">q̇</span><sub>r</sub> ∈ 𝓡(<span class="m">J</span><sup class="rm">T</sup>)</span><b>${vec(qs.r)}</b>
+         <span><span class="m">q̇</span><sub>n</sub> ∈ 𝓝(<span class="m">J</span>)</span><b>${vec(qs.n)}</b>
+         <span><span class="m">J q̇</span><sub>n</sub></span><b>${vec(mul(M.Js, qs.n))}</b>`
+      : `<span>componenti</span><b>(${st.righe.map((i) => NW[i]).join("; ")})</b>
+         <span><span class="m">τ</span> = <span class="m">J</span><sup class="rm">T</sup><span class="m">w</span></span><b>${vec(M.tauS)}</b>
+         <span><span class="m">w</span><sub>r</sub> ∈ 𝓡(<span class="m">J</span>)</span><b>${vec(ws.r)}</b>
+         <span><span class="m">w</span><sub>n</sub> ∈ 𝓝(<span class="m">J</span><sup class="rm">T</sup>)</span><b>${vec(ws.n)}</b>
+         <span><span class="m">J</span><sup class="rm">T</sup><span class="m">w</span><sub>n</sub></span><b>${vec(mul(tr(M.Js), ws.n))}</b>`);
+    $("kvPow").innerHTML = QD_HTML(`<span><span class="m">w</span><sup class="rm">T</sup><span class="m">V</span></span><b>${fmt(dot(M.wS, M.Vs), 4)} W</b>
+      <span><span class="m">τ</span><sup class="rm">T</sup><span class="m">q̇</span></span><b>${fmt(dot(M.tauS, M.qdS), 4)} W</b>`);
+    // automovimento
+    const A = st.auto, dn = S.NJ.length;
+    let nota;
+    if (A && A.play) nota = A.esatto ? "Automovimento in corso: O₃ resta fermo, le tracce sono i percorsi di O₁ e O₂."
+      : "Oscillazione al primo ordine lungo 𝓝(J) della configurazione di partenza: O₃ si sposta solo al secondo ordine.";
+    else if (!dn) nota = "𝓝(J) = {0}: nessun automovimento in questa configurazione.";
+    else if (n > m) nota = `Il compito lascia ${n - m} grado di ridondanza: l'automovimento esiste in ogni configurazione regolare.`;
+    else nota = `𝓝(J) ha dimensione ${dn} solo in questa configurazione singolare: l'animazione oscilla di ±12° lungo 𝓝(J).`;
+    $("autoNote").textContent = nota;
+    $("bAuto").textContent = A && A.play ? "Ferma l'automovimento" : "Avvia l'automovimento";
+    $("bAuto").disabled = !(A && A.play) && !dn;
+    $("bBack").disabled = !A;
+    $("bStruct").disabled = !S.NJt.length;
+  }
+
+  // ---------- comandi ----------
+  function syncControls() {
+    for (const [k, p] of Object.entries(PRESET)) {
+      const b = document.querySelector(`#presets [data-p="${k}"]`);
+      b.setAttribute("aria-pressed", String(st.preset === k));
+    }
+    for (let i = 0; i < 3; i++) {
+      $("r" + i).checked = st.righe.includes(i);
+      $("g" + i).checked = st.giunti.includes(i);
+      for (const [id, v, txt] of [["q" + i, st.q[i], fmt(st.q[i], 0) + "°"], ["l" + i, st.l[i], fmt(st.l[i], 2) + " m"],
+        ["qd" + i, st.qd[i], fmt(st.qd[i], 2) + " rad/s"], ["w" + i, st.w[i], fmt(st.w[i], i < 2 ? 1 : 2) + (i < 2 ? " N" : " N m")]]) {
+        if (document.activeElement !== $(id)) $(id).value = v;
+        $(id + "o").textContent = txt;
+      }
+      $("cq" + i).classList.toggle("off", !st.giunti.includes(i));
+      $("cqd" + i).classList.toggle("off", !st.giunti.includes(i)); $("qd" + i).disabled = !st.giunti.includes(i);
+      $("cw" + i).classList.toggle("off", !st.righe.includes(i)); $("w" + i).disabled = !st.righe.includes(i);
+    }
+    $("mKin").setAttribute("aria-pressed", String(st.modo === "kin"));
+    $("mSta").setAttribute("aria-pressed", String(st.modo === "sta"));
+    document.querySelectorAll("[data-mode]").forEach((el) => { el.hidden = el.dataset.mode !== st.modo; });
+  }
+  let M = null;
+  function render() {
+    M = modello();
+    syncControls();
+    drawA(M);
+    drawSpaces(M);
+    monitor(M);
+  }
+  function svuotaTracce() { for (const k of Object.keys(tracce)) tracce[k] = []; }
+  function fermaAuto() { st.auto = null; svuotaTracce(); }
+  function mettiCompito(righe, giunti, preset) {
+    st.righe = righe.slice().sort(); st.giunti = giunti.slice().sort(); st.preset = preset; st.scelta = null;
+    if (st.auto) { st.q = st.auto.q0.slice(); fermaAuto(); }
+    render();
+  }
+  document.querySelectorAll("#presets button").forEach((b) => b.addEventListener("click", () => {
+    const p = PRESET[b.dataset.p]; mettiCompito(p.righe, p.giunti, b.dataset.p);
+  }));
+  for (let i = 0; i < 3; i++) {
+    $("r" + i).addEventListener("change", (e) => {
+      const s = new Set(st.righe); if (e.target.checked) s.add(i); else if (s.size > 1) s.delete(i);
+      mettiCompito([...s], st.giunti, null);
+    });
+    $("g" + i).addEventListener("change", (e) => {
+      const s = new Set(st.giunti); if (e.target.checked) s.add(i); else if (s.size > 1) s.delete(i);
+      mettiCompito(st.righe, [...s], null);
+    });
+    $("q" + i).addEventListener("input", (e) => { fermaAuto(); st.q[i] = +e.target.value; st.scelta = null; render(); });
+    $("l" + i).addEventListener("input", (e) => { fermaAuto(); st.l[i] = +e.target.value; st.scelta = null; render(); });
+    $("qd" + i).addEventListener("input", (e) => { st.qd[i] = +e.target.value; st.scelta = null; render(); });
+    $("w" + i).addEventListener("input", (e) => { st.w[i] = +e.target.value; st.scelta = null; render(); });
+  }
+  const conf = (fn) => () => { fermaAuto(); fn(); st.scelta = null; render(); };
+  $("cReg").addEventListener("click", conf(() => { st.q = Q_REG.slice(); }));
+  $("cS2").addEventListener("click", conf(() => { st.q[1] = 0; }));
+  $("cS3").addEventListener("click", conf(() => { st.q[2] = 0; }));
+  $("cAll").addEventListener("click", conf(() => { st.q[1] = 0; st.q[2] = 0; }));
+  $("cNear").addEventListener("click", conf(() => { st.q[1] = 5; }));
+  $("mKin").addEventListener("click", () => { st.modo = "kin"; render(); });
+  $("mSta").addEventListener("click", () => { st.modo = "sta"; render(); });
+  $("bZero").addEventListener("click", () => { if (st.modo === "kin") st.qd = [0, 0, 0]; else st.w = [0, 0, 0]; st.scelta = null; render(); });
+  $("bStruct").addEventListener("click", () => mostra("NJt", 0));
+  $("tSub").addEventListener("click", (e) => { const b = e.target.closest("button.basis"); if (b) mostra(b.dataset.tipo, +b.dataset.k); });
+
+  // vettore di base: lo si mostra
+  function mostra(tipo, k) {
+    const { S, Js, D } = M;
+    st.scelta = { tipo, k };
+    if (tipo === "RJ") { st.qd = embG(sc(mul(tr(Js), S.RJ[k]), 1 / D.s[k])); st.modo = "kin"; }
+    else if (tipo === "NJ") { st.qd = embG(S.NJ[k]); st.modo = "kin"; }
+    else if (tipo === "NJt") { st.w = embR(sc(S.NJt[k], 10)); st.modo = "sta"; }
+    else { const w = mul(Js, S.RJt[k]); st.w = embR(sc(w, 10 / nrm(w))); st.modo = "sta"; }
+    render();
+  }
+
+  // ---------- automovimento ----------
+  const AMP = 12, PERIODO = 4, VEL = 0.6;
+  function avviaAuto() {
+    const { S } = M;
+    if (!S.NJ.length) return;
+    const k = st.scelta && st.scelta.tipo === "NJ" && st.scelta.k < S.NJ.length ? st.scelta.k : 0;
+    const q0 = st.auto ? st.auto.q0 : st.q.slice();
+    if (!st.auto) svuotaTracce();
+    st.auto = { q0, qa: st.q.slice(), dir: embG(S.NJ[k]), esatto: M.n > M.m, t: 0, play: true, P0: M.O[3].slice(), phi0: M.phi };
+    st.qd = embG(S.NJ[k]);
+  }
+  function passoAuto(dt) {
+    const A = st.auto;
+    if (!A || !A.play) return false;
+    A.t += dt;
+    if (A.esatto) {
+      const h = 1 / 240, passi = Math.max(1, Math.round(dt / h));
+      for (let p = 0; p < passi; p++) {
+        const Kc = cinematica(st.q);
+        const D = svd(st.righe.map((r) => st.giunti.map((g) => Kc.J[r][g])));
+        let d = suNucleo(D, st.giunti.map((j) => A.dir[j]));
+        const nd = nrm(d);
+        if (nd < 1e-3) { A.play = false; break; }
+        d = sc(d, 1 / nd);
+        const e = [A.P0[0] - Kc.O[3][0], A.P0[1] - Kc.O[3][1], Math.atan2(Math.sin(A.phi0 - Kc.phi), Math.cos(A.phi0 - Kc.phi))];
+        const qdS = add(sc(d, VEL), pinv(D, sc(st.righe.map((r) => e[r]), 8)));
+        st.giunti.forEach((j, i) => { st.q[j] += (qdS[i] * h) / D2R; });
+        A.dir = embG(d);
+      }
+      st.q = st.q.map((x) => ((((x + 180) % 360) + 360) % 360) - 180);
+      st.qd = A.dir.slice();
+    } else {
+      const s = AMP * Math.sin((2 * Math.PI * A.t) / PERIODO);
+      st.q = A.qa.map((x, j) => x + s * A.dir[j]);
+    }
+    const Kc = cinematica(st.q);
+    tracce.O1.push(Kc.O[1]); tracce.O2.push(Kc.O[2]); tracce.O3.push(Kc.O[3]);
+    if (tracce.O1.length > 3000) for (const t of Object.values(tracce)) t.shift();
+    return true;
+  }
+  $("bAuto").addEventListener("click", () => { if (st.auto && st.auto.play) st.auto.play = false; else avviaAuto(); render(); loop(); });
+  $("bBack").addEventListener("click", () => { if (st.auto) st.q = st.auto.q0.slice(); fermaAuto(); render(); });
+  let ultimo = null, inCorso = false;
+  function loop() {
+    if (inCorso) return;
+    inCorso = true;
+    ultimo = performance.now();
+    const passo = (ora) => {
+      const dt = Math.min(0.1, (ora - ultimo) / 1000); ultimo = ora;
+      if (passoAuto(dt)) { render(); requestAnimationFrame(passo); } else { inCorso = false; render(); }
+    };
+    requestAnimationFrame(passo);
+  }
+
+  // ---------- rotazione delle viste 3D ----------
+  for (const [id, key] of [["svgB", "B"], ["svgC", "C"]]) {
+    const el = $(id);
+    let start = null;
+    el.addEventListener("pointerdown", (e) => { start = [e.clientX, e.clientY, ...st.vista[key]]; el.setPointerCapture(e.pointerId); });
+    el.addEventListener("pointermove", (e) => {
+      if (!start) return;
+      st.vista[key] = [start[2] - (e.clientX - start[0]) * 0.5, Math.max(-85, Math.min(85, start[3] + (e.clientY - start[1]) * 0.5))];
+      drawSpaces(M);
+    });
+    const fine = () => { start = null; };
+    el.addEventListener("pointerup", fine); el.addEventListener("pointercancel", fine);
+  }
+
+  render();
+  // per le prove: avanza l'automovimento di t secondi senza orologio
+  window.__rrr = { st, avanza: (t) => { for (let k = 0; k < Math.round(t * 60); k++) passoAuto(1 / 60); render(); } };
+})();
+</script>
+</body>
+</html>

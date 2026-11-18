@@ -1,0 +1,523 @@
+<!doctype html>
+<!-- (c) 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini, Universita' di Pisa. Tutti i diritti riservati. -->
+<!-- Copia per il sito di Dashboard_animazioni/algoritmo_RNEA.html, nel repository della dispensa (scheletro aggiunto da pubblica_sito.py). -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Ing. Eugeniu Grabovic, Prof. Marco Gabiccini">
+<meta name="copyright" content="&copy; 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini. Tutti i diritti riservati.">
+<title>Algoritmo RNEA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap">
+<style>
+  /* Layout: comandi in alto; barra dei passi; braccio a sinistra e formula del passo a destra;
+     sotto lo schema del flusso dei dati, il registro dei link e la scomposizione delle coppie */
+  :root {
+    --ground: #f2f4f8;
+    --panel: #ffffff;
+    --canvas: #fbfcfe;
+    --ink: #1a1e2b;
+    --muted: #5b6577;
+    --line: #d4d9e3;
+    --ghost: #a3abb9;
+    --link: #b9c0cc;
+    --s: #1436a8;                     /* frame {S0}: blu, come nella dispensa */
+    --fwd: #17714a; --fwd-bg: #e0f2e8; /* ricorsione in avanti: twist */
+    --bwd: #9a4a00; --bwd-bg: #fbe9d4; /* ricorsione all'indietro: wrench */
+    --serif: "STIX Two Text", "Cambria Math", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #11141b; --panel: #191d27; --canvas: #151922; --ink: #e7eaf1;
+      --muted: #9aa4b7; --line: #2b3241; --ghost: #5a6376; --link: #4a5263; --s: #7ea5ff;
+      --fwd: #74d6a4; --fwd-bg: #15342a; --bwd: #f1a961; --bwd-bg: #3a2812;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #11141b; --panel: #191d27; --canvas: #151922; --ink: #e7eaf1;
+    --muted: #9aa4b7; --line: #2b3241; --ghost: #5a6376; --link: #4a5263; --s: #7ea5ff;
+    --fwd: #74d6a4; --fwd-bg: #15342a; --bwd: #f1a961; --bwd-bg: #3a2812;
+    color-scheme: dark;
+  }
+
+  body { background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 1180px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 40px; display: flex; flex-direction: column; gap: 18px; }
+
+  .m { font-family: var(--serif); font-style: italic; font-size: 1.08em; white-space: nowrap; }
+  .m .rm, .rm { font-style: normal; }
+  .m sub, .m sup { font-size: 0.7em; line-height: 0; }
+  .d1, .d2 { position: relative; display: inline-block; }
+  .d1::after { content: "˙"; position: absolute; left: 0.22em; top: -0.42em; font-style: normal; }
+  .d2::after { content: "¨"; position: absolute; left: 0.1em; top: -0.42em; font-style: normal; }
+
+  header .eyebrow { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+  header h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(28px, 4vw, 40px); line-height: 1.12; text-wrap: balance; }
+  header .lede { margin: 10px 0 0; max-width: 72ch; color: var(--muted); font-size: 16px; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+  h2 { margin: 0; font: 600 19px/1.25 var(--serif); }
+  .sub { margin: 4px 0 0; font-size: 13.5px; color: var(--muted); }
+
+  button { font: 500 13.5px var(--sans); color: var(--ink); background: var(--ground); border: 1px solid var(--line); border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--ghost); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--s); outline-offset: 2px; }
+  .seg { display: flex; gap: 6px; }
+  .seg button { border-radius: 999px; padding: 5px 14px; }
+  .seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+
+  /* ---- comandi ---- */
+  .controls { padding: 14px 18px; display: flex; flex-direction: column; gap: 14px; }
+  .toprow { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; }
+  .toprow .tag { font-size: 13px; font-weight: 600; }
+  .toprow label.chk { display: inline-flex; gap: 7px; align-items: center; font-size: 13.5px; }
+  .joints { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px 22px; }
+  .joint { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .joint .name { font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  .ctl { display: grid; grid-template-columns: 26px minmax(0, 1fr) 84px; gap: 8px; align-items: center; }
+  .ctl output { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+  input[type="range"] { width: 100%; accent-color: var(--ink); margin: 0; }
+
+  /* ---- barra dei passi ---- */
+  .stepper { padding: 12px 18px; display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; }
+  .stepper .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dots { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+  .dot { width: 26px; height: 8px; border-radius: 4px; background: var(--line); border: 0; padding: 0; }
+  .dot.fwd.done { background: var(--fwd); } .dot.bwd.done { background: var(--bwd); } .dot.ini.done { background: var(--ink); }
+  .dot.cur { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .gap { width: 8px; }
+  .where { font-size: 13.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* ---- vista principale ---- */
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 18px; }
+  @media (max-width: 900px) { .main { grid-template-columns: minmax(0, 1fr); } }
+  .view { display: flex; flex-direction: column; }
+  .view > .head { padding: 14px 18px 8px; }
+  .stage { background: var(--canvas); border-top: 1px solid var(--line); border-radius: 0 0 6px 6px; }
+  .stage svg { display: block; width: 100%; height: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 18px 12px; font-size: 12.5px; color: var(--muted); }
+  .legend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+  .stepcard { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
+  .phase { align-self: flex-start; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; }
+  .phase.ini { background: var(--ground); color: var(--ink); border: 1px solid var(--line); }
+  .phase.fwd { background: var(--fwd-bg); color: var(--fwd); }
+  .phase.bwd { background: var(--bwd-bg); color: var(--bwd); }
+  .stepcard p { margin: 0; max-width: 62ch; }
+  .eq { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 10px; overflow-x: auto; padding-bottom: 2px; }
+  .eq .op { align-self: center; font-family: var(--serif); font-size: 20px; padding-bottom: 26px; }
+  .eq .lhs { align-self: center; padding-bottom: 26px; font-size: 17px; }
+  .term { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .term .cap { font-size: 11.5px; color: var(--muted); max-width: 13ch; text-align: center; line-height: 1.25; min-height: 2.5em; }
+  .term .sym { font-size: 14px; }
+  .col { display: inline-flex; flex-direction: column; padding: 3px 7px; border-left: 1.5px solid var(--ink); border-right: 1.5px solid var(--ink); border-radius: 4px; font: 12.5px/1.45 var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .col span:nth-child(4) { border-top: 1px dashed var(--ghost); margin-top: 2px; padding-top: 2px; }
+  .col.res { background: var(--ground); font-weight: 500; }
+  .eq.fwd .col.res { background: var(--fwd-bg); border-color: var(--fwd); }
+  .eq.bwd .col.res { background: var(--bwd-bg); border-color: var(--bwd); }
+  .tauline { font-size: 16px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+  .tauline b { font: 600 20px var(--mono); color: var(--bwd); font-variant-numeric: tabular-nums; }
+
+  /* ---- schema, registro, scomposizione ---- */
+  .block { padding: 14px 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .scroll { overflow-x: auto; }
+  .flow svg { display: block; min-width: 560px; width: 100%; height: auto; margin-inline: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th { text-align: left; font-weight: 600; font-size: 12px; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.todo { color: var(--ghost); }
+  td.now.f { background: var(--fwd-bg); } td.now.b { background: var(--bwd-bg); }
+  td.tau { font-weight: 500; }
+  .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 26px; }
+  .jt { display: flex; flex-direction: column; gap: 6px; }
+  .jt .name { font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  .bar { display: grid; grid-template-columns: 66px minmax(0, 1fr) 70px; gap: 8px; align-items: center; font-size: 13px; }
+  .bar .track { position: relative; height: 10px; background: var(--ground); border-radius: 5px; }
+  .bar .track::before { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--ghost); }
+  .bar .fill { position: absolute; top: 0; bottom: 0; background: var(--ink); border-radius: 5px; }
+  .bar.tot .fill { background: var(--bwd); }
+  .bar output { font-family: var(--mono); font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
+  .note { font-size: 13px; color: var(--muted); margin: 0; max-width: 80ch; }
+  /* chi ha fatto la pagina */
+  .credito { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted);
+             display: flex; flex-wrap: wrap; gap: 2px 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Meccanica dei Robot · Capitolo 12</p>
+    <h1>Algoritmo RNEA</h1>
+    <p class="lede">La dinamica inversa di un braccio planare, un passo alla volta: i twist salgono dalla base all'ultimo link, i wrench scendono dall'ultimo link alla base, e ogni coppia è la proiezione del wrench sul twist del giunto.</p>
+  </header>
+
+  <section class="panel controls" aria-label="Dati del moto">
+    <div class="toprow">
+      <span class="tag">Giunti</span>
+      <div class="seg" id="nsel">
+        <button type="button" data-n="2">2</button><button type="button" data-n="3">3</button><button type="button" data-n="4">4</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="grav" checked> Gravità lungo −<span class="m">y<sub>0</sub></span></label>
+      <button type="button" id="preset">Dati della dispensa</button>
+    </div>
+    <div class="joints" id="joints"></div>
+  </section>
+
+  <section class="panel stepper" aria-label="Passi dell'algoritmo">
+    <div class="btns">
+      <button type="button" id="prev">◀ Indietro</button>
+      <button type="button" id="play">▶ Riproduci</button>
+      <button type="button" id="next">Avanti ▶</button>
+      <button type="button" id="reset">Ricomincia</button>
+    </div>
+    <div class="dots" id="dots"></div>
+    <span class="where" id="where"></span>
+  </section>
+
+  <div class="main">
+    <section class="panel view">
+      <div class="head">
+        <h2>Il braccio</h2>
+        <p class="sub">Frame dei link con l'origine nei baricentri. I vettori compaiono quando l'algoritmo li calcola.</p>
+      </div>
+      <div class="stage"><svg id="arm" viewBox="0 0 560 440" role="img" aria-label="Braccio planare con i vettori calcolati dall'algoritmo"></svg></div>
+      <div class="legend">
+        <span><i style="background:var(--fwd)"></i>velocità dei baricentri (parte lineare dei twist)</span>
+        <span><i style="background:var(--bwd)"></i>forza sul perno e coppia del giunto (wrench)</span>
+      </div>
+    </section>
+
+    <section class="panel stepcard" id="card" aria-live="polite"></section>
+  </div>
+
+  <section class="panel block flow">
+    <h2>Flusso dei dati</h2>
+    <div class="scroll"><svg id="flow" role="img" aria-label="Schema delle due ricorsioni"></svg></div>
+  </section>
+
+  <section class="panel block">
+    <h2>Registro dei link</h2>
+    <p class="sub">Componenti nel frame del link, polo nel baricentro: parte lineare | parte angolare. Unità SI.</p>
+    <div class="scroll"><table id="log"></table></div>
+  </section>
+
+  <section class="panel block">
+    <h2>Da che cosa è fatta la coppia</h2>
+    <p class="sub">Tre chiamate alla RNEA separano i termini della forma standard: solo accelerazioni, solo velocità, solo gravità.</p>
+    <div class="split" id="split"></div>
+    <p class="note">Le masse sono <span class="m">m<sub>i</sub></span> = 2, 1, 0,8, 0,6 kg e le lunghezze <span class="m">ℓ<sub>i</sub></span> = 0,5, 0,3, 0,25, 0,2 m, con aste omogenee. Con due giunti e i dati della dispensa le coppie valgono 10,398 e 0,417 N m.</p>
+  </section>
+  <footer class="credito"><span>Realizzato da Ing. Eugeniu Grabovic</span><span>&copy; 2026 Ing. Eugeniu Grabovic e Prof. Marco Gabiccini &mdash; Tutti i diritti riservati</span></footer>
+</div>
+
+<script>
+/*CORE*/
+const L = [0.5, 0.3, 0.25, 0.2], MASS = [2, 1, 0.8, 0.6], GR = 9.81;
+const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+const add = (a, b) => a.map((x, i) => x + b[i]);
+const scl = (a, k) => a.map(x => x * k);
+const Rz = q => { const c = Math.cos(q), s = Math.sin(q); return [[c, -s, 0], [s, c, 0], [0, 0, 1]]; };
+const mv = (R, v) => R.map(r => r[0]*v[0] + r[1]*v[1] + r[2]*v[2]);
+const tmv = (R, v) => [0, 1, 2].map(j => R[0][j]*v[0] + R[1][j]*v[1] + R[2][j]*v[2]);
+const tadd = (a, b) => ({ v: add(a.v, b.v), w: add(a.w, b.w) });
+
+// RNEA in local POE con frame baricentrici: C_i = T_Tx, X_i = (0, lc_i, 0, 0, 0, 1), M_i = diag(m, m, m, 0, I, I)
+function rnea(n, q, qd, qdd, grav) {
+  const lc = i => L[i] / 2;
+  const r = { g: [], V: [], Vd: [], w: [], tau: [], fw: [], bw: [] };
+  let Vp = { v: [0, 0, 0], w: [0, 0, 0] }, Vdp = { v: scl(grav, -1), w: [0, 0, 0] };
+  r.Vd0 = Vdp;
+  for (let i = 0; i < n; i++) {
+    const R = Rz(q[i]), cx = i === 0 ? lc(0) : L[i-1] - lc(i-1) + lc(i);
+    const d = [cx - lc(i) + lc(i)*Math.cos(q[i]), lc(i)*Math.sin(q[i]), 0];      // g_{i-1,i} = C_i exp(X_i q_i)
+    const X = { v: [0, lc(i), 0], w: [0, 0, 1] };
+    const AdI = T => ({ v: tmv(R, add(T.v, cross(T.w, d))), w: tmv(R, T.w) });      // Ad^-1 di g_{i-1,i}
+    const a = AdI(Vp), Xq = { v: scl(X.v, qd[i]), w: scl(X.w, qd[i]) };
+    const V = tadd(a, Xq);
+    const b = AdI(Vdp), Xqq = { v: scl(X.v, qdd[i]), w: scl(X.w, qdd[i]) };
+    const adv = { v: add(cross(V.w, Xq.v), cross(V.v, Xq.w)), w: cross(V.w, Xq.w) }; // ad_V X qd
+    const Vd = tadd(tadd(b, Xqq), adv);
+    r.g.push({ R, d }); r.V.push(V); r.Vd.push(Vd); r.fw.push({ a, Xq, b, Xqq, adv });
+    Vp = V; Vdp = Vd;
+  }
+  let wn = { v: [0, 0, 0], w: [0, 0, 0] };                                            // wrench: v = forza, w = momento
+  for (let i = n - 1; i >= 0; i--) {
+    const m = MASS[i], I = m * L[i] * L[i] / 12, V = r.V[i], Vd = r.Vd[i];
+    const p = { v: scl(V.v, m), w: [0, I * V.w[1], I * V.w[2]] };                     // M V
+    const MVd = { v: scl(Vd.v, m), w: [0, I * Vd.w[1], I * Vd.w[2]] };
+    const ads = { v: cross(V.w, p.v), w: add(cross(V.v, p.v), cross(V.w, p.w)) };     // ad*_V M V
+    const w = tadd(tadd(MVd, ads), wn);
+    r.w[i] = w; r.bw[i] = { MVd, ads, wn };
+    r.tau[i] = lc(i) * w.v[1] + w.w[2];                                               // X^T w
+    const { R, d } = r.g[i], Rf = mv(R, w.v);
+    wn = { v: Rf, w: add(cross(d, Rf), mv(R, w.w)) };                                 // Ad* di g_{i-1,i}
+  }
+  return r;
+}
+/*END CORE*/
+
+// ------------------------------------------------------------------ stato
+const DEF = { q: [30, 60, -45, 30], qd: [1, -2, 1.5, -1], qdd: [3, 5, -2, 1] };
+const st = { n: 2, q: DEF.q.slice(), qd: DEF.qd.slice(), qdd: DEF.qdd.slice(), grav: true, step: 4, timer: null };
+const $ = id => document.getElementById(id);
+const nSteps = () => 2 * st.n + 1;
+const fmt = (x, d = 3) => { const s = (Math.abs(x) < 0.5 * 10 ** -d ? 0 : x).toFixed(d).replace('.', ','); return s.replace('-', '−'); };
+const sub = i => `<sub>${i}</sub>`;
+const stepInfo = k => k === 0 ? { ph: 'ini' } : k <= st.n ? { ph: 'fwd', i: k } : { ph: 'bwd', i: 2 * st.n + 1 - k };
+const fwdDone = i => st.step >= i;                 // link i (1..n)
+const bwdDone = i => st.step >= 2 * st.n + 1 - i;
+
+function compute() {
+  const q = st.q.map(x => x * Math.PI / 180), g = st.grav ? [0, -GR, 0] : [0, 0, 0], n = st.n, z = [0, 0, 0, 0];
+  const r = rnea(n, q, st.qd, st.qdd, g);
+  r.tB = rnea(n, q, z, st.qdd, [0, 0, 0]).tau;
+  r.tC = rnea(n, q, st.qd, z, [0, 0, 0]).tau;
+  r.tG = rnea(n, q, z, z, g).tau;
+  // cinematica nel frame {S0} per il disegno
+  r.th = []; r.P = []; r.G = []; r.E = [];
+  let th = 0, p = [0, 0];
+  for (let i = 0; i < n; i++) {
+    th += q[i]; const c = Math.cos(th), s = Math.sin(th);
+    r.th.push(th); r.P.push(p); r.G.push([p[0] + L[i]/2*c, p[1] + L[i]/2*s]);
+    p = [p[0] + L[i]*c, p[1] + L[i]*s]; r.E.push(p);
+  }
+  return r;
+}
+
+// ------------------------------------------------------------------ comandi
+function buildControls() {
+  const box = $('joints'); box.innerHTML = '';
+  for (let i = 0; i < st.n; i++) {
+    const rows = [
+      ['q', '<span class="m">q</span>', -180, 180, 1, v => fmt(v, 0) + '°'],
+      ['qd', '<span class="m"><span class="d1">q</span></span>', -3, 3, 0.1, v => fmt(v, 1) + ' rad/s'],
+      ['qdd', '<span class="m"><span class="d2">q</span></span>', -6, 6, 0.1, v => fmt(v, 1) + ' rad/s²']
+    ].map(([k, lab, lo, hi, stp, f]) =>
+      `<div class="ctl"><label for="${k}${i}">${lab}${sub(i + 1)}</label>
+        <input type="range" id="${k}${i}" min="${lo}" max="${hi}" step="${stp}" value="${st[k][i]}" data-k="${k}" data-i="${i}">
+        <output id="o_${k}${i}">${f(st[k][i])}</output></div>`).join('');
+    box.insertAdjacentHTML('beforeend', `<div class="joint"><span class="name">Giunto ${i + 1}</span>${rows}</div>`);
+  }
+  box.querySelectorAll('input').forEach(el => el.addEventListener('input', () => {
+    const k = el.dataset.k, i = +el.dataset.i; st[k][i] = +el.value;
+    $('o_' + k + i).textContent = k === 'q' ? fmt(st[k][i], 0) + '°' : fmt(st[k][i], 1) + (k === 'qd' ? ' rad/s' : ' rad/s²');
+    render();
+  }));
+  $('nsel').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.n === st.n));
+}
+function buildDots() {
+  const box = $('dots'); box.innerHTML = '';
+  for (let k = 0; k < nSteps(); k++) {
+    const { ph, i } = stepInfo(k);
+    if (k === 1 || k === st.n + 1) box.insertAdjacentHTML('beforeend', '<span class="gap"></span>');
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'dot ' + ph; b.dataset.k = k;
+    b.setAttribute('aria-label', ph === 'ini' ? 'Inizializzazione' : (ph === 'fwd' ? 'In avanti, link ' : "All'indietro, link ") + (i || ''));
+    b.addEventListener('click', () => { stop(); st.step = k; render(); });
+    box.appendChild(b);
+  }
+}
+
+// ------------------------------------------------------------------ disegno del braccio
+const NS = 'http://www.w3.org/2000/svg';
+const esc = s => s;
+function arrow(x1, y1, x2, y2, col, w = 2.2, op = 1) {
+  const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy);
+  if (len < 3) return '';
+  const ux = dx / len, uy = dy / len, h = Math.min(9, len * 0.5), bx = x2 - ux * h, by = y2 - uy * h;
+  return `<g opacity="${op}"><line x1="${x1}" y1="${y1}" x2="${bx}" y2="${by}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>
+    <polygon points="${x2},${y2} ${bx - uy * h * 0.42},${by + ux * h * 0.42} ${bx + uy * h * 0.42},${by - ux * h * 0.42}" fill="${col}"/></g>`;
+}
+function arcArrow(cx, cy, rad, a0, sweep, col, op = 1) {      // angoli in rad nel piano fisico (antiorario positivo)
+  const pt = a => [cx + rad * Math.cos(a), cy - rad * Math.sin(a)];
+  const [x0, y0] = pt(a0), a1 = a0 + sweep, [x1, y1] = pt(a1);
+  const large = Math.abs(sweep) > Math.PI ? 1 : 0, sf = sweep > 0 ? 0 : 1;
+  const t = sweep > 0 ? a1 + Math.PI / 2 : a1 - Math.PI / 2, tx = Math.cos(t), ty = -Math.sin(t), h = 8;
+  const bx = x1 - tx * h, by = y1 - ty * h;
+  return `<g opacity="${op}"><path d="M${x0},${y0} A${rad},${rad} 0 ${large} ${sf} ${x1},${y1}" fill="none" stroke="${col}" stroke-width="2"/>
+    <polygon points="${x1 + tx * 2},${y1 + ty * 2} ${bx - ty * 4},${by + tx * 4} ${bx + ty * 4},${by - tx * 4}" fill="${col}"/></g>`;
+}
+function text(x, y, s, col, size = 13, anchor = 'middle', extra = '') {
+  return `<text x="${x}" y="${y}" fill="${col}" font-size="${size}" text-anchor="${anchor}" font-family="STIX Two Text, Georgia, serif" font-style="italic" ${extra}>${s}</text>`;
+}
+function drawArm(r) {
+  const reach = L.slice(0, st.n).reduce((a, b) => a + b, 0), S = 185 / reach, cx = 280, cy = 240, X = p => [cx + p[0] * S, cy - p[1] * S];
+  const { ph, i: cur } = stepInfo(st.step);
+  let h = `<rect x="0" y="0" width="560" height="440" fill="none"/>`;
+  // telaio e frame {S0}
+  h += `<line x1="${cx - 34}" y1="${cy + 16}" x2="${cx + 34}" y2="${cy + 16}" stroke="var(--ink)" stroke-width="2"/>`;
+  for (let k = -3; k <= 3; k++) h += `<line x1="${cx + k * 10}" y1="${cy + 16}" x2="${cx + k * 10 - 7}" y2="${cy + 25}" stroke="var(--ink)" stroke-width="1"/>`;
+  h += `<path d="M${cx - 12},${cy + 16} L${cx},${cy} L${cx + 12},${cy + 16}" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
+  h += arrow(cx, cy, cx + 62, cy, 'var(--s)', 1.6) + arrow(cx, cy, cx, cy - 62, 'var(--s)', 1.6);
+  h += text(cx + 72, cy + 5, 'x<tspan font-size="9" dy="3">0</tspan>', 'var(--s)') + text(cx - 2, cy - 68, 'y<tspan font-size="9" dy="3">0</tspan>', 'var(--s)');
+  // gravita' e accelerazione apparente della base
+  if (st.grav) {
+    h += arrow(505, 60, 505, 108, 'var(--muted)', 1.8) + text(520, 90, 'g', 'var(--muted)', 14, 'start', 'font-style="normal"');
+    const on = st.step === 0;
+    h += arrow(cx - 52, cy + 6, cx - 52, cy - 44, on ? 'var(--ink)' : 'var(--ghost)', on ? 2.6 : 1.6);
+    h += `<text x="${cx - 60}" y="${cy - 22}" fill="${on ? 'var(--ink)' : 'var(--ghost)'}" font-size="12.5" text-anchor="end" font-family="IBM Plex Sans, sans-serif">base: +g</text>`;
+  }
+  // link
+  for (let i = 0; i < st.n; i++) {
+    const [x1, y1] = X(r.P[i]), [x2, y2] = X(r.E[i]), act = (ph !== 'ini' && cur === i + 1);
+    h += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${act ? 'var(--ink)' : 'var(--link)'}" stroke-width="${act ? 11 : 9}" stroke-linecap="round" opacity="${act ? 0.55 : 1}"/>`;
+  }
+  // scale dei vettori
+  let vmax = 0.3, fmax = 5;
+  for (let i = 0; i < st.n; i++) { vmax = Math.max(vmax, Math.hypot(r.V[i].v[0], r.V[i].v[1])); fmax = Math.max(fmax, Math.hypot(r.w[i].v[0], r.w[i].v[1])); }
+  const sv = 78 / vmax, sf = 92 / fmax;
+  // twist: velocita' dei baricentri
+  for (let i = 0; i < st.n; i++) {
+    if (!fwdDone(i + 1)) continue;
+    const c = Math.cos(r.th[i]), s = Math.sin(r.th[i]), v = r.V[i].v, vw = [c * v[0] - s * v[1], s * v[0] + c * v[1]];
+    const [gx, gy] = X(r.G[i]), act = ph === 'fwd' && cur === i + 1, op = ph === 'bwd' ? 0.28 : (act ? 1 : 0.6);
+    h += arrow(gx, gy, gx + vw[0] * sv, gy - vw[1] * sv, 'var(--fwd)', act ? 3 : 2.2, op);
+    if (ph !== 'bwd') h += `<g opacity="${op}">` + text(gx + vw[0] * sv + 10 * Math.sign(vw[0] || 1), gy - vw[1] * sv - 6, `v<tspan font-size="9" dy="3">G${i + 1}</tspan>`, 'var(--fwd)') + '</g>';
+  }
+  // wrench: forza sul perno del giunto e coppia
+  for (let i = 0; i < st.n; i++) {
+    if (!bwdDone(i + 1)) continue;
+    const c = Math.cos(r.th[i]), s = Math.sin(r.th[i]), f = r.w[i].v, fw = [c * f[0] - s * f[1], s * f[0] + c * f[1]];
+    const [px, py] = X(r.P[i]), act = ph === 'bwd' && cur === i + 1, op = act ? 1 : 0.6, tau = r.tau[i];
+    h += arrow(px - fw[0] * sf, py + fw[1] * sf, px, py, 'var(--bwd)', act ? 3 : 2.2, op);
+    if (Math.abs(tau) > 1e-3) h += arcArrow(px, py, 24, r.th[i] + 0.5, Math.sign(tau) * 4.2, 'var(--bwd)', op);
+    h += `<g opacity="${op}"><text x="${px + 34}" y="${py + 40}" fill="var(--bwd)" font-size="12.5" font-family="IBM Plex Mono, monospace">τ${i + 1} = ${fmt(tau, 2)}</text></g>`;
+  }
+  // giunti e baricentri
+  for (let i = 0; i < st.n; i++) {
+    const [px, py] = X(r.P[i]), [gx, gy] = X(r.G[i]);
+    h += `<circle cx="${px}" cy="${py}" r="6" fill="var(--canvas)" stroke="var(--ink)" stroke-width="2"/>`;
+    h += `<circle cx="${gx}" cy="${gy}" r="4.5" fill="var(--canvas)" stroke="var(--ink)" stroke-width="1.5"/><path d="M${gx},${gy} L${gx + 4.5},${gy} A4.5,4.5 0 0 0 ${gx},${gy - 4.5} Z M${gx},${gy} L${gx - 4.5},${gy} A4.5,4.5 0 0 0 ${gx},${gy + 4.5} Z" fill="var(--ink)"/>`;
+  }
+  $('arm').innerHTML = h;
+}
+
+// ------------------------------------------------------------------ scheda del passo
+const col = (T, cls = '') => `<span class="col ${cls}">${[...T.v, ...T.w].map(x => `<span>${fmt(x)}</span>`).join('')}</span>`;
+const term = (T, sym, cap, cls = '') => `<div class="term">${col(T, cls)}<span class="m sym">${sym}</span><span class="cap">${cap}</span></div>`;
+const op = s => `<span class="op">${s}</span>`;
+const Vs = i => `V${sub(i)}`, Vds = i => `<span class="d1">V</span>${sub(i)}`, ws = i => `w${sub(i)}`;
+const AdI = i => `<span class="rm">Ad</span><sup>−1</sup><sub>g${sub('' + (i - 1) + ',' + i)}</sub>`;
+function drawCard(r) {
+  const { ph, i } = stepInfo(st.step), k = i - 1, n = st.n;
+  let h = '';
+  if (ph === 'ini') {
+    h += `<span class="phase ini">Inizializzazione</span><h2>Base ferma, gravità nella base</h2>
+      <p>${st.grav ? "La gravità entra come accelerazione della base verso l'alto. I pesi dei link non si aggiungono ai wrench: arrivano a ogni link con la ricorsione in avanti." : "Senza gravità la base ha twist e accelerazione nulli."}</p>
+      <div class="eq">${term({ v: [0, 0, 0], w: [0, 0, 0] }, Vs(0), 'twist della base', 'res')}${term(r.Vd0, Vds(0) + ' = (−<span class="rm">g</span>' + sub(0) + ', 0)', 'accelerazione della base', 'res')}
+      ${term({ v: [0, 0, 0], w: [0, 0, 0] }, ws(n + 1), "wrench oltre l'ultimo link", 'res')}</div>`;
+  } else if (ph === 'fwd') {
+    const f = r.fw[k];
+    h += `<span class="phase fwd">In avanti · link ${i}</span><h2>Twist e accelerazione del link ${i}</h2>
+      <p>Il twist del link ${i} è il twist del link ${i - 1} portato nel frame del link ${i}, più il twist del giunto ${i}.</p>
+      <div class="eq fwd"><span class="lhs m">${Vs(i)} =</span>${term(f.a, AdI(i) + ' ' + Vs(i - 1), `link ${i - 1}, portato in {S${sub(i)}}`)}${op('+')}
+        ${term(f.Xq, `X${sub(i)} <span class="d1">q</span>${sub(i)}`, `twist del giunto ${i}`)}${op('=')}${term(r.V[k], Vs(i), 'twist del link', 'res')}</div>
+      <p>Nell'accelerazione si aggiunge il termine di trascinamento: il twist del giunto ha componenti costanti in un frame che si muove.</p>
+      <div class="eq fwd"><span class="lhs m">${Vds(i)} =</span>${term(f.b, AdI(i) + ' ' + Vds(i - 1), `link ${i - 1}, portato in {S${sub(i)}}`)}${op('+')}
+        ${term(f.Xqq, `X${sub(i)} <span class="d2">q</span>${sub(i)}`, 'accelerazione del giunto')}${op('+')}
+        ${term(f.adv, `<span class="rm">ad</span><sub>V${sub(i)}</sub> X${sub(i)} <span class="d1">q</span>${sub(i)}`, 'trascinamento')}${op('=')}${term(r.Vd[k], Vds(i), 'accelerazione', 'res')}</div>`;
+  } else {
+    const b = r.bw[k], lc = L[k] / 2;
+    h += `<span class="phase bwd">All'indietro · link ${i}</span><h2>Wrench trasmesso dal giunto ${i}</h2>
+      <p>Il giunto ${i} fornisce il wrench che accelera il link ${i}${i < n ? `, più il wrench che il link ${i} trasmette al link ${i + 1}` : ". È l'ultimo link: a valle non c'è nulla"}.</p>
+      <div class="eq bwd"><span class="lhs m">${ws(i)} =</span>${term(b.MVd, `M${sub(i)} ${Vds(i)}`, 'inerzia per accelerazione')}${op('+')}
+        ${term(b.ads, `<span class="rm">ad</span><sup>*</sup><sub>V${sub(i)}</sub> M${sub(i)} ${Vs(i)}`, 'trascinamento')}${op('+')}
+        ${term(b.wn, i < n ? `<span class="rm">Ad</span><sup>*</sup><sub>g${sub(i + ',' + (i + 1))}</sub> ${ws(i + 1)}` : ws(n + 1), i < n ? `wrench del link ${i + 1}, portato in {S${sub(i)}}` : 'nullo')}${op('=')}${term(r.w[k], ws(i), 'forza | momento', 'res')}</div>
+      <p>La coppia è la proiezione del wrench sul twist del giunto: il momento rispetto all'asse del giunto. Le altre componenti sono le reazioni del perno.</p>
+      <div class="tauline"><span class="m">τ${sub(i)} = X${sub(i)}<sup class="rm">T</sup> ${ws(i)} = ℓ<sub>c${i}</sub> f<sub>y</sub> + m<sub>z</sub></span>
+        <span>= ${fmt(lc, 3)} · ${fmt(r.w[k].v[1])} + ${fmt(r.w[k].w[2])} =</span> <b>${fmt(r.tau[k])} N m</b></div>`;
+  }
+  $('card').innerHTML = h;
+}
+
+// ------------------------------------------------------------------ schema del flusso
+function drawFlow(r) {
+  const n = st.n, dx = 170, x0 = 90, W = x0 + n * dx + 110, H = 210, y = 100, { ph, i: cur } = stepInfo(st.step);
+  const svg = $('flow'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.maxWidth = Math.round(W * 1.15) + 'px';
+  const mono = 'font-family="IBM Plex Mono, monospace"', ser = 'font-family="STIX Two Text, Georgia, serif" font-style="italic"';
+  let h = `<line x1="${x0 - 30}" y1="${y - 30}" x2="${x0 - 30}" y2="${y + 30}" stroke="var(--ink)" stroke-width="2"/>`;
+  for (let k = 0; k < 6; k++) h += `<line x1="${x0 - 30}" y1="${y - 26 + k * 11}" x2="${x0 - 39}" y2="${y - 17 + k * 11}" stroke="var(--ink)" stroke-width="1"/>`;
+  h += `<line x1="${x0 - 30}" y1="${y}" x2="${x0 - 18}" y2="${y}" stroke="var(--ink)" stroke-width="2"/>`;
+  for (let i = 1; i <= n; i++) {
+    const xa = x0 + (i - 1) * dx, xb = x0 + i * dx, f = fwdDone(i), b = bwdDone(i), fa = ph === 'fwd' && cur === i, ba = ph === 'bwd' && cur === i;
+    h += `<line x1="${xa + 18}" y1="${y}" x2="${xb - 18}" y2="${y}" stroke="var(--link)" stroke-width="2"/>`;
+    h += `<text x="${(xa + xb) / 2}" y="${y + 5}" text-anchor="middle" font-size="14" fill="var(--muted)" ${ser}><tspan>q</tspan><tspan font-size="10" dy="3">${i}</tspan></text>`;
+    // in avanti (sopra)
+    const cf = f ? 'var(--fwd)' : 'var(--line)';
+    h += `<path d="M${xa + 12},${y - 22} Q${(xa + xb) / 2},${y - 62} ${xb - 16},${y - 25}" fill="none" stroke="${cf}" stroke-width="${fa ? 3.4 : 2}"/>`;
+    h += `<polygon points="${xb - 10},${y - 20} ${xb - 22},${y - 22} ${xb - 15},${y - 32}" fill="${cf}"/>`;
+    h += `<text x="${(xa + xb) / 2}" y="${y - 52}" text-anchor="middle" font-size="14" fill="${f ? 'var(--fwd)' : 'var(--ghost)'}" ${ser} font-weight="${fa ? 600 : 400}">V<tspan font-size="10" dy="3">${i}</tspan><tspan dy="-3">, V̇</tspan><tspan font-size="10" dy="3">${i}</tspan></text>`;
+    // all'indietro (sotto)
+    const cb = b ? 'var(--bwd)' : 'var(--line)';
+    h += `<path d="M${xb - 12},${y + 22} Q${(xa + xb) / 2},${y + 62} ${xa + 16},${y + 25}" fill="none" stroke="${cb}" stroke-width="${ba ? 3.4 : 2}"/>`;
+    h += `<polygon points="${xa + 10},${y + 20} ${xa + 22},${y + 22} ${xa + 15},${y + 32}" fill="${cb}"/>`;
+    h += `<text x="${(xa + xb) / 2}" y="${y + 62}" text-anchor="middle" font-size="14" fill="${b ? 'var(--bwd)' : 'var(--ghost)'}" ${ser} font-weight="${ba ? 600 : 400}">w<tspan font-size="10" dy="3">${i}</tspan></text>`;
+    h += `<text x="${(xa + xb) / 2}" y="${y + 90}" text-anchor="middle" font-size="12.5" fill="${b ? 'var(--bwd)' : 'var(--ghost)'}" ${mono}>τ${i} = ${b ? fmt(r.tau[i - 1], 2) : '…'}</text>`;
+  }
+  for (let i = 0; i <= n; i++) {
+    const x = x0 + i * dx, act = ph !== 'ini' && cur === i, on = i === 0 ? true : fwdDone(i);
+    h += `<circle cx="${x}" cy="${y}" r="18" fill="${act ? 'var(--ink)' : 'var(--panel)'}" stroke="${on ? 'var(--ink)' : 'var(--ghost)'}" stroke-width="2"/>`;
+    h += `<text x="${x}" y="${y + 5}" text-anchor="middle" font-size="14" fill="${act ? 'var(--panel)' : (on ? 'var(--ink)' : 'var(--ghost)')}" font-family="IBM Plex Sans, sans-serif" font-weight="600">${i}</text>`;
+  }
+  h += `<text x="${x0 - 46}" y="${y - 46}" text-anchor="start" font-size="12" fill="var(--muted)" font-family="IBM Plex Sans, sans-serif">in avanti: twist</text>`;
+  h += `<text x="${x0 + n * dx + 28}" y="${y + 50}" text-anchor="start" font-size="12" fill="var(--muted)" font-family="IBM Plex Sans, sans-serif">all'indietro:</text>`;
+  h += `<text x="${x0 + n * dx + 28}" y="${y + 66}" text-anchor="start" font-size="12" fill="var(--muted)" font-family="IBM Plex Sans, sans-serif">wrench</text>`;
+  svg.innerHTML = h;
+}
+
+// ------------------------------------------------------------------ registro e scomposizione
+const row6 = T => `${T.v.map(x => fmt(x, 2)).join('  ')} | ${T.w.map(x => fmt(x, 2)).join('  ')}`;
+function drawLog(r) {
+  const { ph, i: cur } = stepInfo(st.step);
+  let h = `<thead><tr><th>Link</th><th><span class="m">V<sub>i</sub></span> (m/s | rad/s)</th><th><span class="m"><span class="d1">V</span><sub>i</sub></span> (m/s² | rad/s²)</th><th><span class="m">w<sub>i</sub></span> (N | N m)</th><th><span class="m">τ<sub>i</sub></span> (N m)</th></tr></thead><tbody>`;
+  for (let i = 1; i <= st.n; i++) {
+    const f = fwdDone(i), b = bwdDone(i), fn = ph === 'fwd' && cur === i ? ' now f' : '', bn = ph === 'bwd' && cur === i ? ' now b' : '';
+    h += `<tr><td>${i}</td><td class="${f ? '' : 'todo'}${fn}">${f ? row6(r.V[i - 1]) : 'da calcolare'}</td><td class="${f ? '' : 'todo'}${fn}">${f ? row6(r.Vd[i - 1]) : 'da calcolare'}</td>
+      <td class="${b ? '' : 'todo'}${bn}">${b ? row6(r.w[i - 1]) : 'da calcolare'}</td><td class="tau ${b ? '' : 'todo'}${bn}">${b ? fmt(r.tau[i - 1]) : '…'}</td></tr>`;
+  }
+  $('log').innerHTML = h + '</tbody>';
+}
+function drawSplit(r) {
+  let mx = 1e-6;
+  for (let i = 0; i < st.n; i++) mx = Math.max(mx, Math.abs(r.tB[i]), Math.abs(r.tC[i]), Math.abs(r.tG[i]), Math.abs(r.tau[i]));
+  const bar = (lab, v, cls = '') => {
+    const w = Math.abs(v) / mx * 50, left = v >= 0 ? 50 : 50 - w;
+    return `<div class="bar ${cls}"><span>${lab}</span><span class="track"><span class="fill" style="left:${left}%;width:${w}%"></span></span><output>${fmt(v)}</output></div>`;
+  };
+  let h = '';
+  for (let i = 0; i < st.n; i++)
+    h += `<div class="jt"><span class="name">Giunto ${i + 1}</span>
+      ${bar('<span class="m">B <span class="d2">q</span></span>', r.tB[i])}${bar('<span class="m">C <span class="d1">q</span></span>', r.tC[i])}${bar('<span class="m">G</span>', r.tG[i])}${bar('<span class="m">τ</span> (N m)', r.tau[i], 'tot')}</div>`;
+  $('split').innerHTML = h;
+}
+
+// ------------------------------------------------------------------ ciclo
+function render() {
+  const r = compute(), { ph, i } = stepInfo(st.step);
+  drawArm(r); drawCard(r); drawFlow(r); drawLog(r); drawSplit(r);
+  $('dots').querySelectorAll('.dot').forEach(d => { const k = +d.dataset.k; d.classList.toggle('done', k <= st.step); d.classList.toggle('cur', k === st.step); });
+  $('where').textContent = `Passo ${st.step + 1} di ${nSteps()} · ` + (ph === 'ini' ? 'inizializzazione' : (ph === 'fwd' ? 'in avanti, link ' : "all'indietro, link ") + (i || ''));
+  $('prev').disabled = st.step === 0; $('next').disabled = st.step === nSteps() - 1;
+  $('play').textContent = st.timer ? '❚❚ Pausa' : '▶ Riproduci';
+}
+function stop() { if (st.timer) { clearInterval(st.timer); st.timer = null; } }
+$('prev').addEventListener('click', () => { stop(); st.step = Math.max(0, st.step - 1); render(); });
+$('next').addEventListener('click', () => { stop(); st.step = Math.min(nSteps() - 1, st.step + 1); render(); });
+$('reset').addEventListener('click', () => { stop(); st.step = 0; render(); });
+$('play').addEventListener('click', () => {
+  if (st.timer) { stop(); render(); return; }
+  if (st.step === nSteps() - 1) st.step = 0;
+  st.timer = setInterval(() => { if (st.step >= nSteps() - 1) stop(); else st.step++; render(); }, 1800);
+  render();
+});
+$('nsel').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { stop(); st.n = +b.dataset.n; st.step = nSteps() - 1; buildControls(); buildDots(); render(); }));
+$('grav').addEventListener('change', e => { st.grav = e.target.checked; render(); });
+$('preset').addEventListener('click', () => { stop(); st.n = 2; st.q = DEF.q.slice(); st.qd = DEF.qd.slice(); st.qdd = DEF.qdd.slice(); st.grav = true; $('grav').checked = true; st.step = nSteps() - 1; buildControls(); buildDots(); render(); });
+buildControls(); buildDots(); render();
+</script>
+</body>
+</html>
