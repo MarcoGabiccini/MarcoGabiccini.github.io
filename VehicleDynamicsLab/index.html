@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interactive browser simulators for Dinamica dei Veicoli (Vehicle Dynamics), Master's Degree in Vehicle Engineering, Università di Pisa.">
+  <title>Vehicle Dynamics Lab — Dinamica dei Veicoli · Università di Pisa</title>
+  <!-- Landing page dei widget del corso, sul modello di "Applied Mechanics in Motion"
+       (martinogulisano.github.io/mec-app): un riquadro per simulatore, divisi per argomento.
+       Pubblicata su marcogabiccini.github.io/VehicleDynamicsLab/ da html/pubblica_sito.py,
+       che copia questa pagina e le pagine dei suoi riquadri (a class="card"): per pubblicare
+       un widget nuovo basta aggiungere il suo riquadro, nel suo gruppo. doubletrack_struttura.html
+       e campionamento_assale.html sono generati dagli script di struttura_equazioni/. Le icone
+       dei grafici sono le curve vere del caso Under 1 (Magic Formula dei widget handling_*). -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 16px;
+      background: #0d1117;
+      color: #c9d1d9;
+      min-height: 100vh;
+      padding: 56px 24px 80px;
+    }
+
+    header { max-width: 860px; margin: 0 auto 40px; }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #e6edf3;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+
+    header .intro-lead {
+      margin-top: 18px;
+      color: #8b949e;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    header .course-context {
+      margin-top: 18px;
+      padding: 16px 20px 16px 22px;
+      background: #1a2332;
+      border: 1px solid #3d4f66;
+      border-left: 4px solid #58a6ff;
+      border-radius: 8px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(88, 166, 255, 0.08);
+      color: #d8dee4;
+      font-size: 1rem;
+      line-height: 1.55;
+    }
+
+    header .course-context strong { color: #e6edf3; font-weight: 600; }
+
+    /* un titolo per argomento, sopra i suoi riquadri */
+    .topic {
+      max-width: 860px;
+      margin: 44px auto 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #21262d;
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .topic:first-of-type { margin-top: 8px; }
+
+    .topic h2 {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
+      color: #e6edf3;
+    }
+
+    .topic p { font-size: 0.875rem; color: #6e7681; }
+
+    .grid {
+      max-width: 860px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 24px 24px 20px;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+    }
+
+    .card:hover {
+      border-color: #58a6ff;
+      box-shadow: 0 0 0 1px #58a6ff33, 0 4px 20px #0008;
+      background: #1c2230;
+    }
+
+    .card:focus-visible { outline: 2px solid #58a6ff; outline-offset: 2px; }
+
+    .card svg { flex-shrink: 0; margin-top: 2px; opacity: 0.85; }
+
+    .card-body h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #58a6ff;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .card-body p { font-size: 0.875rem; color: #8b949e; line-height: 1.55; }
+
+    footer {
+      max-width: 860px;
+      margin: 56px auto 0;
+      font-size: 0.875rem;
+      color: #8b949e;
+      border-top: 1px solid #21262d;
+      padding-top: 20px;
+    }
+
+    .epigraph {
+      max-width: 860px;
+      margin: 48px auto 0;
+      padding: 0 24px;
+      text-align: center;
+      font-size: 1rem;
+      color: #8b949e;
+      line-height: 1.6;
+    }
+
+    .epigraph cite { font-style: normal; color: #6e7681; }
+
+    footer a { color: #58a6ff; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 480px) {
+      body { padding: 36px 16px 56px; }
+      .grid { grid-template-columns: 1fr; }
+      .card { padding: 20px 18px 18px; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Vehicle Dynamics Lab</h1>
+  <p class="course-context">
+    Interactive simulations for the course <strong>Dinamica dei Veicoli</strong>
+    (<em>Vehicle Dynamics</em>), Master’s Degree in Vehicle Engineering,
+    <strong>Università di Pisa</strong>.
+  </p>
+  <p class="intro-lead">
+    Browser-based simulations for vehicle dynamics, from the steering geometry to the handling diagram.
+    Click any card to open the simulator directly — no installation required.
+    Many plots have a “?” button that explains what they show.
+  </p>
+</header>
+
+<!-- ================================================================= -->
+<div class="topic"><h2>Steering geometry</h2><p>steering law and steering mechanisms</p></div>
+<div class="grid">
+
+  <!-- Legge di sterzo e Ackermann -->
+  <a class="card" href="sterzo_ackermann.html">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- normals of the four wheels meeting at the velocity centre C -->
+      <line x1="12" y1="15" x2="48" y2="34" stroke="#8b949e" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <line x1="28" y1="15" x2="48" y2="34" stroke="#8b949e" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <line x1="12" y1="34" x2="48" y2="34" stroke="#8b949e" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <rect x="10" y="29" width="4" height="10" rx="1" stroke="#8b949e" stroke-width="1.4"/>
+      <rect x="26" y="29" width="4" height="10" rx="1" stroke="#8b949e" stroke-width="1.4"/>
+      <!-- front wheels: the inner one steers more -->
+      <rect x="10" y="10" width="4" height="10" rx="1" stroke="#58a6ff" stroke-width="1.6" transform="rotate(27.8 12 15)"/>
+      <rect x="26" y="10" width="4" height="10" rx="1" stroke="#58a6ff" stroke-width="1.6" transform="rotate(43.5 28 15)"/>
+      <circle cx="48" cy="34" r="2.6" fill="#f78166"/>
+    </svg>
+    <div class="card-body">
+      <h3>Steering law and Ackermann</h3>
+      <p>From the steering wheel to the angles of the two front wheels: the steering law with the Ackermann coefficient ε (Ackermann, parallel, anti-Ackermann), the velocity centre C and the resulting slip angles.</p>
+    </div>
+  </a>
+
+  <!-- Meccanismo di sterzo -->
+  <a class="card" href="sterzo_meccanismo.html">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- wheels on the kingpins -->
+      <rect x="9.5" y="7" width="5" height="14" rx="1.2" stroke="#8b949e" stroke-width="1.3"/>
+      <rect x="37.5" y="7" width="5" height="14" rx="1.2" stroke="#8b949e" stroke-width="1.3"/>
+      <!-- arm extensions meeting on the centreline (Jeantaud) -->
+      <line x1="15.9" y1="22.1" x2="26" y2="42.8" stroke="#8b949e" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <line x1="36.1" y1="22.1" x2="26" y2="42.8" stroke="#8b949e" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <circle cx="26" cy="42.8" r="1.8" fill="#8b949e"/>
+      <!-- steering arms and tie rod -->
+      <line x1="12" y1="14" x2="15.9" y2="22.1" stroke="#d29922" stroke-width="2.2" stroke-linecap="round"/>
+      <line x1="40" y1="14" x2="36.1" y2="22.1" stroke="#d29922" stroke-width="2.2" stroke-linecap="round"/>
+      <line x1="15.9" y1="22.1" x2="36.1" y2="22.1" stroke="#58a6ff" stroke-width="1.8"/>
+      <circle cx="12" cy="14" r="2" fill="#0d1117" stroke="#c9d1d9" stroke-width="1.2"/>
+      <circle cx="40" cy="14" r="2" fill="#0d1117" stroke="#c9d1d9" stroke-width="1.2"/>
+    </svg>
+    <div class="card-body">
+      <h3>Steering mechanism</h3>
+      <p>Four-bar linkage and rack-and-pinion, each sized by least squares to follow exact Ackermann or the steering law with ε = 1, 0, −1.</p>
+    </div>
+  </a>
+
+</div>
+
+<!-- ================================================================= -->
+<div class="topic"><h2>Double-track model structure</h2><p>the equations, their loops, the axle characteristic</p></div>
+<div class="grid">
+
+  <!-- Struttura delle equazioni (visualizzatore) -->
+  <a class="card" href="doubletrack_struttura.html">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- three blocks and the algebraic loop through them -->
+      <rect x="4" y="9" width="15" height="10" rx="2" stroke="#58a6ff" stroke-width="1.6"/>
+      <rect x="33" y="9" width="15" height="10" rx="2" stroke="#58a6ff" stroke-width="1.6"/>
+      <rect x="18.5" y="33" width="15" height="10" rx="2" stroke="#58a6ff" stroke-width="1.6"/>
+      <line x1="19" y1="14" x2="30" y2="14" stroke="#f78166" stroke-width="1.5"/>
+      <polygon points="33,14 29,11.8 29,16.2" fill="#f78166"/>
+      <line x1="39" y1="19" x2="31.6" y2="30.8" stroke="#f78166" stroke-width="1.5"/>
+      <polygon points="30,33 30.1,28.5 33.7,30.8" fill="#f78166"/>
+      <line x1="21" y1="33" x2="13.6" y2="21.2" stroke="#f78166" stroke-width="1.5"/>
+      <polygon points="12,19 15.7,21.3 12.1,23.5" fill="#f78166"/>
+      <!-- an input from outside -->
+      <line x1="2" y1="38" x2="15.5" y2="38" stroke="#8b949e" stroke-width="1.2"/>
+      <polygon points="18.5,38 15,36.2 15,39.8" fill="#8b949e"/>
+    </svg>
+    <div class="card-body">
+      <h3>Structure of the double-track equations</h3>
+      <p>The double-track equations as a Simulink-like block diagram: which equation computes which unknown, the algebraic loops and how they are solved, in four formulations. Dependency tree and the flow of one simulation step.</p>
+    </div>
+  </a>
+
+  <!-- Campionamento della caratteristica -->
+  <a class="card" href="campionamento_assale.html">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 6 L6 46 L47 46" stroke="#8b949e" stroke-width="1.2"/>
+      <path d="M6.0,46.0 L7.0,41.5 L8.1,37.1 L9.1,32.9 L10.1,29.0 L11.1,25.4 L12.2,22.3 L13.2,19.5 L14.2,17.2 L15.2,15.2 L16.3,13.7 L17.3,12.4 L18.3,11.5 L19.3,10.8 L20.4,10.3 L21.4,10.1 L22.4,10.0 L23.4,10.0 L24.5,10.2 L25.5,10.5 L26.5,10.8 L27.5,11.2 L28.6,11.7 L29.6,12.2 L30.6,12.7 L31.6,13.3 L32.7,13.8 L33.7,14.4 L34.7,15.0 L35.7,15.6 L36.8,16.2 L37.8,16.8 L38.8,17.4 L39.8,18.0 L40.9,18.6 L41.9,19.1 L42.9,19.7 L43.9,20.3 L45.0,20.8 L46.0,21.3" stroke="#58a6ff" stroke-width="1.4" opacity="0.55"/>
+      <!-- the samples, one per slip angle -->
+      <circle cx="8.0" cy="37.3" r="2" fill="#f78166"/>
+      <circle cx="10.0" cy="29.4" r="2" fill="#f78166"/>
+      <circle cx="12.0" cy="22.7" r="2" fill="#f78166"/>
+      <circle cx="15.0" cy="15.7" r="2" fill="#f78166"/>
+      <circle cx="18.0" cy="11.7" r="2" fill="#f78166"/>
+      <circle cx="22.0" cy="10.0" r="2" fill="#f78166"/>
+      <circle cx="28.0" cy="11.4" r="2" fill="#f78166"/>
+      <circle cx="36.0" cy="15.8" r="2" fill="#f78166"/>
+      <circle cx="44.0" cy="20.3" r="2" fill="#f78166"/>
+    </svg>
+    <div class="card-body">
+      <h3>Sampling the axle characteristic</h3>
+      <p>The axle characteristic point by point: for each front slip angle α<sub>1</sub>, the loop of the front-axle equations, the consistency of ã<sub>y</sub> and the sampled curve. Set-up effects and anti-roll bar can be switched on.</p>
+    </div>
+  </a>
+
+  <!-- Costruzione grafica della caratteristica -->
+  <a class="card" href="costruzione_assale.html">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 6 L6 46 L47 46" stroke="#8b949e" stroke-width="1.2"/>
+      <!-- another sum curve, faded -->
+      <path d="M6.0,46.0 L7.0,38.0 L8.1,30.8 L9.1,24.9 L10.1,20.5 L11.1,17.3 L12.2,15.2 L13.2,13.9 L14.2,13.0 L15.2,12.5 L16.3,12.3 L17.3,12.2 L18.3,12.3 L19.3,12.4 L20.4,12.5 L21.4,12.7 L22.4,12.9 L23.4,13.1 L24.5,13.3 L25.5,13.5 L26.5,13.7 L27.5,13.8 L28.6,14.0 L29.6,14.2 L30.6,14.4 L31.6,14.5 L32.7,14.7 L33.7,14.8 L34.7,14.9 L35.7,15.1 L36.8,15.2 L37.8,15.3 L38.8,15.4 L39.8,15.5 L40.9,15.7 L41.9,15.8 L42.9,15.8 L43.9,15.9 L45.0,16.0 L46.0,16.1" stroke="#8b949e" stroke-width="1.1" opacity="0.5"/>
+      <path d="M6.0,46.0 L7.0,41.5 L8.1,37.1 L9.1,32.9 L10.1,29.0 L11.1,25.4 L12.2,22.3 L13.2,19.5 L14.2,17.2 L15.2,15.2 L16.3,13.7 L17.3,12.4 L18.3,11.5 L19.3,10.8 L20.4,10.3 L21.4,10.1 L22.4,10.0 L23.4,10.0 L24.5,10.2 L25.5,10.5 L26.5,10.8 L27.5,11.2 L28.6,11.7 L29.6,12.2 L30.6,12.7 L31.6,13.3 L32.7,13.8 L33.7,14.4 L34.7,15.0 L35.7,15.6 L36.8,16.2 L37.8,16.8 L38.8,17.4 L39.8,18.0 L40.9,18.6 L41.9,19.1 L42.9,19.7 L43.9,20.3 L45.0,20.8 L46.0,21.3" stroke="#58a6ff" stroke-width="1.7"/>
+      <!-- the load-transfer line from the origin and its one point on the sum curve -->
+      <line x1="6" y1="46" x2="30" y2="8" stroke="#d29922" stroke-width="1.6"/>
+      <circle cx="28.0" cy="11.4" r="2.6" fill="#d29922"/>
+    </svg>
+    <div class="card-body">
+      <h3>Graphical construction of the axle characteristic</h3>
+      <p>The load-transfer line ΔZ<sub>1</sub> = k<sub>1</sub>Y<sub>1</sub> and the sum curves, without and with a front anti-roll bar, plus a sheet on how the bar works.</p>
+    </div>
+  </a>
+
+</div>
+
+<!-- ================================================================= -->
+<div class="topic"><h2>Handling diagram</h2><p>branches, local understeer gradient, equilibria and stability</p></div>
+<div class="grid">
+
+  <!-- Caratteristiche degli assali -->
+  <a class="card" href="caratteristiche_assali.html">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 6 L6 46 L47 46" stroke="#8b949e" stroke-width="1.2"/>
+      <line x1="6" y1="22" x2="46" y2="22" stroke="#8b949e" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <path d="M6.0,46.0 L7.0,41.5 L8.1,37.1 L9.1,32.9 L10.1,29.0 L11.1,25.4 L12.2,22.3 L13.2,19.5 L14.2,17.2 L15.2,15.2 L16.3,13.7 L17.3,12.4 L18.3,11.5 L19.3,10.8 L20.4,10.3 L21.4,10.1 L22.4,10.0 L23.4,10.0 L24.5,10.2 L25.5,10.5 L26.5,10.8 L27.5,11.2 L28.6,11.7 L29.6,12.2 L30.6,12.7 L31.6,13.3 L32.7,13.8 L33.7,14.4 L34.7,15.0 L35.7,15.6 L36.8,16.2 L37.8,16.8 L38.8,17.4 L39.8,18.0 L40.9,18.6 L41.9,19.1 L42.9,19.7 L43.9,20.3 L45.0,20.8 L46.0,21.3" stroke="#f78166" stroke-width="1.7"/>
+      <path d="M6.0,46.0 L7.0,38.0 L8.1,30.8 L9.1,24.9 L10.1,20.5 L11.1,17.3 L12.2,15.2 L13.2,13.9 L14.2,13.0 L15.2,12.5 L16.3,12.3 L17.3,12.2 L18.3,12.3 L19.3,12.4 L20.4,12.5 L21.4,12.7 L22.4,12.9 L23.4,13.1 L24.5,13.3 L25.5,13.5 L26.5,13.7 L27.5,13.8 L28.6,14.0 L29.6,14.2 L30.6,14.4 L31.6,14.5 L32.7,14.7 L33.7,14.8 L34.7,14.9 L35.7,15.1 L36.8,15.2 L37.8,15.3 L38.8,15.4 L39.8,15.5 L40.9,15.7 L41.9,15.8 L42.9,15.8 L43.9,15.9 L45.0,16.0 L46.0,16.1" stroke="#58a6ff" stroke-width="1.7"/>
+      <circle cx="12.3" cy="22" r="2.2" fill="#f78166"/>
+      <circle cx="9.7" cy="22" r="2.2" fill="#58a6ff"/>
+    </svg>
+    <div class="card-body">
+      <h3>Axle characteristics</h3>
+      <p>Front and rear axle characteristics with the Magic Formula: a cursor on the slip angle α and one on the lateral force F, with the cornering stiffnesses.</p>
+    </div>
+  </a>
+
+  <!-- Costruzione dell'handling diagram -->
+  <a class="card" href="handling_diagram.html">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="4" y1="46" x2="48" y2="46" stroke="#8b949e" stroke-width="1.2"/>
+      <line x1="26" y1="4" x2="26" y2="46" stroke="#8b949e" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <path d="M6.2,21.3 L7.6,20.1 L9.2,18.7 L10.8,17.4 L12.2,16.2 L13.4,15.2 L14.6,14.3 L15.7,13.6 L16.8,12.9 L17.9,12.5 L19.2,12.2" stroke="#db61a2" stroke-width="1.5" opacity="0.8"/>
+      <path d="M31.1,16.1 L28.6,15.6 L26.7,15.1 L25.0,14.6 L23.7,14.1 L22.5,13.5 L21.5,13.0 L20.7,12.6 L19.9,12.3 L19.2,12.2" stroke="#a371f7" stroke-width="1.4" opacity="0.8"/>
+      <path d="M43.1,16.1 L40.0,15.6 L37.5,15.1 L35.6,14.7 L34.0,14.3 L32.6,13.9 L31.4,13.6 L30.2,13.2 L29.1,12.9 L28.0,12.6 L27.1,12.4 L26.0,12.2" stroke="#f0883e" stroke-width="1.6"/>
+      <path d="M26.0,46.0 L25.8,41.6 L25.6,37.5 L25.4,33.7 L25.2,30.2 L25.0,26.9 L24.8,24.0 L24.6,21.5 L24.4,19.3 L24.3,17.3 L24.3,15.7 L24.3,14.4 L24.5,13.4 L24.8,12.7 L25.4,12.3 L26.0,12.2" stroke="#d29922" stroke-width="2"/>
+    </svg>
+    <div class="card-body">
+      <h3>Handling diagram construction</h3>
+      <p>The branches from the normalized axle characteristics: at each level ã<sub>y</sub>/g, the pairs of points on the two curves and their Δα = α<sub>1</sub> − α<sub>2</sub>. Axle data as Magic Formula or as curve quantities (slope at the origin, peak, asymptote).</p>
+    </div>
+  </a>
+
+  <!-- Gradiente di sottosterzo locale -->
+  <a class="card" href="handling_steering.html">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="4" y1="46" x2="48" y2="46" stroke="#8b949e" stroke-width="1.2"/>
+      <line x1="26" y1="4" x2="26" y2="46" stroke="#8b949e" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <!-- primary branch: understeer below the neutral point, oversteer above -->
+      <path d="M26.0,46.0 L25.8,41.6 L25.6,37.5 L25.4,33.7 L25.2,30.2 L25.0,26.9 L24.8,24.0 L24.6,21.5 L24.4,19.3 L24.3,17.3 L24.3,15.7" stroke="#3fb950" stroke-width="2"/>
+      <path d="M24.3,15.7 L24.3,14.4 L24.5,13.4 L24.8,12.7 L25.4,12.3 L26.0,12.2" stroke="#f85149" stroke-width="2"/>
+      <path d="M43.1,16.1 L40.0,15.6 L37.5,15.1 L35.6,14.7 L34.0,14.3 L32.6,13.9 L31.4,13.6 L30.2,13.2 L29.1,12.9 L28.0,12.6 L27.1,12.4 L26.0,12.2" stroke="#f85149" stroke-width="1.6"/>
+      <!-- vertical tangent: K = 0 -->
+      <line x1="24.3" y1="8" x2="24.3" y2="23" stroke="#d29922" stroke-width="1" stroke-dasharray="2 2"/>
+      <circle cx="24.3" cy="15.7" r="2.2" fill="#d29922"/>
+      <!-- tangent to a branch: its slope is g K -->
+      <line x1="27" y1="12.4" x2="41" y2="16.3" stroke="#c9d1d9" stroke-width="1.2"/>
+      <circle cx="33.1" cy="14.1" r="1.8" fill="#c9d1d9"/>
+    </svg>
+    <div class="card-body">
+      <h3>Local understeer gradient</h3>
+      <p>K<sub>γ</sub> along the branches, g K<sub>γ</sub> = W<sub>1</sub>/Φ<sub>1</sub> − W<sub>2</sub>/Φ<sub>2</sub>: where the vehicle understeers and where it oversteers, with the tangents to the axle characteristics and to the branches.</p>
+    </div>
+  </a>
+
+  <!-- Equilibri e stabilita' -->
+  <a class="card" href="handling_equilibrium.html">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="4" y1="46" x2="48" y2="46" stroke="#8b949e" stroke-width="1.2"/>
+      <line x1="26" y1="4" x2="26" y2="46" stroke="#8b949e" stroke-width="1" stroke-dasharray="3 2.5"/>
+      <path d="M43.1,16.1 L40.0,15.6 L37.5,15.1 L35.6,14.7 L34.0,14.3 L32.6,13.9 L31.4,13.6 L30.2,13.2 L29.1,12.9 L28.0,12.6 L27.1,12.4 L26.0,12.2" stroke="#f0883e" stroke-width="1.6"/>
+      <path d="M26.0,46.0 L25.8,41.6 L25.6,37.5 L25.4,33.7 L25.2,30.2 L25.0,26.9 L24.8,24.0 L24.6,21.5 L24.4,19.3 L24.3,17.3 L24.3,15.7 L24.3,14.4 L24.5,13.4 L24.8,12.7 L25.4,12.3 L26.0,12.2" stroke="#d29922" stroke-width="2"/>
+      <!-- the input line and the equilibria it cuts: stable (green) and unstable (red) -->
+      <line x1="22.7" y1="46" x2="27.5" y2="6" stroke="#e6edf3" stroke-width="1.3"/>
+      <circle cx="25.0" cy="28.2" r="3.4" stroke="#3fb950" stroke-width="1.8"/>
+      <circle cx="27.0" cy="12.4" r="3.4" stroke="#f85149" stroke-width="1.8"/>
+      <circle cx="22.7" cy="46" r="1.8" fill="#e6edf3"/>
+    </svg>
+    <div class="card-body">
+      <h3>Equilibria and stability</h3>
+      <p>Steady-state equilibria as intersections of the branches with the input line set by speed and steering angle, their stability, and the graphical reading of l/R.</p>
+    </div>
+  </a>
+
+</div>
+
+<p class="epigraph"><em>What I cannot create, I do not understand.</em> <cite>— Richard Feynman</cite></p>
+
+<footer>
+  Created by <a href="https://marcogabiccini.github.io/">Marco Gabiccini</a> — with a little help from Claude.
+</footer>
+
+</body>
+</html>

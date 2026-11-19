@@ -228,7 +228,8 @@ canvas.grafico { width: 100%; height: 200px; background: rgba(0,0,0,.25); border
       <div class="card-testa"><i></i>Quadrilatero articolato <span>trapezio di Jeantaud</span></div>
       <div class="card-corpo">
         <div class="note">Due bracci solidali ai fusi e una barra di accoppiamento rigida fra le loro punte.
-          Il volante comanda il fuso sinistro: &delta;<sub>11</sub> = &tau;<sub>1</sub>&delta;<sub>v</sub>.</div>
+          Il volante comanda l'angolo dell'assale, la media delle due ruote: &delta;<sub>1</sub> = &tau;<sub>1</sub>&delta;<sub>v</sub>.
+          Cos&igrave; la sterzata &egrave; speculare a destra e a sinistra; un comando su un fuso solo darebbe, a pari volante, angoli diversi nei due versi.</div>
         <div class="seg" id="q-lato">
           <button data-v="-1" class="on">barra dietro l'assale</button>
           <button data-v="1">barra davanti</button>
@@ -536,12 +537,21 @@ const Modello = {
   // configurazione del meccanismo per un dato volante (per continuita', a piccoli passi)
   configurazione(g, dv, tau) {
     if (g.tipo === 'quad') {
-      const dIn = tau * dv * D2R, n = Math.max(1, Math.ceil(Math.abs(dIn) / (0.5 * D2R)));
+      // il volante comanda l'angolo dell'assale, la media delle due ruote: delta_1 = tau_1 delta_v
+      // (slide fr:stlegge). Il quadrilatero e' simmetrico, quindi la sterzata e' speculare:
+      // delta_11(delta_v) = -delta_12(-delta_v). Il fuso sinistro si trova a piccoli passi, con le secanti
+      const mObj = tau * dv * D2R, n = Math.max(1, Math.ceil(Math.abs(mObj) / (0.5 * D2R)));
+      const media = r => 0.5 * (r.dL + r.dR);
       let ok = this.quad(g, 0, 0), blocco = false;
-      for (let i = 1; i <= n; i++) {
-        const r = this.quad(g, dIn * i / n, ok.dR);
-        if (!r || Math.abs(r.dR - ok.dR) > 8 * D2R) { blocco = true; break; }
-        ok = r;
+      for (let i = 1; i <= n && !blocco; i++) {
+        const m = mObj * i / n;
+        const prova = dL => { const r = this.quad(g, dL, ok.dR); return r && Math.abs(r.dR - ok.dR) <= 8 * D2R ? r : null; };
+        let x0 = ok.dL, r0 = ok, x1 = ok.dL + (m - media(ok)), r1 = prova(x1);
+        for (let k = 0; k < 40 && r1 && Math.abs(media(r1) - m) > 1e-13; k++) {
+          const f0 = media(r0) - m, f1 = media(r1) - m, x2 = x1 - f1 * (x1 - x0) / (f1 - f0 || 1e-15);
+          x0 = x1; r0 = r1; x1 = x2; r1 = prova(x1);
+        }
+        if (!r1 || Math.abs(media(r1) - m) > 1e-9) blocco = true; else ok = r1;
       }
       return { ...ok, blocco };
     }
@@ -914,12 +924,9 @@ const Meccanismo = {
       testoPx(T.g, `γ₀ = ${(geo.g0 * R2D).toFixed(1)}°`, X - (rg + 16) * Math.sin(am), Y - (rg + 16) * Math.cos(am),
         COL.arm, 'center', 'middle', 12, true);
     }
-    // comando del quadrilatero sul fuso sinistro
-    if (geo.tipo === 'quad') {
-      const [X, Y] = T.P(...KL);
-      arcoPx(T.g, X, Y, -2.2, -0.4, 17, COL.mecc, 2);
-      T.testo('comando: δ₁₁ = τ₁δᵥ', [KL[0] - 0.42, KL[1] + this.E], COL.mecc, 'center', 'top', 11, true);
-    }
+    // comando del quadrilatero: l'angolo medio delle due ruote
+    if (geo.tipo === 'quad')
+      T.testo('comando: δ₁ = (δ₁₁ + δ₁₂)/2 = τ₁δᵥ', [KL[0] - 0.42, KL[1] + this.E], COL.mecc, 'center', 'top', 11, true);
     // etichette
     const meta = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
     T.testo('braccio b', meta(KR, cfg.TR), COL.arm, 'right', 'middle', 11, true, -10, 0);
@@ -1177,7 +1184,7 @@ const Pannello = {
     $('verso').textContent = m > 1e-9 ? 'sinistra (interna la 11)' : m < -1e-9 ? 'destra (interna la 12)' : '— (rettilineo)';
     const g = x => fmt(x * R2D, 2, '°');
     let ingresso = st.tipo === 'quad'
-      ? `<tr class="sep"><td>ingresso: &delta;<sub>11</sub> = &tau;<sub>1</sub>&delta;<sub>v</sub></td><td colspan="3" style="text-align:center">${fmt(tau() * st.dv, 2, '°')}</td></tr>`
+      ? `<tr class="sep"><td>ingresso: &delta;<sub>1</sub> = &tau;<sub>1</sub>&delta;<sub>v</sub></td><td colspan="3" style="text-align:center">${fmt(tau() * st.dv, 2, '°')}</td></tr>`
       : `<tr class="sep"><td>corsa della cremagliera s</td><td colspan="3" style="text-align:center">${fmt(cfg.s * 1000, 1, ' mm')}</td></tr>
          <tr><td>rotazione del pignone = &delta;<sub>v</sub></td><td colspan="3" style="text-align:center">${fmt(st.dv, 0, '°')}</td></tr>`;
     $('tab-angoli').innerHTML = `
@@ -1451,7 +1458,7 @@ const Comandi = {
     $('dv-lett').textContent = `${st.dv.toFixed(0)}°`;
     $('dm-lett').textContent = `${(m * R2D).toFixed(2)}°`;
     $('ingresso-lett').innerHTML = st.tipo === 'quad'
-      ? `&delta;<sub>11</sub> = &tau;<sub>1</sub>&delta;<sub>v</sub>, &tau;<sub>1</sub> = 1/${st.N.toFixed(1).replace('.0', '')}`
+      ? `&delta;<sub>1</sub> = &tau;<sub>1</sub>&delta;<sub>v</sub>, &tau;<sub>1</sub> = 1/${st.N.toFixed(1).replace('.0', '')}`
       : `s = ${(CFG.s * 1000).toFixed(1)} mm, &tau;<sub>1</sub> = 1/${st.N.toFixed(1).replace('.0', '')}`;
     // legenda del meccanismo
     $('mecc-leg').innerHTML = `

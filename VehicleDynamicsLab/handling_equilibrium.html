@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Handling Diagram — Equilibri e Stabilità</title>
+<!-- Widget didattico dei blocchi 10-12: gli equilibri di regime come intersezioni
+     dell'handling diagram (curva fissa, dal veicolo) con la retta "ballerina"
+     a~_y/g = u^2/(g l) (delta - Delta alpha), che si sposta con gli ingressi u e delta.
+     Asse Delta alpha positivo verso SINISTRA, l/R verso destra (come nel deck).
+     Per ogni equilibrio: K_gamma locale = (W1/Phi1 - W2/Phi2)/g e stabilita' dalla
+     Jacobiana del monotraccia, p = tr A, q = det A, Delta = p^2 - 4q (blocco 12).
+     A richiesta la lettura grafica di l/R della slide fr:letturalR: parallela alla
+     retta per l'origine, con delta, Delta alpha e l/R. Le caratteristiche degli assali
+     si danno con la Magic Formula (B, C, D, E) o con le grandezze della curva
+     (y'(0), y_m, x_m, y_a); tre casi: Under 1, Under 2, Over.
+     Stessa struttura di handling_diagram.html e handling_steering.html: le parti
+     comuni (stile, parametri, modello, disegno degli assi, help) sono identiche
+     nei tre file. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root {
+  --bg: #1a1a2e; --panel: #16213e; --accent: #0f3460; --text: #e0e0e0; --muted: #9aa6b8;
+  --hl: #e94560; --dato: #ffd98a; --front: #e94560; --rear: #00b4d8; --cur: #06d6a0;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text);
+  display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* === In alto: i due grafici === */
+#canvas-strip { flex: 1 1 0%; min-height: 170px; display: flex; align-items: center; justify-content: center;
+  padding: 6px; overflow: hidden; position: relative; }
+canvas#main-canvas { background: #0d1117; border-radius: 8px; display: block; }
+.aiuto-b { position: absolute; z-index: 5; width: 22px; height: 20px; padding: 0; background: #1d2d52;
+  border: 1px solid #4a5a80; color: #dde; border-radius: 4px; font-weight: 700; font-size: .8em; cursor: pointer; }
+.aiuto-b:hover, .aiuto-b.on, .aiuto-p:hover, .aiuto-p.on { background: var(--hl); border-color: var(--hl); color: #fff; }
+/* "?" dei pannelli, nella riga del titolo della sezione */
+.aiuto-p { float: right; width: 18px; height: 16px; padding: 0; margin: -1px 0 0 6px; background: #1d2d52; border: 1px solid #4a5a80;
+  color: #dde; border-radius: 4px; font-weight: 700; font-size: 11px; line-height: 13px; cursor: pointer; letter-spacing: 0; }
+
+/* === Divisore: trascina per ridimensionare, doppio clic per chiudere/aprire i pannelli === */
+#h-splitter { flex: 0 0 7px; background: var(--accent); cursor: row-resize; display: flex; align-items: center;
+  justify-content: center; user-select: none; transition: background .15s; }
+#h-splitter:hover, #h-splitter.active { background: var(--hl); }
+#h-splitter::after { content: ''; width: 40px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.35); }
+
+/* === In basso: tre pannelli affiancati, ciascuno scorre da se' === */
+#bottom-strip { flex: 0 0 290px; min-height: 0; display: grid; overflow: hidden; background: var(--panel);
+  grid-template-columns: minmax(280px, 1.1fr) minmax(260px, 1fr) minmax(260px, 1fr); }
+#bottom-strip.chiuso { flex-basis: 0 !important; }
+.panel { padding: 8px 10px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 7px; min-height: 0; }
+.panel + .panel { border-left: 2px solid var(--accent); }
+@media (max-width: 880px) {
+  #bottom-strip { grid-template-columns: 1fr; grid-auto-rows: max-content; overflow-y: auto; }
+  .panel { overflow: visible; min-height: auto; }
+  .panel + .panel { border-left: none; border-top: 2px solid var(--accent); }
+}
+.titolo { text-align: center; line-height: 1.25; }
+.titolo .t1 { font-size: 1em; font-weight: 700; color: var(--hl); }
+.titolo .t2 { font-size: .72em; color: #bbb; }
+.titolo .t3 { font-size: .52em; color: #666; }
+.section { background: var(--accent); border-radius: 8px; padding: 6px 9px 7px; }
+.section-title { font-size: .66em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #aab; margin-bottom: 5px; }
+.note { font-size: .74em; color: var(--muted); line-height: 1.45; }
+.note b { color: #dfe6f5; }
+.note + .note { margin-top: 3px; }
+.seg { display: flex; border-radius: 6px; overflow: hidden; border: 1px solid #4a5a80; margin: 1px 0 6px; }
+.seg button { flex: 1; border: none; border-right: 1px solid #4a5a80; background: #1d2d52; color: #dde;
+  font-size: .78em; font-weight: 600; padding: 5px 6px; cursor: pointer; }
+.seg button:last-child { border-right: none; }
+.seg button.on { background: var(--hl); color: #fff; }
+.riga { display: flex; align-items: center; gap: 6px; font-size: .8em; margin: 2px 0 4px; }
+.riga input[type=range] { flex: 1; min-width: 0; accent-color: var(--cur); }
+.riga .val { flex: 0 0 46px; text-align: right; font-family: Consolas, monospace; color: var(--dato); }
+.riga .lab { flex: 0 0 auto; min-width: 50px; }
+.btn { background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 5px; font-size: .95em;
+  padding: 2px 9px; cursor: pointer; line-height: 1.35; }
+.btn:hover { border-color: var(--hl); }
+.btn.on { background: var(--hl); border-color: var(--hl); color: #fff; }
+.chk { font-size: .76em; display: flex; align-items: flex-start; gap: 6px; margin: 3px 0; cursor: pointer; color: #cfd6e4; line-height: 1.35; }
+.chk input { accent-color: var(--hl); margin-top: 2px; }
+table.tab { width: 100%; border-collapse: collapse; font-size: .76em; }
+table.tab th, table.tab td { padding: 2px 5px; text-align: right; white-space: nowrap; }
+table.tab th { color: #aab; font-weight: 600; border-bottom: 1px solid #2c3a5e; }
+table.tab td:first-child, table.tab th:first-child { text-align: left; }
+table.tab td.v { font-family: Consolas, monospace; color: var(--dato); }
+table.tab td.r { text-align: left; color: var(--muted); }
+table.tab tr.assente td, table.tab tr.assente td.v { color: #56607a; }
+table.tab tr.click { cursor: pointer; }
+table.tab tr.click:hover td { background: rgba(255,255,255,.04); }
+table.tab tr.sel td { background: rgba(255,217,138,.09); }
+table.tab + .note { margin-top: 4px; }
+.sw { display: inline-block; width: 16px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: 5px; }
+.sw.tr { border-top-style: dashed; }
+.pal { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: middle; margin-right: 5px; }
+.leg { font-size: .74em; color: #cfd6e4; line-height: 1.6; }
+#avviso { font-size: .74em; color: #ffb4a8; line-height: 1.4; margin-top: 4px; }
+#avviso:empty { display: none; }
+details.grp { background: var(--accent); border-radius: 8px; padding: 5px 9px; }
+details.grp summary { cursor: pointer; font-size: .66em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: #aab; list-style: none; display: flex; justify-content: space-between; user-select: none; }
+details.grp summary::-webkit-details-marker { display: none; }
+details.grp summary::after { content: '\25BE'; transition: transform .2s; }
+details.grp:not([open]) summary::after { transform: rotate(-90deg); }
+details.grp[open] summary { margin-bottom: 5px; }
+details.grp.front summary { color: var(--front); }
+details.grp.rear summary { color: var(--rear); }
+.param-row { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
+.param-row label { flex: 0 0 84px; font-size: .76em; text-align: right; }
+.param-row input[type=range] { flex: 1; min-width: 0; accent-color: var(--hl); }
+.param-row .val { flex: 0 0 50px; font-size: .72em; font-family: monospace; color: #ccc; text-align: right; white-space: nowrap; }
+.label-front { color: var(--front); } .label-rear { color: var(--rear); }
+/* le due parametrizzazioni della caratteristica: si vede una sola serie di cursori */
+.par-curva { display: none; }
+body.curva .par-mf { display: none; }
+body.curva .par-curva { display: block; }
+.altra { font-size: .7em; color: var(--muted); line-height: 1.4; margin: 3px 0 1px; padding-top: 3px; border-top: 1px dashed #2c3a5e; }
+.altra b { color: #cfd6e4; font-weight: 600; }
+#formula-render { text-align: center; }
+#formula-render .katex { font-size: .74em; }
+
+/* === Help: scheda a richiesta, si sposta trascinandone la testata === */
+#aiuto { position: fixed; z-index: 40; display: none; flex-direction: column; background: #111a33; border: 1px solid #4a5a80;
+  border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,.65); }
+#aiuto.on { display: flex; }
+#aiuto .testa { display: flex; align-items: center; gap: 10px; padding: 8px 10px 7px 14px; border-bottom: 1px solid #2c3a5e; cursor: move; }
+#aiuto .testa .t { flex: 1; font-size: .84em; font-weight: 700; color: #fff; }
+#aiuto .testa button { background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 5px; font-size: .8em; padding: 1px 8px; cursor: pointer; }
+#aiuto .testa button:hover { border-color: var(--hl); }
+#aiuto .corpo { overflow-y: auto; padding: 4px 16px 12px; font-size: .8em; color: #c3ccdd; line-height: 1.5; }
+#aiuto h4 { font-size: 1em; color: #fff; margin: 11px 0 3px; }
+#aiuto h4 .n { color: var(--dato); margin-right: 5px; }
+#aiuto p { margin: 0 0 5px; }
+#aiuto b { color: #fff; }
+#aiuto ul { margin: 2px 0 6px 18px; }
+#aiuto li { margin: 2px 0; }
+#aiuto .sw { width: 18px; border-top-width: 2.5px; }
+#aiuto .adesso { background: rgba(255,217,138,.07); border: 1px solid rgba(255,217,138,.25); border-radius: 6px; padding: 5px 9px; margin: 8px 0 2px; }
+#aiuto .adesso:empty { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ========= In alto: caratteristiche (sinistra) e handling diagram con la retta (destra) ========= -->
+<div id="canvas-strip">
+  <canvas id="main-canvas"></canvas>
+  <button class="aiuto-b" data-aiuto="car" title="che cosa si vede in questo grafico">?</button>
+  <button class="aiuto-b" data-aiuto="hd" title="che cosa si vede in questo grafico">?</button>
+</div>
+
+<div id="h-splitter" title="trascina per ridimensionare · doppio clic: chiudi o riapri i pannelli"></div>
+
+<!-- ========= In basso: ingressi | equilibri | parametri ========= -->
+<div id="bottom-strip">
+
+  <div class="panel" id="p-ingressi">
+    <div class="titolo">
+      <div class="t1">Equilibri e stabilit&agrave;</div>
+      <div class="t2">Prof. M. Gabiccini &mdash; Dinamica del Veicolo</div>
+      <div class="t3">&copy; 2026 Tutti i diritti riservati</div>
+    </div>
+    <div class="section">
+      <div class="section-title">Caso</div>
+      <div class="seg" id="seg-caso">
+        <button data-caso="under1" class="on">Under 1</button>
+        <button data-caso="under2">Under 2</button>
+        <button data-caso="over">Over</button>
+      </div>
+      <div class="note" id="caso-tipo"></div>
+      <div class="note" id="caso-picchi"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Ingressi: la retta &laquo;ballerina&raquo;<button class="aiuto-p" data-aiuto="ing" title="come si muove la retta, come si legge l/R">?</button></div>
+      <div id="retta-formula" style="text-align:center;font-size:.8em;margin:1px 0 3px"></div>
+      <div class="riga"><span class="lab">&delta; (&deg;)</span><input type="range" id="delta-slider" min="0" max="20" value="3" step="0.1"><span class="val" id="delta-val">3.0</span></div>
+      <div class="riga"><span class="lab">u (m/s)</span><input type="range" id="u-slider" min="0" max="70" value="20" step="0.5"><span class="val" id="u-val">20.0</span></div>
+      <div class="note" id="retta-info"></div>
+      <label class="chk"><input type="checkbox" id="chk-lettura">
+        <span>lettura di l/R: la parallela alla retta per l'origine (tratteggiata), con &delta;, &Delta;&alpha; e l/R</span></label>
+      <label class="chk"><input type="checkbox" id="chk-stab" checked>
+        <span>banda di stabilit&agrave; sotto i rami (dipende da u e J<sub>z</sub>)</span></label>
+      <label class="chk"><input type="checkbox" id="chk-kg" checked>
+        <span>rami colorati con il segno di K<sub>&gamma;</sub> locale (se no, un colore per ramo)</span></label>
+      <label class="chk"><input type="checkbox" id="chk-punti" checked>
+        <span>sulle caratteristiche: i punti dell'equilibrio scelto e la loro &Delta;&alpha;</span></label>
+    </div>
+  </div>
+
+  <div class="panel" id="p-equi">
+    <div class="section">
+      <div class="section-title">Equilibri<button class="aiuto-p" data-aiuto="equi" title="come si classifica un equilibrio">?</button></div>
+      <table class="tab" id="tab-eq"></table>
+      <div class="note" id="eq-nota"></div>
+    </div>
+    <div class="section" style="flex:1">
+      <div class="section-title" id="scelto-titolo">Equilibrio scelto</div>
+      <div id="eq-scelto"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Legenda</div>
+      <div class="leg">
+        <span class="sw" style="border-color:#06d6a0"></span>K<sub>&gamma;</sub> &gt; 0 sotto &nbsp;
+        <span class="sw" style="border-color:#ffdd57"></span>&asymp; 0 neutro &nbsp;
+        <span class="sw" style="border-color:#ff4d6d"></span>&lt; 0 sovra<br>
+        <span class="sw" style="border-color:rgba(6,214,160,.45);border-top-width:8px"></span>stabile &nbsp;
+        <span class="sw" style="border-color:rgba(255,77,109,.45);border-top-width:8px"></span>instabile (banda)<br>
+        equilibrio: anello = stabilit&agrave;, punto = segno di K<sub>&gamma;</sub>
+      </div>
+    </div>
+  </div>
+  <div class="panel" id="p-param">
+    <div class="section">
+      <div class="section-title">Caratteristiche degli assali<button class="aiuto-p" data-aiuto="par" title="le due parametrizzazioni">?</button></div>
+      <div class="seg" id="seg-param">
+        <button data-par="mf" class="on" title="i quattro coefficienti della formula">Magic Formula</button>
+        <button data-par="curva" title="pendenza nell'origine, picco, asintoto">Grandezze della curva</button>
+      </div>
+      <div class="note" id="par-nota"></div>
+      <label class="chk"><input type="checkbox" id="chk-grandezze">
+        <span>sul grafico: pendenza y'(0), picco (x<sub>m</sub>, y<sub>m</sub>), asintoto y<sub>a</sub></span></label>
+    </div>
+    <details class="grp front" open><summary>Assale 1 (anteriore)</summary><div id="ass1"></div></details>
+    <details class="grp rear" open><summary>Assale 2 (posteriore)</summary><div id="ass2"></div></details>
+    <details class="grp"><summary>Veicolo</summary><div id="veicolo"></div><div class="note" id="carichi"></div></details>
+    <details class="grp"><summary>Formule e rigidezze</summary><div id="formula-render"></div><div class="note" id="rigidezze"></div></details>
+    <div><button class="btn" id="b-ripristina" title="rimette i parametri del caso scelto">ripristina il caso</button></div>
+  </div>
+</div>
+
+<!-- ========= Help ========= -->
+<div id="aiuto"><div class="testa" title="trascina per spostare"><span class="t"></span><button class="x" title="chiudi (Esc)">&#10005;</button></div><div class="corpo"></div></div>
+
+<template id="aiuto-par" data-titolo="Due modi di dare la stessa caratteristica">
+<h4><span class="n">1</span>La Magic Formula</h4>
+<p>Ogni assale ha la sua caratteristica $F_{yi}(\alpha_i) = D\sin\bigl(C\arctan(B\alpha - E(B\alpha - \arctan B\alpha))\bigr)$.
+I quattro coefficienti hanno un nome (rigidezza $B$, forma $C$, picco $D$, curvatura $E$), ma tranne $D$ non si leggono sulla curva.</p>
+<h4><span class="n">2</span>Le grandezze della curva</h4>
+<p>Le stesse caratteristiche si possono dare con quattro grandezze che <b>si vedono</b> sul grafico:</p>
+<ul>
+<li>$y'(0)$: la pendenza nell'origine, cio&egrave; la rigidezza di deriva dell'assale;</li>
+<li>$y_m$: il valore di picco, raggiunto alla deriva $x_m$;</li>
+<li>$y_a$: il valore a cui la curva tende per derive grandi (asintoto).</li>
+</ul>
+<p>Con il bottone &laquo;Grandezze della curva&raquo; i cursori diventano questi quattro; la riga sotto i cursori d&agrave; sempre i valori dell'altra parametrizzazione.</p>
+<h4><span class="n">3</span>Il dizionario</h4>
+<p>Dai coefficienti alla curva: $y'(0) = BCD$, $y_m = D$, $y_a = D\sin(C\pi/2)$; $x_m$ &egrave; dove $C\arctan(\ldots) = \pi/2$.</p>
+<p>Dalla curva ai coefficienti: $D = y_m$, $C = 2 - \frac{2}{\pi}\arcsin\frac{y_a}{y_m}$, $B = \frac{y'(0)}{C\,D}$, $E = \frac{B x_m - \tan\frac{\pi}{2C}}{B x_m - \arctan B x_m}$.</p>
+<p>$E$ non entra in $y'(0)$ n&eacute; in $y_a$: sposta il picco e decide quanto &egrave; arrotondato il ginocchio.</p>
+<h4><span class="n">4</span>I limiti</h4>
+<p>Il dizionario vale se la curva ha un picco: $y_a &lt; y_m$ (cio&egrave; $1 &lt; C &lt; 3$) ed $E &lt; 1$. Per questo il cursore di $y_a$ va da $-0.6\,y_m$ a $0.99\,y_m$, e quello di $x_m$ si restringe da solo all'intervallo in cui $E$ resta fra $-1 - C^2/2$ e $0.98$.
+Sotto $-1 - C^2/2$ la curva partirebbe convessa, sopra la sua tangente nell'origine: un picco troppo vicino all'origine, a parit&agrave; di pendenza, chiede proprio questo.</p>
+<h4><span class="n">5</span>Che cosa non &egrave;</h4>
+<p>Non &egrave; un altro modello: la curva &egrave; la stessa, cambia solo che cosa si tiene fermo quando si muove un cursore.
+Con le grandezze della curva, muovere $y_m$ a $y_a$ fermo cambia anche $C$, $B$ ed $E$; l'asintoto si raggiunge per $\alpha \to \infty$, oltre i 20&deg; del grafico.</p>
+</template>
+
+<template id="aiuto-car" data-titolo="Caratteristiche normalizzate degli assali">
+<h4><span class="n">1</span>Che cosa si vede</h4>
+<p>Per ogni assale la forza laterale divisa per il suo carico statico, $F_{yi}/W_i$, in funzione della deriva $\alpha_i$:
+<span class="sw" style="border-color:#e94560"></span>assale 1 (anteriore), <span class="sw" style="border-color:#00b4d8"></span>assale 2 (posteriore), con $W_1 = mg\,a_2/l$ e $W_2 = mg\,a_1/l$.
+A regime $F_{y1}/W_1 = F_{y2}/W_2 = \tilde a_y/g$: i due assali lavorano alla stessa quota.</p>
+<h4><span class="n">2</span>L'equilibrio scelto</h4>
+<p>Alla quota $\tilde a_y/g$ dell'equilibrio scelto (tabella &laquo;Equilibri&raquo;, o clic sul grafico a destra) si vedono i due punti che lo compongono, uno per curva,
+e la freccia dalla deriva dell'assale 2 a quella dell'assale 1: &egrave; la sua $\Delta\alpha = \alpha_1 - \alpha_2$, la stessa ascissa che ha nell'handling diagram.</p>
+<p>La pendenza della curva in quei punti &egrave; la rigidezza di deriva locale $\Phi_i = dF_{yi}/d\alpha_i$: decide sia $K_\gamma$ locale sia la stabilit&agrave;.
+Sul tratto calante (punti $Q$) $\Phi_i &lt; 0$.</p>
+<h4><span class="n">3</span>Le grandezze della curva</h4>
+<p>Con la casella del pannello dei parametri compaiono, per ogni assale: la tangente nell'origine (pendenza $y'(0)$, la rigidezza di deriva), il picco $(x_m, y_m)$ e l'asintoto $y_a$, tutti divisi per $W_i$.</p>
+<h4><span class="n">4</span>Che cosa non &egrave;</h4>
+<p>Le curve non dipendono da $u$ n&eacute; da $\delta$: muovendo gli ingressi cambia solo la quota a cui si lavora, non le curve.</p>
+</template>
+
+<template id="aiuto-hd" data-titolo="Equilibri sull'handling diagram">
+<h4><span class="n">1</span>Che cosa si vede</h4>
+<p>I rami dell'handling diagram (la curva fissa, dal veicolo) e la <b>retta</b> $\tilde a_y/g = \frac{u^2}{g\,l}(\delta - \Delta\alpha)$, che si sposta con gli ingressi.
+Ogni intersezione &egrave; un <b>equilibrio di regime</b>, numerato dal basso: anello = stabilit&agrave;, punto = segno di $K_\gamma$ locale.
+Accanto a ogni equilibrio, il numero e il tipo (verde se stabile, rosso se instabile); quello scelto &egrave; in grassetto.</p>
+<h4><span class="n">2</span>L'asse orizzontale</h4>
+<p>$\Delta\alpha = \alpha_1 - \alpha_2$ &egrave; positivo <b>verso sinistra</b>: cos&igrave; la retta sale verso destra con pendenza $u^2/(g\,l)$ e taglia l'asse in $\Delta\alpha = \delta$.
+Verso destra si legge $l/R$: sulla scala delle tacche (che &egrave; quella di $\Delta\alpha$) un punto a destra dell'origine si legge come $-l/R$.</p>
+<h4><span class="n">3</span>I colori dei rami</h4>
+<ul>
+<li>linea sottile: <span class="sw" style="border-color:#06d6a0"></span>$K_\gamma &gt; 0$ (il ramo sale piegando a sinistra), <span class="sw" style="border-color:#ffdd57"></span>$K_\gamma \approx 0$, <span class="sw" style="border-color:#ff4d6d"></span>$K_\gamma &lt; 0$;</li>
+<li>banda larga: <span class="sw" style="border-color:rgba(6,214,160,.45);border-top-width:8px"></span>stabile, <span class="sw" style="border-color:rgba(255,77,109,.45);border-top-width:8px"></span>instabile, alla velocit&agrave; $u$ e con il $J_z$ scelti.</li>
+</ul>
+<p>$K_\gamma$ locale &egrave; una propriet&agrave; del ramo; la stabilit&agrave; no: la banda cambia con $u$, i colori della linea no.</p>
+<h4><span class="n">4</span>La lettura di $l/R$</h4>
+<p>Con la casella &laquo;lettura di l/R&raquo; compare la parallela alla retta per l'origine (tratteggiata). Alla quota dell'equilibrio scelto le due rette distano in orizzontale proprio $\delta$;
+il piede della tratteggiata d&agrave; $l/R = \delta - \Delta\alpha$. Sotto l'asse: la freccia $\Delta\alpha$ dall'origine al piede dell'equilibrio, la freccia $l/R$ dall'origine al piede della tratteggiata, e $\delta$ dall'intercetta all'origine.</p>
+<h4><span class="n">5</span>Che cosa non &egrave;</h4>
+<p>Non &egrave; una traiettoria nel tempo: ogni punto &egrave; un moto in curva a regime. Spostare la retta non &laquo;muove&raquo; il veicolo lungo il ramo: dice dove sono, per quegli ingressi, gli stati di regime possibili.</p>
+<div class="adesso" id="aiuto-adesso"></div>
+</template>
+
+<template id="aiuto-ing" data-titolo="Gli ingressi e la retta">
+<h4><span class="n">1</span>Da dove viene la retta</h4>
+<p>A regime la cinematica d&agrave; $l/R = \delta - \Delta\alpha$ e l'accelerazione laterale &egrave; $\tilde a_y = u^2/R$. Moltiplicando per $u^2/(g\,l)$:
+$\tilde a_y/g = \frac{u^2}{g\,l}(\delta - \Delta\alpha)$. Dipende solo dagli ingressi $u$ e $\delta$, non dal veicolo (salvo il passo $l$).</p>
+<h4><span class="n">2</span>Come si muove</h4>
+<ul>
+<li>$\delta$ sposta l'<b>intercetta</b> sull'asse: la retta trasla in orizzontale;</li>
+<li>$u$ cambia la <b>pendenza</b> $u^2/(g\,l)$: la retta ruota attorno all'intercetta. A $u$ piccola &egrave; quasi orizzontale, a $u$ grande quasi verticale.</li>
+</ul>
+<h4><span class="n">3</span>La lettura di $l/R$ (slide &laquo;Lettura grafica di l/R&raquo;)</h4>
+<p>Si traccia la parallela alla retta passante per l'origine. Alla quota $\tilde a_y^*/g$ dell'equilibrio la distanza orizzontale fra le due rette &egrave; $\delta$; il piede della parallela dista dall'origine $l/R = \delta - \Delta\alpha^*$.
+Sulla scala delle tacche il piede cade a $-l/R$: verso destra si legge $l/R$, con il segno cambiato rispetto a $\Delta\alpha$.</p>
+<p>Il pannello &laquo;Equilibrio scelto&raquo; controlla il conto in due modi: $R = l/(l/R)$ e $R = u^2/\tilde a_y$ devono coincidere.</p>
+<h4><span class="n">4</span>Che cosa non &egrave;</h4>
+<p>$\delta$ qui &egrave; l'angolo di sterzo netto delle ruote, $\delta = \delta_1 - \delta_2$, non l'angolo del volante.</p>
+</template>
+
+<template id="aiuto-equi" data-titolo="Classificare un equilibrio">
+<h4><span class="n">1</span>La tabella</h4>
+<p>Una riga per equilibrio, dal basso verso l'alto: il ramo su cui sta, $\Delta\alpha$, $\tilde a_y/g$, il gradiente locale e il tipo. Un clic sulla riga lo sceglie.</p>
+<h4><span class="n">2</span>Il gradiente di sottosterzo locale</h4>
+<p>$K_\gamma = \frac{m}{l}\,\frac{\Phi_2 a_2 - \Phi_1 a_1}{\Phi_1\Phi_2}$, con $\Phi_i$ le rigidezze di deriva locali. Moltiplicato per $g$ diventa
+$g\,K_\gamma = \frac{W_1}{\Phi_1} - \frac{W_2}{\Phi_2}$: in tabella &egrave; in gradi per $g$, come la pendenza iniziale del ramo primario.</p>
+<h4><span class="n">3</span>La stabilit&agrave;</h4>
+<p>Dalla Jacobiana $A$ del monotraccia nell'equilibrio: $p = \mathrm{tr}\,A = -\frac{1}{u}\Bigl(\frac{\Phi_1 + \Phi_2}{m} + \frac{a_1^2\Phi_1 + a_2^2\Phi_2}{J_z}\Bigr)$,
+$q = \det A = \frac{\Phi_1\Phi_2\,l^2}{m J_z u^2} + \frac{a_2\Phi_2 - a_1\Phi_1}{J_z}$, $\Delta = p^2 - 4q$.</p>
+<ul>
+<li>$q &lt; 0$: <b>sella</b>, instabile (divergente);</li>
+<li>$p &lt; 0$, $q &gt; 0$: <b>nodo stabile</b> se $\Delta &gt; 0$, <b>spirale stabile</b> se $\Delta &lt; 0$;</li>
+<li>$p &gt; 0$, $q &gt; 0$: nodo o spirale <b>instabile</b>.</li>
+</ul>
+<h4><span class="n">4</span>Che cosa non &egrave;</h4>
+<p>Il segno di $K_\gamma$ non basta a dire se un equilibrio &egrave; stabile: un sovrasterzante &egrave; stabile sotto la velocit&agrave; critica e diventa sella sopra.
+E la stabilit&agrave; &egrave; locale: dice che cosa fanno le piccole perturbazioni, non le grandi.</p>
+<div class="adesso" id="aiuto-adesso"></div>
+</template>
+<script>
+// ===================================================================
+//  Casi, costanti
+// ===================================================================
+const $ = id => document.getElementById(id);
+const PRESETS = {
+  under1: { B1: 6.44, C1: 2.18, D1: 9780, E1: 0.28, B2: 18.75, C2: 1.44, D2: 8660, E2: -0.07 },
+  under2: { B1: 9.86, C1: 1.87, D1: 9778, E1: 0.28, B2: 18.75, C2: 1.53, D2: 9234, E2: 0.30 },
+  over:   { B1: 14.5, C1: 1.89, D1: 9778, E1: 0.29, B2: 13.5,  C2: 1.45, D2: 9234, E2: 0.31 }
+};
+const CASI = { under1: 'Under 1', under2: 'Under 2', over: 'Over' };
+const VEHICLE_DEFAULT = { m: 1938, a1: 1.444, a2: 1.529, Jz: 4063 };
+const G = 9.81, ALPHA_MAX = 20, NS = 4000, DA = ALPHA_MAX / NS;   // campionamento delle curve, in gradi
+const RAD = Math.PI / 180;
+const COL1 = '#e94560', COL2 = '#00b4d8';
+const NOMI1 = ['P₁', 'Q₁'], NOMI2 = ['P₂', 'Q₂'];
+// coppie (indice del punto sull'assale 1, sull'assale 2): ramo e colore
+const PAIRS = [
+  { i: 0, j: 0, nome: 'P₁P₂', col: '#ffdd57', lw: 2.6, ramo: 'primario',   fasi: 'cresc. − cresc.' },
+  { i: 0, j: 1, nome: 'P₁Q₂', col: '#ff9f1c', lw: 2.0, ramo: 'secondario', fasi: 'cresc. − cal.' },
+  { i: 1, j: 0, nome: 'Q₁P₂', col: '#f15bb5', lw: 2.0, ramo: 'secondario', fasi: 'cal. − cresc.' },
+  { i: 1, j: 1, nome: 'Q₁Q₂', col: '#9b5de5', lw: 1.7, ramo: 'secondario', fasi: 'cal. − cal.' },
+];
+const sub = s => s.replace(/([PQ])₁/g, '$1<sub>1</sub>').replace(/([PQ])₂/g, '$1<sub>2</sub>');
+const fmt = d => (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(2) + '°';
+
+// ===================================================================
+//  Fisica: Magic Formula per assale, curve normalizzate campionate una volta per
+//  ogni set di parametri; le intersezioni con una quota si interpolano sui campioni
+// ===================================================================
+function Fy(aR, B, C, D, E) {
+  const Ba = B * aR;
+  return D * Math.sin(C * Math.atan(Ba - E * (Ba - Math.atan(Ba))));
+}
+// rigidezza di deriva locale Phi = dFy/dalpha (N/rad)
+function dFy(aR, B, C, D, E) {
+  const Ba = B * aR, x = Ba - E * (Ba - Math.atan(Ba));
+  return D * Math.cos(C * Math.atan(x)) * C / (1 + x * x) * B * (1 - E + E / (1 + Ba * Ba));
+}
+function campiona(B, C, D, E, W) {
+  const v = new Float64Array(NS + 1);
+  for (let k = 0; k <= NS; k++) v[k] = Fy(k * DA * RAD, B, C, D, E) / W;
+  return v;
+}
+// derive (gradi) in cui la curva campionata vale eta, in ordine di alpha: prima P (salita), poi Q (discesa)
+function incroci(v, eta) {
+  if (eta < 1e-9) return [0];
+  const res = [];
+  for (let k = 1; k <= NS; k++) {
+    const a = v[k - 1] - eta, b = v[k] - eta;
+    if ((a < 0 && b >= 0) || (a > 0 && b <= 0)) res.push((k - 1 + a / (a - b)) * DA);
+  }
+  return res;
+}
+// picco della curva: il massimo dei campioni (vg), poi quello esatto da dFy = 0.
+// interno = false se a 20 gradi la curva sta ancora salendo: non c'e' tratto calante
+function picco(v, B, C, D, E, W) {
+  let best = 0, bk = 0;
+  for (let k = 0; k <= NS; k++) if (v[k] > best) { best = v[k]; bk = k; }
+  const interno = bk > 0 && bk < NS;
+  if (!interno) return { v: best, a: bk * DA, vg: best, interno };
+  let lo = (bk - 1) * DA * RAD, hi = (bk + 1) * DA * RAD;
+  for (let n = 0; n < 50; n++) { const m = (lo + hi) / 2; if (dFy(m, B, C, D, E) > 0) lo = m; else hi = m; }
+  const aR = (lo + hi) / 2;
+  return { v: Fy(aR, B, C, D, E) / W, a: aR / RAD, vg: best, interno };
+}
+// derive alla quota eta, picco compreso: li' P e Q coincidono
+function tagli(v, pk, eta) {
+  if (eta < pk.vg) return incroci(v, eta);
+  if (eta > pk.v + 1e-12) return [];
+  return pk.interno ? [pk.a, pk.a] : [pk.a];
+}
+// quote dei rami, tutte fino al picco piu' basso (sopra non ci sono coppie): passo uniforme, piu' quote
+// addensate verso il picco, dove alpha varia come la radice di (picco - eta), piu' le quote
+// in cui una curva esce dal grafico a 20 gradi. Cosi' i rami arrivano fino alla punta
+function quoteRami(v1, v2, etaP) {
+  const NETA = 600, NFINE = 120, q = [];
+  for (let k = 1; k <= NETA; k++) q.push(k / NETA * etaP);
+  for (let j = 1; j <= NFINE; j++) q.push(etaP * (1 - 0.1 * (j / NFINE) ** 2));
+  for (const v of [v1, v2]) if (v[NS] > 0 && v[NS] < etaP) q.push(v[NS]);
+  q.sort((a, b) => a - b);
+  return q.filter((e, k) => k === 0 || e > q[k - 1]);
+}
+
+// ===================================================================
+//  Due parametrizzazioni della stessa caratteristica d'assale:
+//  Magic Formula B, C, D, E  <->  grandezze della curva y_m, x_m, y_a, y'(0)
+//    dai coefficienti: y'(0) = B C D,  y_m = D (in x_m),  y_a = D sin(C pi/2)
+//    dalla curva:      D = y_m,  C = 2 - (2/pi) asin(y_a/y_m),  B = y'(0)/(C D),
+//                      E = (B x_m - tan(pi/(2C))) / (B x_m - arctan(B x_m))
+//  Valgono se la curva ha il picco: 1 < C < 3 (y_a < y_m) ed E < 1.
+//  x_m in rad, y'(0) in N/rad. E si tiene fra Emin(C) ed E_MAX restringendo x_m:
+//  vicino all'origine y/D = C s - s^3 C (E/3 + 1/3 + C^2/6) + ..., s = B x, quindi la
+//  curva resta sotto la sua tangente solo se E > -1 - C^2/2 (sotto, parte convessa).
+// ===================================================================
+const CURVA = {
+  E_MAX: 0.98,
+  Emin(C) { return -1 - C * C / 2 + 0.02; },
+  daCurva(q) {
+    const D = q.ym, C = 2 - 2 / Math.PI * Math.asin(q.ya / q.ym), B = q.yp / (C * D);
+    const s = B * q.xm, E = (s - Math.tan(Math.PI / (2 * C))) / (s - Math.atan(s));
+    return { B, C, D, E };
+  },
+  aCurva(B, C, D, E) {
+    const T = Math.tan(Math.PI / (2 * C)), phi = x => (1 - E) * B * x + E * Math.atan(B * x);
+    let lo = 0, hi = 0.01;
+    while (phi(hi) < T && hi < 100) { lo = hi; hi *= 2; }
+    for (let k = 0; k < 80; k++) { const mid = (lo + hi) / 2; if (phi(mid) < T) lo = mid; else hi = mid; }
+    return { ym: D, xm: (lo + hi) / 2, ya: D * Math.sin(C * Math.PI / 2), yp: B * C * D };
+  },
+  // x_m (rad) ammessi, dati B e C: quelli per cui E sta fra Emin(C) ed E_MAX
+  intervalloXm(B, C) {
+    const T = Math.tan(Math.PI / (2 * C)), E = s => (s - T) / (s - Math.atan(s));
+    const sol = e => {
+      let lo = 1e-3, hi = 1e-3;
+      while (E(hi) < e && hi < 1e4) { lo = hi; hi *= 1.5; }
+      if (E(hi) < e) return Infinity;
+      for (let k = 0; k < 80; k++) { const mid = (lo + hi) / 2; if (E(mid) < e) lo = mid; else hi = mid; }
+      return (lo + hi) / 2;
+    };
+    return [sol(this.Emin(C)) / B, sol(this.E_MAX) / B];
+  },
+};
+
+// ===================================================================
+//  Stato: P contiene i parametri esatti (Magic Formula e veicolo), CQ le grandezze
+//  della curva di ciascun assale. I cursori sono solo viste: un cursore che si muove
+//  cambia la sua grandezza, le altre restano esatte (niente arrotondamenti al passo).
+// ===================================================================
+let currentMode = 'under1', PAR = 'mf';
+const P = {}, CQ = { 1: null, 2: null };
+const PKEYS = ['B1', 'C1', 'D1', 'E1', 'B2', 'C2', 'D2', 'E2', 'm', 'a1', 'a2', 'Jz'];
+const SPEC = {
+  mf: [
+    { k: 'B', lab: i => `B<sub>${i}</sub>`, min: 1, max: 30, step: 0.01, dec: 2, f: 1 },
+    { k: 'C', lab: i => `C<sub>${i}</sub>`, min: 1.05, max: 2.95, step: 0.01, dec: 2, f: 1 },
+    { k: 'D', lab: i => `D<sub>${i}</sub> (N)`, min: 1000, max: 20000, step: 1, dec: 0, f: 1 },
+    { k: 'E', lab: i => `E<sub>${i}</sub>`, min: -3, max: 0.98, step: 0.01, dec: 2, f: 1 },
+  ],
+  curva: [
+    { k: 'yp', lab: () => `y'(0) (kN/rad)`, min: 20, max: 600, step: 0.1, dec: 1, f: 1e-3 },
+    { k: 'ym', lab: () => `y<sub>m</sub> (N)`, min: 1000, max: 20000, step: 1, dec: 0, f: 1 },
+    { k: 'xm', lab: () => `x<sub>m</sub> (&deg;)`, min: 0.5, max: 20, step: 0.01, dec: 2, f: 1 / RAD },
+    { k: 'ya', lab: () => `y<sub>a</sub> (N)`, min: -12000, max: 19800, step: 1, dec: 0, f: 1 },
+  ],
+  veicolo: [
+    { k: 'm', lab: () => 'm (kg)', min: 800, max: 3000, step: 2, dec: 0, f: 1 },
+    { k: 'a1', lab: () => 'a<sub>1</sub> (m)', min: 0.5, max: 2.5, step: 0.001, dec: 3, f: 1 },
+    { k: 'a2', lab: () => 'a<sub>2</sub> (m)', min: 0.5, max: 2.5, step: 0.001, dec: 3, f: 1 },
+    { k: 'Jz', lab: () => 'J<sub>z</sub> (kg m&sup2;)', min: 1000, max: 8000, step: 1, dec: 0, f: 1 },
+  ],
+};
+const WHEELBASE = VEHICLE_DEFAULT.a1 + VEHICLE_DEFAULT.a2;
+let RIDISEGNA = () => {};
+
+function getParams() { return Object.assign({}, P); }
+function chiaveP() { return PKEYS.map(k => P[k]).join(','); }
+function modificato() {
+  const pr = Object.assign({}, PRESETS[currentMode], VEHICLE_DEFAULT);
+  return Object.keys(pr).some(k => Math.abs(P[k] - pr[k]) > 1e-7 * Math.max(1, Math.abs(pr[k])));
+}
+function riga(id, s, cls) {
+  return `<div class="param-row"><label class="${cls}">${s.lab(id.slice(-1))}:</label>`
+    + `<input type="range" id="${id}-slider" min="${s.min}" max="${s.max}" step="${s.step}"><span class="val" id="${id}-val"></span></div>`;
+}
+function mostra(id, v, s) { $(id + '-val').textContent = (v * s.f).toFixed(s.dec); }
+function curvaDaP(i) { CQ[i] = CURVA.aCurva(P['B' + i], P['C' + i], P['D' + i], P['E' + i]); }
+// limiti dei cursori di y_a (da y_m) e di x_m (da B e C, perche' E resti nei limiti)
+function limitiCurva(i) {
+  const q = CQ[i], C = 2 - 2 / Math.PI * Math.asin(q.ya / q.ym), B = q.yp / (C * q.ym);
+  const [lo, hi] = CURVA.intervalloXm(B, C);
+  const xlo = Math.max(0.5 * RAD, lo), xhi = Math.min(ALPHA_MAX * RAD, hi);
+  return { yaMin: -0.6 * q.ym, yaMax: 0.99 * q.ym, xlo, xhi: Math.max(xlo, xhi) };
+}
+function sincronizza() {
+  for (const i of [1, 2]) {
+    for (const s of SPEC.mf) { const id = s.k + i; $(id + '-slider').value = P[id]; mostra(id, P[id], s); }
+    const L = limitiCurva(i), q = CQ[i];
+    Object.assign($('ya' + i + '-slider'), { min: Math.ceil(L.yaMin), max: Math.floor(L.yaMax) });
+    Object.assign($('xm' + i + '-slider'), { min: (L.xlo / RAD).toFixed(2), max: (L.xhi / RAD).toFixed(2) });
+    for (const s of SPEC.curva) { const id = s.k + i; $(id + '-slider').value = q[s.k] * s.f; mostra(id, q[s.k], s); }
+    $('altra' + i).innerHTML = PAR === 'mf'
+      ? `Sulla curva: <b>y'(0)</b> = ${(q.yp / 1000).toFixed(1)} kN/rad, <b>y<sub>m</sub></b> = ${q.ym.toFixed(0)} N a <b>x<sub>m</sub></b> = ${(q.xm / RAD).toFixed(2)}&deg;, `
+        + `<b>y<sub>a</sub></b> = ${q.ya.toFixed(0)} N (y<sub>a</sub>/y<sub>m</sub> = ${(q.ya / q.ym).toFixed(2)})`
+      : `Coefficienti: <b>B</b> = ${P['B' + i].toFixed(3)}, <b>C</b> = ${P['C' + i].toFixed(3)}, <b>D</b> = ${P['D' + i].toFixed(0)} N, <b>E</b> = ${P['E' + i].toFixed(3)}`
+        + ` &nbsp;(y<sub>a</sub>/y<sub>m</sub> = ${(q.ya / q.ym).toFixed(2)})`;
+  }
+  for (const s of SPEC.veicolo) if ($(s.k + '-slider')) { $(s.k + '-slider').value = P[s.k]; mostra(s.k, P[s.k], s); }
+  $('l-val') && ($('l-val').textContent = (P.a1 + P.a2).toFixed(3));
+}
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('#seg-caso button').forEach(b => b.classList.toggle('on', b.dataset.caso === mode));
+  Object.assign(P, PRESETS[mode], VEHICLE_DEFAULT);
+  curvaDaP(1); curvaDaP(2); sincronizza(); RIDISEGNA();
+}
+function setPar(par) {
+  PAR = par;
+  document.body.classList.toggle('curva', par === 'curva');
+  document.querySelectorAll('#seg-param button').forEach(b => b.classList.toggle('on', b.dataset.par === par));
+  if (par === 'curva' && !$('chk-grandezze').checked) { $('chk-grandezze').checked = true; opt.grandezze = true; }
+  $('par-nota').innerHTML = par === 'mf'
+    ? 'I quattro coefficienti della formula: rigidezza B, forma C, picco D, curvatura E. Sotto i cursori, le grandezze che si leggono sulla curva.'
+    : 'Le quattro grandezze che si leggono sulla curva; i coefficienti si ricavano con il dizionario del &laquo;?&raquo;. x<sub>m</sub> ha un intervallo che dipende dagli altri tre.';
+  sincronizza(); RIDISEGNA();
+}
+// un cursore della Magic Formula: cambia il coefficiente, le grandezze della curva seguono
+function suMF(i, s) { P[s.k + i] = +$(s.k + i + '-slider').value; curvaDaP(i); sincronizza(); RIDISEGNA(); }
+// un cursore delle grandezze della curva: cambia la grandezza, si rispettano i limiti, i coefficienti seguono
+function suCurva(i, s) {
+  const q = CQ[i];
+  q[s.k] = +$(s.k + i + '-slider').value / s.f;
+  q.ya = Math.min(0.99 * q.ym, Math.max(-0.6 * q.ym, q.ya));
+  const L = limitiCurva(i);
+  q.xm = Math.min(L.xhi, Math.max(L.xlo, q.xm));
+  const c = CURVA.daCurva(q);
+  P['B' + i] = c.B; P['C' + i] = c.C; P['D' + i] = c.D; P['E' + i] = c.E;
+  sincronizza(); RIDISEGNA();
+}
+function inizializzaParametri(conJz, ridisegna) {
+  RIDISEGNA = ridisegna;
+  for (const i of [1, 2]) {
+    const cls = i === 1 ? 'label-front' : 'label-rear';
+    $('ass' + i).innerHTML = `<div class="par-mf">${SPEC.mf.map(s => riga(s.k + i, s, cls)).join('')}</div>`
+      + `<div class="par-curva">${SPEC.curva.map(s => riga(s.k + i, s, cls)).join('')}</div><div class="altra" id="altra${i}"></div>`;
+    for (const s of SPEC.mf) $(s.k + i + '-slider').addEventListener('input', () => suMF(i, s));
+    for (const s of SPEC.curva) $(s.k + i + '-slider').addEventListener('input', () => suCurva(i, s));
+  }
+  const veic = SPEC.veicolo.filter(s => conJz || s.k !== 'Jz');
+  $('veicolo').innerHTML = riga('m', veic[0], '')
+    + `<div class="param-row"><label>l (m):</label><span class="val" id="l-val" style="flex:0 0 auto;color:#aaa"></span></div>`
+    + veic.slice(1).map(s => riga(s.k, s, '')).join('');
+  for (const s of veic) $(s.k + '-slider').addEventListener('input', () => {
+    P[s.k] = +$(s.k + '-slider').value;
+    if (s.k === 'a1' || s.k === 'a2') {          // a1 + a2 = l costante
+      const altro = s.k === 'a1' ? 'a2' : 'a1';
+      P[altro] = Math.min(2.5, Math.max(0.5, WHEELBASE - P[s.k])); P[s.k] = WHEELBASE - P[altro];
+    }
+    sincronizza(); RIDISEGNA();
+  });
+  document.querySelectorAll('#seg-caso button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.caso)));
+  document.querySelectorAll('#seg-param button').forEach(b => b.addEventListener('click', () => setPar(b.dataset.par)));
+  $('b-ripristina').addEventListener('click', () => setMode(currentMode));
+  $('chk-grandezze').addEventListener('change', e => { opt.grandezze = e.target.checked; RIDISEGNA(); });
+  Object.assign(P, PRESETS[currentMode], VEHICLE_DEFAULT); curvaDaP(1); curvaDaP(2);
+  setPar('mf');
+}
+function renderFormula() {
+  if (typeof katex === 'undefined') return setTimeout(renderFormula, 100);
+  const el = $('formula-render'), opz = { displayMode: true, throwOnError: false };
+  el.innerHTML = [
+    String.raw`F_{y_i}\!(\alpha_i) = D_i \sin\!\bigl(C_i \arctan\!\bigl(B_i\alpha_i - E_i(B_i\alpha_i - \arctan B_i\alpha_i)\bigr)\bigr)`,
+    String.raw`y'(0) = BCD,\quad y_m = D,\quad y_a = D\sin\tfrac{C\pi}{2}`,
+    String.raw`C = 2 - \tfrac{2}{\pi}\arcsin\tfrac{y_a}{y_m},\quad B = \tfrac{y'(0)}{C\,D},\quad E = \tfrac{B x_m - \tan\frac{\pi}{2C}}{B x_m - \arctan B x_m}`,
+  ].map(f => katex.renderToString(f, opz)).join('');
+}
+
+// ===================================================================
+//  Modello: curve normalizzate, picchi, rami dell'handling diagram (con le derive
+//  dei due assali in ogni punto), rigidezze e pendenza iniziale del ramo primario
+// ===================================================================
+let MODEL = null, MODEL_KEY = '';
+function model() {
+  const key = chiaveP();
+  if (key !== MODEL_KEY) { MODEL = calcola(getParams()); MODEL_KEY = key; }
+  return MODEL;
+}
+function calcola(p) {
+  const l = p.a1 + p.a2, W1 = p.m * G * p.a2 / l, W2 = p.m * G * p.a1 / l;
+  const v1 = campiona(p.B1, p.C1, p.D1, p.E1, W1), v2 = campiona(p.B2, p.C2, p.D2, p.E2, W2);
+  const pk1 = picco(v1, p.B1, p.C1, p.D1, p.E1, W1), pk2 = picco(v2, p.B2, p.C2, p.D2, p.E2, W2);
+  const etaMax = Math.max(pk1.v, pk2.v);
+  const rami = PAIRS.map(() => []);
+  rami[0].push({ da: 0, eta: 0, a1: 0, a2: 0 });
+  for (const eta of quoteRami(v1, v2, Math.min(pk1.v, pk2.v))) {
+    const a1s = tagli(v1, pk1, eta), a2s = tagli(v2, pk2, eta);
+    PAIRS.forEach((pr, b) => {
+      if (a1s.length > pr.i && a2s.length > pr.j) rami[b].push({ da: a1s[pr.i] - a2s[pr.j], eta, a1: a1s[pr.i], a2: a2s[pr.j] });
+    });
+  }
+  let daMin = 0, daMax = 0;
+  for (const r of rami) for (const q of r) { daMin = Math.min(daMin, q.da); daMax = Math.max(daMax, q.da); }
+  const marg = Math.max(1, (daMax - daMin) * 0.15);
+  daMin = Math.min(-1, Math.floor((daMin - marg) * 2) / 2);
+  daMax = Math.max(1, Math.ceil((daMax + marg) * 2) / 2);
+  const cs1 = p.B1 * p.C1 * p.D1, cs2 = p.B2 * p.C2 * p.D2;
+  const gK = (W1 / cs1 - W2 / cs2) / RAD;          // g K_gamma = W1/C1 - W2/C2, in gradi per g
+  return { p, l, W1, W2, v1, v2, pk1, pk2, etaMax, rami, daMin, daMax, cs1, cs2, gK };
+}
+// g K_gamma locale (gradi per g) con le derive alpha_1, alpha_2 (gradi): W1/Phi1 - W2/Phi2
+function gKlocale(M, a1, a2) {
+  const p = M.p, Ph1 = dFy(a1 * RAD, p.B1, p.C1, p.D1, p.E1), Ph2 = dFy(a2 * RAD, p.B2, p.C2, p.D2, p.E2);
+  return { Ph1, Ph2, g: (M.W1 / Ph1 - M.W2 / Ph2) / RAD };
+}
+// punti e coppie alla quota eta: ogni coppia ha da = alpha_1 - alpha_2, oppure null se manca un punto
+function alCursore(M, eta) {
+  const a1s = tagli(M.v1, M.pk1, eta), a2s = tagli(M.v2, M.pk2, eta);
+  const coppie = PAIRS.map((pr, b) => Object.assign({ b }, pr,
+    (a1s.length > pr.i && a2s.length > pr.j) ? { da: a1s[pr.i] - a2s[pr.j], a1: a1s[pr.i], a2: a2s[pr.j] } : { da: null }));
+  return { a1s, a2s, coppie };
+}
+
+// ===================================================================
+//  Disegno: strumenti
+// ===================================================================
+const canvas = $('main-canvas'), ctx = canvas.getContext('2d');
+let CW = 800, CH = 400, LAY = null;
+function resize() {
+  const c = $('canvas-strip'), dpr = window.devicePixelRatio || 1;
+  CW = Math.max(c.clientWidth - 12, 420); CH = Math.max(c.clientHeight - 12, 200);
+  canvas.style.width = CW + 'px'; canvas.style.height = CH + 'px';
+  canvas.width = Math.round(CW * dpr); canvas.height = Math.round(CH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function linea(x0, y0, x1, y1, col, lw, dash) {
+  ctx.save(); ctx.setLineDash(dash || []); ctx.strokeStyle = col; ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.restore();
+}
+function testo(t, x, y, col, font, align) {
+  ctx.save(); ctx.font = font; ctx.textAlign = align || 'left';
+  ctx.lineJoin = 'round'; ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(13,17,23,.92)'; ctx.strokeText(t, x, y);
+  ctx.fillStyle = col; ctx.fillText(t, x, y); ctx.restore();
+}
+function pallino(x, y, r, col) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = col; ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+function anello(x, y, r, col, lw) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.strokeStyle = 'rgba(13,17,23,.9)'; ctx.lineWidth = lw + 2.5; ctx.stroke();
+  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.stroke();
+}
+// freccia orizzontale dalla coda x0 alla punta x1, alla quota y; troppo corta: solo un segno.
+// estremi = true: due trattini (quota |<->| come nelle figure del deck)
+function freccia(x0, x1, y, col, estremi) {
+  const L = Math.abs(x1 - x0), s = Math.sign(x1 - x0) || 1;
+  ctx.save(); ctx.lineCap = 'round';
+  if (L < 7) {
+    linea(x0, y - 4, x0, y + 4, 'rgba(13,17,23,.9)', 4.5); linea(x0, y - 4, x0, y + 4, col, 2);
+    ctx.restore(); return;
+  }
+  const hx = x1 - s * 7;
+  linea(x0, y, hx, y, 'rgba(13,17,23,.9)', 5.5);
+  linea(x0, y - 3.5, x0, y + 3.5, 'rgba(13,17,23,.9)', 4.5);
+  linea(x0, y, hx, y, col, 2.2);
+  linea(x0, y - 3.5, x0, y + 3.5, col, 1.6);                     // coda: un trattino
+  if (estremi) linea(x1, y - 4.5, x1, y + 4.5, col, 1.6);
+  ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(hx, y - 4.5); ctx.lineTo(hx, y + 4.5); ctx.closePath();
+  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(13,17,23,.9)'; ctx.stroke(); ctx.fillStyle = col; ctx.fill();
+  ctx.restore();
+}
+// etichetta di una freccia: fuori dalla freccia, dal lato dove c'e' posto nel riquadro [xa, xb];
+// se non c'e' posto da nessuna parte (freccia lunga), sopra la freccia, a meta', con il fondo scuro
+function etichettaFreccia(t, x0, x1, y, col, xa, xb) {
+  ctx.font = 'bold 10.5px "Segoe UI"';
+  const w = ctx.measureText(t).width, lo = Math.min(x0, x1), hi = Math.max(x0, x1);
+  let x = hi + 7;
+  if (x + w > xb - 2) x = lo - 7 - w;
+  if (x < xa + 2) {
+    x = Math.max(xa + 2, Math.min(xb - 2 - w, (lo + hi) / 2 - w / 2));
+    ctx.fillStyle = '#0d1117'; ctx.fillRect(x - 4, y - 7, w + 8, 14);
+  }
+  testo(t, x, y + 3.5, col, 'bold 10.5px "Segoe UI"');
+}
+
+// ===================================================================
+//  Impaginazione: due grafici affiancati con la stessa ordinata a~_y/g.
+//  A destra Delta alpha positivo verso SINISTRA (x di pagina = -Delta alpha).
+// ===================================================================
+function impagina(M, daMin, daMax, padBextra) {
+  const W = CW, H = CH;
+  const yMax = Math.ceil(M.etaMax * 1.15 * 10) / 10, yStep = yMax > 1.5 ? 0.2 : 0.1;
+  const gap = 58, padL = 52, padR = 42, padT = 30, padB = 34 + (padBextra || 0);
+  const totW = W - padL - padR - gap, pwL = Math.floor(totW * 0.47), pwR = totW - pwL, ph = H - padT - padB;
+  const LX0 = padL, RX0 = padL + pwL + gap, Y0 = padT, YB = Y0 + ph;
+  LAY = { W, H, yMax, yStep, LX0, RX0, pwL, pwR, Y0, YB, ph, daMin, daMax,
+    toY: v => YB - v / yMax * ph,
+    toXL: a => LX0 + a / ALPHA_MAX * pwL,
+    toXR: da => RX0 + (daMax - da) / (daMax - daMin) * pwR };
+  return LAY;
+}
+
+// grafico di sinistra: griglia, assi, le due caratteristiche normalizzate e, a richiesta,
+// le grandezze della curva (tangente nell'origine, picco, asintoto)
+function disegnaCaratteristiche(M, L) {
+  const { LX0, pwL, Y0, YB, ph, yMax, yStep, toY, toXL, H } = L;
+  testo('Caratteristiche normalizzate degli assali', LX0, 19, '#dfe6f5', '600 12.5px "Segoe UI"');
+  for (let d = 0; d <= ALPHA_MAX; d += 2) linea(toXL(d), Y0, toXL(d), YB, 'rgba(255,255,255,.07)', 1);
+  for (let v = 0; v <= yMax + 1e-3; v += yStep) linea(LX0, toY(v), LX0 + pwL, toY(v), 'rgba(255,255,255,.07)', 1);
+  ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(LX0, Y0); ctx.lineTo(LX0, YB); ctx.lineTo(LX0 + pwL, YB); ctx.stroke();
+  ctx.font = '11px "Segoe UI"'; ctx.fillStyle = '#888'; ctx.textAlign = 'center';
+  for (let d = 0; d <= ALPHA_MAX; d += 4) ctx.fillText(d + '°', toXL(d), YB + 14);
+  ctx.textAlign = 'right'; ctx.font = '11px monospace';
+  for (let v = 0; v <= yMax + 1e-3; v += yStep) ctx.fillText(v.toFixed(1), LX0 - 5, toY(v) + 4);
+  ctx.font = 'italic 12px "Segoe UI"'; ctx.fillStyle = '#aaa';
+  ctx.fillText('αᵢ (deg)', LX0 + pwL, H - 5);
+  ctx.save(); ctx.translate(12, Y0 + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center';
+  ctx.fillText('Fyᵢ / Wᵢ = ãy / g', 0, 0); ctx.restore();
+  ctx.textAlign = 'left';
+  for (const [v, col] of [[M.v1, COL1], [M.v2, COL2]]) {
+    ctx.beginPath();
+    for (let k = 0; k <= NS; k += 8) { const x = toXL(k * DA), y = toY(v[k]); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.stroke();
+  }
+  {   // nomi delle curve sopra i picchi
+    const x1 = toXL(M.pk1.a), x2 = toXL(M.pk2.a), y1 = toY(M.pk1.v) - 7, y2 = toY(M.pk2.v) - 7, primo1 = x1 <= x2;
+    testo('assale 1', x1 + (primo1 ? -3 : 3), y1, COL1, 'bold 10.5px "Segoe UI"', primo1 ? 'right' : 'left');
+    testo('assale 2', x2 + (primo1 ? 3 : -3), y2, COL2, 'bold 10.5px "Segoe UI"', primo1 ? 'left' : 'right');
+  }
+  if (opt.grandezze) disegnaGrandezze(M, L);
+}
+function disegnaGrandezze(M, L) {
+  const { LX0, pwL, Y0, YB, yMax, toY, toXL } = L, f = 'italic bold 11px "Segoe UI"';
+  for (const i of [1, 2]) {
+    const q = CQ[i], W = M['W' + i], col = i === 1 ? COL1 : COL2, k = i - 1;
+    const ym = q.ym / W, xm = q.xm / RAD, ya = q.ya / W, pend = q.yp / W * RAD;     // pendenza per grado
+    // tangente nell'origine: y'(0)
+    const yEnd = Math.min(1.12 * ym, yMax * 0.98), aEnd = Math.min(ALPHA_MAX, yEnd / pend);
+    linea(toXL(0), toY(0), toXL(aEnd), toY(aEnd * pend), col, 1.3, [6, 4]);
+    testo("y'(0)", toXL(aEnd) + (i === 1 ? 5 : -5), toY(aEnd * pend) + (i === 1 ? 4 : -2), col, f, i === 1 ? 'left' : 'right');
+    // picco: y_m a x_m
+    const xp = toXL(xm), yp = toY(ym);
+    linea(LX0, yp, xp, yp, col, 1, [2, 3]);
+    linea(xp, yp, xp, YB, col, 1, [2, 3]);
+    anello(xp, yp, 4.5, col, 1.8);
+    testo('yₘ', LX0 + 4 + 22 * k, yp + (i === 1 ? -4 : 12), col, f);
+    testo('xₘ', xp, YB - 5 - 13 * k, col, f, 'center');
+    // asintoto: y_a (si raggiunge per alpha -> infinito)
+    if (ya > 0) {
+      linea(xp, toY(ya), LX0 + pwL, toY(ya), col, 1.2, [8, 3, 2, 3]);
+      testo('yₐ', LX0 + pwL - 4, toY(ya) + (i === 1 ? -4 : 12), col, f, 'right');
+    } else {
+      testo(`yₐ = ${ya.toFixed(2)}·W${i === 1 ? '₁' : '₂'} (sotto l'asse)`, LX0 + pwL - 4, YB - 18 - 13 * k, col, 'italic 10.5px "Segoe UI"', 'right');
+    }
+  }
+}
+
+// grafico di destra: griglia e assi dell'handling diagram
+function disegnaAssiHD(M, L, titolo) {
+  const { RX0, pwR, Y0, YB, ph, yMax, yStep, toY, toXR, daMin, daMax, H } = L;
+  testo(titolo || 'Handling diagram', RX0, 19, '#dfe6f5', '600 12.5px "Segoe UI"');
+  for (let d = Math.ceil(daMin); d <= Math.floor(daMax); d++) linea(toXR(d), Y0, toXR(d), YB, 'rgba(255,255,255,.07)', 1);
+  for (let v = 0; v <= yMax + 1e-3; v += yStep) linea(RX0, toY(v), RX0 + pwR, toY(v), 'rgba(255,255,255,.07)', 1);
+  linea(RX0, YB, RX0 + pwR, YB, 'rgba(255,255,255,.45)', 1.5);
+  if (daMin < 0 && daMax > 0) {
+    linea(toXR(0), Y0, toXR(0), YB, 'rgba(255,255,255,.32)', 1.3);
+    testo('Δα = 0', toXR(0), Y0 - 3, '#99a', '10px "Segoe UI"', 'center');
+  }
+  ctx.font = '11px "Segoe UI"'; ctx.textAlign = 'center';
+  const pxGrado = pwR / (daMax - daMin), passoDa = [1, 2, 4, 5, 10, 20].find(s => s * pxGrado >= 34) || 20;
+  for (let d = Math.ceil(daMin / passoDa) * passoDa; d <= daMax; d += passoDa) {
+    ctx.fillStyle = d === 0 ? '#bbb' : '#888'; ctx.fillText(d + '°', toXR(d), YB + 14);
+  }
+  ctx.textAlign = 'left'; ctx.fillStyle = '#888'; ctx.font = '11px monospace';
+  for (let v = 0; v <= yMax + 1e-3; v += yStep) ctx.fillText(v.toFixed(1), RX0 + pwR + 5, toY(v) + 4);
+  ctx.font = 'italic 12px "Segoe UI"'; ctx.fillStyle = '#aaa';
+  ctx.fillText('← Δα = α₁ − α₂', RX0 + 2, H - 5);
+  ctx.textAlign = 'right'; ctx.fillText('l / R →', RX0 + pwR, H - 5);
+  ctx.save(); ctx.translate(RX0 + pwR + 36, Y0 + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center';
+  ctx.fillText('ãy / g', 0, 0); ctx.restore();
+  ctx.textAlign = 'left';
+}
+// pannelli comuni: il caso (comportamento a basse a~_y, quale assale satura prima), carichi, rigidezze
+function pannelloCaso(M) {
+  const tipo = M.gK > 0.01 ? 'sottosterzante' : (M.gK < -0.01 ? 'sovrasterzante' : 'neutro');
+  $('caso-tipo').innerHTML = `A basse &atilde;<sub>y</sub>: <b>${tipo}</b>. Pendenza iniziale del ramo primario `
+    + `g&thinsp;K<sub>&gamma;</sub> = <b>${fmt(M.gK)}/g</b>${modificato() ? ' <i>(parametri modificati)</i>' : ''}.`;
+  const d = M.pk1.v - M.pk2.v, pmin = Math.min(M.pk1.v, M.pk2.v);
+  if (Math.abs(d) < 0.003)
+    $('caso-picchi').innerHTML = `Picchi uguali (${M.pk1.v.toFixed(3)}): i due assali saturano alla stessa quota, fin l&igrave; arriva il ramo primario.`;
+  else {
+    const i = d > 0 ? 2 : 1;
+    $('caso-picchi').innerHTML = `Satura prima l'<b>assale ${i}</b> (${i === 1 ? 'anteriore' : 'posteriore'}): picco ${pmin.toFixed(3)} `
+      + `contro ${Math.max(M.pk1.v, M.pk2.v).toFixed(3)}. Il ramo primario arriva fino a &atilde;<sub>y</sub>/g = ${pmin.toFixed(3)}.`;
+  }
+  $('carichi').innerHTML = `Carichi statici: W<sub>1</sub> = mg&thinsp;a<sub>2</sub>/l = ${M.W1.toFixed(0)} N, W<sub>2</sub> = mg&thinsp;a<sub>1</sub>/l = ${M.W2.toFixed(0)} N.`;
+  $('rigidezze').innerHTML = `Rigidezze di deriva y'(0) = B&thinsp;C&thinsp;D: C<sub>&alpha;1</sub> = ${(M.cs1 / 1000).toFixed(1)} kN/rad, `
+    + `C<sub>&alpha;2</sub> = ${(M.cs2 / 1000).toFixed(1)} kN/rad.<br>Picchi delle curve normalizzate: assale 1 ${M.pk1.v.toFixed(3)} a ${M.pk1.a.toFixed(1)}&deg;, `
+    + `assale 2 ${M.pk2.v.toFixed(3)} a ${M.pk2.a.toFixed(1)}&deg;.<br>g&thinsp;K<sub>&gamma;</sub> = W<sub>1</sub>/C<sub>&alpha;1</sub> &minus; W<sub>2</sub>/C<sub>&alpha;2</sub> = ${fmt(M.gK)}/g.`;
+}
+// ===================================================================
+//  Gradiente di sottosterzo locale lungo i rami: g K_gamma = W1/Phi1 - W2/Phi2
+//  (gradi per g), colore per segno; i rami di handling_equilibrium e handling_steering
+// ===================================================================
+const COL_SOTTO = '#06d6a0', COL_NEUTRO = '#ffdd57', COL_SOVRA = '#ff4d6d';
+const SOGLIA_NEUTRO = 0.15;        // |g K_gamma| (gradi per g) sotto cui un tratto di ramo e' "neutro"
+const colKg = g => !isFinite(g) ? COL_NEUTRO : (g > SOGLIA_NEUTRO ? COL_SOTTO : (g < -SOGLIA_NEUTRO ? COL_SOVRA : COL_NEUTRO));
+// un ramo a tratti di colore diverso (un tratto per colore, senza giunture visibili)
+function ramoATratti(r, colore, lw, alpha) {
+  if (r.length < 2) return;
+  const { toXR, toY } = LAY;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.lineWidth = lw; ctx.lineJoin = 'round';
+  const tratto = (da, a, col) => {
+    ctx.beginPath();
+    for (let k = da; k <= a; k++) { const x = toXR(r[k].da), y = toY(r[k].eta); k === da ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.strokeStyle = col; ctx.stroke();
+  };
+  let c = colore(r[0]), k0 = 0;
+  for (let k = 1; k < r.length; k++) {
+    const ck = colore(r[k]);
+    if (ck !== c || k === r.length - 1) { tratto(k0, k, c); k0 = k; c = ck; }
+  }
+  ctx.restore();
+}
+// punti a K_gamma = 0: il gradiente passa per zero (non per l'infinito, come ai picchi, dove Phi = 0)
+function segnaNeutri(M) {
+  const { toXR, toY } = LAY;
+  M.rami.forEach(r => {
+    for (let k = 1; k < r.length - 1; k++) {
+      const g0 = gKlocale(M, r[k].a1, r[k].a2).g, g1 = gKlocale(M, r[k + 1].a1, r[k + 1].a2).g;
+      if (g0 * g1 < 0 && Math.abs(g0 - g1) < 3) {
+        const t = g0 / (g0 - g1), x = toXR(r[k].da + t * (r[k + 1].da - r[k].da)), y = toY(r[k].eta + t * (r[k + 1].eta - r[k].eta));
+        pallino(x, y, 3.5, COL_NEUTRO); testo('Kγ = 0', x + 7, y + 4, COL_NEUTRO, 'bold 9.5px "Segoe UI"');
+      }
+    }
+  });
+}
+function tracciaRamo(pts, col, lw, alpha, dash) {
+  if (pts.length < 2) return;
+  const { toXR, toY } = LAY;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.setLineDash(dash || []); ctx.beginPath();
+  pts.forEach((q, k) => { const x = toXR(q.da), y = toY(q.eta); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore();
+}
+
+// ===================================================================
+//  Equilibri e stabilita': la parte di questo widget
+// ===================================================================
+const CON_JZ = true;
+const opt = { lettura: false, stab: true, kg: true, punti: true, grandezze: false };
+const COL_RETTA = '#f2f2f2', COL_DA = '#ffd98a', COL_LR = '#8fd3ff';
+let SCELTO = null;                 // equilibrio scelto, { b, eta }, per ritrovarlo dopo un cambio
+let EQ = [], MARK = [];            // equilibri correnti e posizione dei loro marcatori sul canvas
+
+// stabilita' nell'equilibrio con derive a1, a2 (gradi): Jacobiana del monotraccia (blocco 12)
+function stabilita(M, a1, a2, u) {
+  const p = M.p, { Ph1, Ph2, g } = gKlocale(M, a1, a2);
+  if (u < 0.5) return { Ph1, Ph2, gK: g, tipo: 'n/d', stabile: true, pv: NaN, qv: NaN, disc: NaN };
+  const pv = -(1 / u) * ((Ph1 + Ph2) / p.m + (p.a1 * p.a1 * Ph1 + p.a2 * p.a2 * Ph2) / p.Jz);
+  const qv = Ph1 * Ph2 * M.l * M.l / (p.m * p.Jz * u * u) + (p.a2 * Ph2 - p.a1 * Ph1) / p.Jz;
+  const disc = pv * pv - 4 * qv;
+  let tipo, stabile;
+  if (qv < 0) { tipo = 'sella'; stabile = false; }
+  else if (pv < 0) { stabile = true; tipo = disc >= 0 ? 'nodo stabile' : 'spirale stabile'; }
+  else if (pv > 0) { stabile = false; tipo = disc >= 0 ? 'nodo instabile' : 'spirale instabile'; }
+  else { stabile = false; tipo = 'centro'; }
+  return { Ph1, Ph2, gK: g, pv, qv, disc, tipo, stabile };
+}
+// intersezioni della retta eta = s (delta - da) con i rami campionati, dal basso
+function equilibri(M, s, delta, u) {
+  const out = [];
+  if (u < 0.5) return out;
+  M.rami.forEach((r, b) => {
+    for (let k = 0; k < r.length - 1; k++) {
+      const A = r[k], Z = r[k + 1], fA = A.eta - s * (delta - A.da), fB = Z.eta - s * (delta - Z.da);
+      if ((fA < 0 && fB >= 0) || (fA > 0 && fB <= 0) || (k === 0 && fA === 0)) {
+        const t = fA === fB ? 0 : fA / (fA - fB);
+        const e = { b, da: A.da + t * (Z.da - A.da), eta: A.eta + t * (Z.eta - A.eta), a1: A.a1 + t * (Z.a1 - A.a1), a2: A.a2 + t * (Z.a2 - A.a2) };
+        out.push(Object.assign(e, stabilita(M, e.a1, e.a2, u)));
+      }
+    }
+  });
+  out.sort((x, y) => x.eta - y.eta);
+  out.forEach((e, k) => { e.n = k + 1; });
+  return out;
+}
+function scegli(eqs) {
+  if (!eqs.length) return null;
+  if (SCELTO) {
+    const stessi = eqs.filter(e => e.b === SCELTO.b);
+    if (stessi.length) return stessi.reduce((a, c) => Math.abs(c.eta - SCELTO.eta) < Math.abs(a.eta - SCELTO.eta) ? c : a);
+  }
+  return eqs[0];
+}
+// "n · tipo" accanto a ogni equilibrio (il tipo nel colore della stabilita', in grassetto per quello scelto).
+// Ognuna prende la prima posizione libera fra destra/sinistra e sopra/sotto il marcatore (poi piu' in alto): niente sovrapposizioni
+// con le altre etichette, i marcatori, i riquadri in "evita"; dentro il grafico. Se nessuna e' libera, quella
+// che copre meno. L'equilibrio scelto si sistema per primo
+function etichetteEquilibri(evita) {
+  const { RX0, pwR, Y0, YB } = LAY, h = 13;
+  const occ = [...evita, ...MARK.map(m => ({ x: m.x - 9, y: m.y - 9, w: 18, h: 18 }))];
+  const sovr = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x))
+                       * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  const fuori = r => r.w * r.h - sovr(r, { x: RX0 + 2, y: Y0, w: pwR - 4, h: YB - 2 - Y0 });
+  for (const m of [...MARK].sort((a, b) => (b.sel - a.sel) || (a.e.n - b.e.n))) {
+    const font = (m.sel ? 'bold ' : '') + '11px "Segoe UI"', t1 = `${m.e.n} · `, t2 = m.e.tipo;
+    ctx.font = font;
+    const w1 = ctx.measureText(t1).width, w = w1 + ctx.measureText(t2).width;
+    let best = null;
+    for (const [lato, base] of [[1, m.y - 9], [-1, m.y - 9], [1, m.y + 18], [-1, m.y + 18], [1, m.y - 24], [-1, m.y - 24]]) {
+      const r = { x: lato > 0 ? m.x + 12 : m.x - 12 - w, y: base - 10, w, h, base };
+      r.costo = occ.reduce((c, o) => c + sovr(r, o), 0) + 5 * fuori(r);
+      if (!best || r.costo < best.costo) best = r;
+      if (r.costo === 0) break;
+    }
+    occ.push(best); m.box = best;
+    testo(t1, best.x, best.base, m.sel ? '#fff' : '#cfd6e4', font);
+    testo(t2, best.x + w1, best.base, m.e.stabile ? COL_SOTTO : COL_SOVRA, font);
+  }
+}
+// etichetta sopra una quota orizzontale: al centro se ci sta, se no oltre l'estremo lontano dall'origine
+function etichettaQuota(t, x0, x1, y, col, fuori) {
+  ctx.font = 'bold 10.5px "Segoe UI"';
+  const w = ctx.measureText(t).width, lo = Math.min(x0, x1), hi = Math.max(x0, x1);
+  let x = hi - lo > w + 12 ? (lo + hi) / 2 - w / 2 : (fuori > 0 ? hi + 5 : lo - 5 - w);
+  x = Math.max(LAY.RX0 - 40, Math.min(LAY.RX0 + LAY.pwR + 30 - w, x));
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(x - 3, y - 15, w + 6, 12);
+  testo(t, x, y - 5, col, 'bold 10.5px "Segoe UI"');
+}
+
+function draw() {
+  const W = CW, H = CH;
+  ctx.clearRect(0, 0, W, H); ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  const M = model(), u = +$('u-slider').value, delta = +$('delta-slider').value;
+  const s = u * u / (G * M.l) * RAD;             // pendenza della retta, per grado di Delta alpha
+  EQ = equilibri(M, s, delta, u);
+  const E = scegli(EQ);
+  if (E) SCELTO = { b: E.b, eta: E.eta };
+  const lettura = opt.lettura && E && s > 0, lR = E && s > 0 ? E.eta / s : 0;    // l/R in gradi = delta - Delta alpha
+  const daMax = Math.max(M.daMax, Math.ceil(delta + 0.8));
+  const daMin = Math.min(M.daMin, lettura ? Math.floor(-lR - 0.8) : M.daMin);
+  const L = impagina(M, daMin, daMax, lettura ? 42 : 0);
+  const { LX0, RX0, pwL, pwR, Y0, YB, yMax, toY, toXL, toXR } = L;
+  posizionaBottoni();
+  disegnaCaratteristiche(M, L);
+  disegnaAssiHD(M, L, 'Handling diagram e retta degli ingressi');
+
+  // ---------- rami: banda di stabilita' e linea colorata con K_gamma locale ----------
+  ctx.save(); ctx.beginPath(); ctx.rect(RX0, Y0 - 6, pwR, YB - Y0 + 6); ctx.clip();
+  if (opt.stab && u >= 0.5)
+    M.rami.forEach((r, b) => ramoATratti(r, q => stabilita(M, q.a1, q.a2, u).stabile ? 'rgba(6,214,160,.30)' : 'rgba(255,77,109,.30)', PAIRS[b].lw + 9, 1));
+  M.rami.forEach((r, b) => {
+    if (opt.kg) ramoATratti(r, q => colKg(gKlocale(M, q.a1, q.a2).g), PAIRS[b].lw * 0.85, b ? 0.75 : 1);
+    else tracciaRamo(r, PAIRS[b].col, PAIRS[b].lw, b ? 0.8 : 1);
+  });
+  if (opt.kg) segnaNeutri(M);
+  // retta degli ingressi e, a richiesta, la sua parallela per l'origine
+  if (u >= 0.5) {
+    linea(toXR(delta), toY(0), toXR(delta - yMax / s), toY(yMax), COL_RETTA, 1.6);
+    if (lettura) linea(toXR(0), toY(0), toXR(-yMax / s), toY(yMax), COL_RETTA, 1.3, [7, 5]);
+  }
+  ctx.restore();
+  if (u >= 0.5) {
+    pallino(toXR(delta), YB, 3.5, COL_RETTA);
+    if (!lettura) testo(`δ = ${delta.toFixed(1)}°`, toXR(delta) + 6, YB - 6, COL_RETTA, 'bold 10.5px "Segoe UI"');
+  }
+  let zonaLegenda;
+  {   // legenda in alto a destra: velocita', retta, parallela
+    ctx.font = '10.5px "Segoe UI"';
+    const xr = RX0 + pwR - 6, xs = xr - 24 - ctx.measureText('retta degli ingressi, pendenza u²/(g l)').width;
+    zonaLegenda = { x: xs - 4, y: Y0, w: xr - xs + 10, h: lettura ? 52 : 36 };
+    testo(`u = ${u.toFixed(1)} m/s (${(u * 3.6).toFixed(0)} km/h)`, xr, Y0 + 12, '#aab', '10.5px "Segoe UI"', 'right');
+    if (u >= 0.5) {
+      linea(xs, Y0 + 26, xs + 18, Y0 + 26, COL_RETTA, 1.6);
+      testo('retta degli ingressi, pendenza u²/(g l)', xs + 24, Y0 + 30, '#dfe6f5', '10.5px "Segoe UI"');
+      if (lettura) {
+        linea(xs, Y0 + 42, xs + 18, Y0 + 42, COL_RETTA, 1.3, [5, 4]);
+        testo('parallela per l’origine', xs + 24, Y0 + 46, '#dfe6f5', '10.5px "Segoe UI"');
+      }
+    }
+  }
+
+  // ---------- lettura di l/R (slide "Lettura grafica di l/R") ----------
+  if (lettura) {
+    const xE = toXR(E.da), yE = toY(E.eta), xD = toXR(-lR), x0 = toXR(0), xI = toXR(delta);
+    const y1 = YB + 30, y2 = YB + 48;
+    linea(xE, yE, xE, y1 + 5, COL_DA, 1, [2, 3]);
+    linea(xD, yE, xD, y2 + 5, COL_LR, 1, [2, 3]);
+    linea(xI, YB, xI, y2 + 5, COL_RETTA, 1, [2, 3]);
+    linea(x0, YB, x0, y2 + 5, 'rgba(255,255,255,.45)', 1, [2, 3]);
+    freccia(xE, xD, yE, COL_RETTA, true);                          // alla quota dell'equilibrio: delta
+    etichettaQuota('δ', xE, xD, yE, COL_RETTA, xD > xE ? 1 : -1);
+    pallino(xD, yE, 3.5, COL_RETTA);
+    freccia(x0, xE, y1, COL_DA);
+    etichettaQuota(`Δα = ${E.da.toFixed(2)}°`, x0, xE, y1, COL_DA, xE < x0 ? -1 : 1);
+    freccia(xI, x0, y2, COL_RETTA, true);
+    etichettaQuota(`δ = ${delta.toFixed(1)}°`, xI, x0, y2, COL_RETTA, -1);
+    freccia(x0, xD, y2, COL_LR);
+    etichettaQuota(`l/R = ${lR.toFixed(2)}°`, x0, xD, y2, COL_LR, 1);
+  }
+
+  // ---------- equilibri: prima i marcatori, poi accanto a ciascuno numero e tipo ----------
+  MARK = [];
+  for (const e of EQ) {
+    const x = toXR(e.da), y = toY(e.eta);
+    if (x < RX0 - 2 || x > RX0 + pwR + 2 || y < Y0 - 2) continue;
+    const sel = e === E;
+    if (sel) anello(x, y, 12, 'rgba(255,217,138,.6)', 1.2);
+    anello(x, y, 7.5, e.stabile ? COL_SOTTO : COL_SOVRA, 2.4);
+    pallino(x, y, 3.6, colKg(e.gK));
+    MARK.push({ x, y, e, sel });
+  }
+  const evita = [zonaLegenda];
+  if (lettura) {      // la freccia delta della lettura di l/R, alla quota dell'equilibrio scelto, con la sua etichetta
+    const xa = toXR(E.da), xb = toXR(-lR), yE = toY(E.eta);
+    evita.push({ x: Math.min(xa, xb) - 22, y: yE - 17, w: Math.abs(xb - xa) + 44, h: 23 });
+  }
+  etichetteEquilibri(evita);
+
+  // ---------- sulle caratteristiche: i due punti dell'equilibrio scelto ----------
+  if (opt.punti && E) {
+    const y = toY(E.eta), pr = PAIRS[E.b], x1 = toXL(E.a1), x2 = toXL(E.a2);
+    linea(LX0, y, LX0 + pwL, y, 'rgba(255,255,255,.28)', 1);
+    linea(LX0 + pwL, y, RX0, y, 'rgba(255,255,255,.16)', 1, [4, 4]);
+    linea(x1, y, x1, YB, 'rgba(233,69,96,.45)', 1, [3, 3]);
+    linea(x2, y, x2, YB, 'rgba(0,180,216,.45)', 1, [3, 3]);
+    const yf = y + 18 <= YB - 4 ? y + 18 : y - 18, yt = yf > y ? y - 8 : y + 17;
+    freccia(x2, x1, yf, pr.col);
+    etichettaFreccia(`${pr.nome} = ${fmt(E.da)}`, x2, x1, yf, pr.col, LX0, LX0 + pwL);
+    pallino(x1, y, 5, COL1); pallino(x2, y, 5, COL2);
+    const vicini = Math.abs(x1 - x2) < 18, d1 = vicini ? (x1 >= x2 ? 8 : -8) : 0;
+    testo(NOMI1[pr.i], x1 + d1, yt, COL1, 'bold 11px "Segoe UI"', 'center');
+    testo(NOMI2[pr.j], x2 - d1, yt, COL2, 'bold 11px "Segoe UI"', 'center');
+    testo(`equilibrio ${E.n}: ãy/g = ${E.eta.toFixed(3)}`, LX0 + pwL - 4, y - 5, '#dfe6f5', '10.5px "Segoe UI"', 'right');
+  }
+  aggiornaPannelli(M, u, delta, s, E, lR);
+}
+
+// ===================================================================
+//  Pannelli
+// ===================================================================
+const num = (v, d) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d);
+function aggiornaPannelli(M, u, delta, s, E, lR) {
+  pannelloCaso(M);
+  $('delta-val').textContent = delta.toFixed(1); $('u-val').textContent = u.toFixed(1);
+  $('retta-info').innerHTML = u < 0.5 ? 'Con u = 0 la retta &egrave; l’asse orizzontale: nessuna curva a regime.'
+    : `Intercetta &Delta;&alpha; = &delta; = ${delta.toFixed(1)}&deg;; pendenza u&sup2;/(g&thinsp;l) = ${(u * u / (G * M.l)).toFixed(2)} per rad `
+      + `(${s.toFixed(4)} per grado). u = ${(u * 3.6).toFixed(0)} km/h.`;
+  let righe = `<tr><th>#</th><th style="text-align:left">ramo</th><th>&Delta;&alpha;</th><th>&atilde;<sub>y</sub>/g</th><th>g&thinsp;K<sub>&gamma;</sub></th><th style="text-align:left">tipo</th></tr>`;
+  EQ.forEach((e, k) => {
+    righe += `<tr class="click${e === E ? ' sel' : ''}" data-k="${k}"><td>${e.n}</td><td class="r"><span class="sw" style="border-color:${PAIRS[e.b].col}"></span>${sub(PAIRS[e.b].nome)}</td>`
+      + `<td class="v">${fmt(e.da)}</td><td class="v">${e.eta.toFixed(3)}</td><td class="v">${num(e.gK, 2)}&deg;</td>`
+      + `<td class="r" style="color:${e.stabile ? COL_SOTTO : COL_SOVRA}">${e.tipo}</td></tr>`;
+  });
+  $('tab-eq').innerHTML = righe;
+  $('eq-nota').innerHTML = u < 0.5 ? '' : (EQ.length ? 'Clic su una riga, o su un equilibrio nel grafico, per sceglierlo.'
+    : 'La retta non taglia il diagramma: con questi ingressi non c’&egrave; un moto in curva a regime.');
+  if (!E) { $('scelto-titolo').textContent = 'Equilibrio scelto'; $('eq-scelto').innerHTML = '<div class="note">&mdash;</div>'; }
+  else {
+    $('scelto-titolo').textContent = `Equilibrio ${E.n}, ramo ${PAIRS[E.b].nome} (${PAIRS[E.b].ramo})`;
+    const lam = E.disc >= 0 ? `${((E.pv + Math.sqrt(E.disc)) / 2).toFixed(2)}, ${((E.pv - Math.sqrt(E.disc)) / 2).toFixed(2)}`
+      : `${(E.pv / 2).toFixed(2)} &plusmn; ${(Math.sqrt(-E.disc) / 2).toFixed(2)}&thinsp;i`;
+    const tipoK = E.gK > 0.01 ? 'sottosterzante' : (E.gK < -0.01 ? 'sovrasterzante' : 'neutro');
+    const lRrad = lR * RAD, R1 = M.l / lRrad, R2 = u * u / (E.eta * G);
+    const r = (a, b) => `<tr><td>${a}</td><td class="v">${b}</td></tr>`;
+    $('eq-scelto').innerHTML = `<table class="tab">`
+      + r(`&atilde;<sub>y</sub>/g`, `${E.eta.toFixed(3)} &nbsp;(&atilde;<sub>y</sub> = ${(E.eta * G).toFixed(2)} m/s&sup2;)`)
+      + r(`&alpha;<sub>1</sub>, &alpha;<sub>2</sub>`, `${E.a1.toFixed(2)}&deg;, ${E.a2.toFixed(2)}&deg; &rarr; &Delta;&alpha; = ${fmt(E.da)}`)
+      + r(`&Phi;<sub>1</sub>, &Phi;<sub>2</sub>`, `${(E.Ph1 / 1000).toFixed(1)}, ${(E.Ph2 / 1000).toFixed(1)} kN/rad`)
+      + r(`g&thinsp;K<sub>&gamma;</sub> = W<sub>1</sub>/&Phi;<sub>1</sub> &minus; W<sub>2</sub>/&Phi;<sub>2</sub>`, `${num(E.gK, 2)}&deg;/g, ${tipoK}`)
+      + r(`p, q, &Delta;`, `${E.pv.toFixed(2)} s<sup>&minus;1</sup>, ${E.qv.toFixed(2)} s<sup>&minus;2</sup>, ${E.disc.toFixed(2)}`)
+      + r(`&lambda;<sub>1,2</sub> (s<sup>&minus;1</sup>)`, `${lam} &rarr; <b style="color:${E.stabile ? COL_SOTTO : COL_SOVRA}">${E.tipo}</b>`)
+      + r(`l/R = &delta; &minus; &Delta;&alpha;`, `${lR.toFixed(2)}&deg; = ${lRrad.toFixed(4)} rad`)
+      + r(`R = l/(l/R)`, isFinite(R1) ? `${R1.toFixed(1)} m &nbsp;(controllo: u&sup2;/&atilde;<sub>y</sub> = ${R2.toFixed(1)} m)` : '&mdash;')
+      + `</table>`;
+  }
+  if (Aiuto.aperto) Aiuto.adesso();
+}
+function testoAdesso() {
+  const u = +$('u-slider').value, delta = +$('delta-slider').value;
+  const testa = `<b>Adesso</b> (${CASI[currentMode]}${modificato() ? ', modificato' : ''}; u = ${u.toFixed(1)} m/s, &delta; = ${delta.toFixed(1)}&deg;): `;
+  if (!EQ.length) return testa + 'nessun equilibrio.';
+  return testa + EQ.map(e => `${e.n} su ${sub(PAIRS[e.b].nome)}, ${e.tipo}, g&thinsp;K<sub>&gamma;</sub> = ${num(e.gK, 2)}&deg;/g`).join('; ') + '.';
+}
+function renderRetta() {
+  if (typeof katex === 'undefined') return setTimeout(renderRetta, 100);
+  katex.render(String.raw`\frac{\tilde a_y}{g} = \frac{u^2}{g\,l}\,(\delta - \Delta\alpha)`, $('retta-formula'), { throwOnError: false });
+}
+renderRetta();
+for (const id of ['delta-slider', 'u-slider']) $(id).addEventListener('input', () => draw());
+for (const [id, k] of [['chk-lettura', 'lettura'], ['chk-stab', 'stab'], ['chk-kg', 'kg'], ['chk-punti', 'punti']])
+  $(id).addEventListener('change', e => { opt[k] = e.target.checked; draw(); });
+$('tab-eq').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-k]'); if (!tr) return;
+  const q = EQ[+tr.dataset.k]; SCELTO = { b: q.b, eta: q.eta }; draw();
+});
+canvas.addEventListener('click', e => {
+  const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  let best = null, dmin = 14;
+  for (const m of MARK) { const d = Math.hypot(m.x - x, m.y - y); if (d < dmin) { dmin = d; best = m; } }
+  if (best) { SCELTO = { b: best.e.b, eta: best.e.eta }; draw(); }
+});
+
+// ===================================================================
+//  Help: ogni "?" apre la sua scheda (testo nel <template id="aiuto-...">).
+//  Quella di un grafico si apre sopra l'altro grafico, cosi' quello spiegato resta
+//  scoperto; quella di un pannello sopra i grafici. Si sposta trascinandone la testata.
+//  Un elemento #aiuto-adesso nella scheda riceve i numeri del caso corrente
+//  (funzione testoAdesso del widget, se c'e').
+// ===================================================================
+function posizionaBottoni() {
+  if (!LAY) return;
+  const ox = canvas.offsetLeft, oy = canvas.offsetTop;
+  for (const b of document.querySelectorAll('.aiuto-b')) {
+    const x = b.dataset.aiuto === 'car' ? LAY.LX0 + LAY.pwL - 22 : LAY.RX0 + LAY.pwR - 22;
+    b.style.left = (ox + x) + 'px'; b.style.top = (oy + 5) + 'px';
+  }
+}
+const Aiuto = {
+  aperto: null, spostata: false, bottone: null,
+  apri(id, bottone) {
+    if (this.aperto === id) return this.chiudi();
+    const box = $('aiuto'), corpo = box.querySelector('.corpo'), tpl = $('aiuto-' + id);
+    this.aperto = id; this.spostata = false; this.bottone = bottone || null;
+    box.querySelector('.testa .t').textContent = tpl.dataset.titolo;
+    corpo.replaceChildren(tpl.content.cloneNode(true));
+    const dec = s => s.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');   // innerHTML riscrive > come &gt;
+    if (window.katex) corpo.innerHTML = corpo.innerHTML.replace(/\$([^$]+)\$/g, (m, s) => katex.renderToString(dec(s), { throwOnError: false }));
+    corpo.scrollTop = 0;
+    document.querySelectorAll('.aiuto-b, .aiuto-p').forEach(b => b.classList.toggle('on', b.dataset.aiuto === id));
+    box.classList.add('on');
+    this.adesso();
+    this.posiziona();
+  },
+  chiudi() {
+    this.aperto = null; $('aiuto').classList.remove('on');
+    document.querySelectorAll('.aiuto-b, .aiuto-p').forEach(b => b.classList.remove('on'));
+  },
+  adesso() {
+    const el = document.getElementById('aiuto-adesso');
+    if (el && MODEL && typeof testoAdesso === 'function') el.innerHTML = testoAdesso(this.aperto);
+  },
+  posiziona() {
+    if (!this.aperto || this.spostata || !LAY) return;
+    const box = $('aiuto'), r = canvas.getBoundingClientRect();
+    let w, left;
+    if (this.aperto === 'car' || this.aperto === 'hd') {
+      const sopraHd = this.aperto === 'car';
+      const x0 = r.left + (sopraHd ? LAY.RX0 - 10 : LAY.LX0 - 10), wDisp = (sopraHd ? LAY.pwR : LAY.pwL) + 20;
+      w = Math.min(600, Math.max(380, wDisp)); left = x0;
+    } else {                                   // scheda di un pannello: sopra i grafici, verso il suo "?"
+      w = Math.min(560, window.innerWidth - 16);
+      const bx = this.bottone ? this.bottone.getBoundingClientRect().left : window.innerWidth / 2;
+      left = bx - w / 2;
+    }
+    left = Math.max(8, Math.min(window.innerWidth - w - 8, left));
+    Object.assign(box.style, { width: w + 'px', left: left + 'px', top: (r.top + 6) + 'px', maxHeight: Math.max(220, window.innerHeight - r.top - 16) + 'px' });
+  },
+  init() {
+    document.querySelectorAll('.aiuto-b, .aiuto-p').forEach(b => b.addEventListener('click', e => { e.preventDefault(); this.apri(b.dataset.aiuto, b); }));
+    const box = $('aiuto'), testa = box.querySelector('.testa');
+    box.querySelector('.x').addEventListener('click', () => this.chiudi());
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.aperto) this.chiudi(); });
+    let presa = null;
+    testa.addEventListener('pointerdown', e => {
+      if (e.target.closest('button')) return;
+      const rr = box.getBoundingClientRect();
+      presa = { dx: e.clientX - rr.left, dy: e.clientY - rr.top }; testa.setPointerCapture(e.pointerId);
+    });
+    testa.addEventListener('pointermove', e => {
+      if (!presa) return;
+      this.spostata = true;
+      const top = Math.max(0, Math.min(window.innerHeight - 40, e.clientY - presa.dy));
+      Object.assign(box.style, { left: (e.clientX - presa.dx) + 'px', top: top + 'px', maxHeight: (window.innerHeight - top - 10) + 'px' });
+    });
+    const fine = () => { presa = null; };
+    testa.addEventListener('pointerup', fine); testa.addEventListener('pointercancel', fine);
+  },
+};
+
+// ===================================================================
+//  Divisore orizzontale: trascina per dare piu' spazio ai grafici o ai pannelli;
+//  doppio clic chiude o riapre i pannelli. L'altezza scelta resta in proporzione.
+// ===================================================================
+function divisore() {
+  const splitter = $('h-splitter'), bot = $('bottom-strip');
+  let frazione = 0.38, presa = null;
+  const altezza = () => Math.max(190, Math.min(440, window.innerHeight * frazione));
+  const applica = h => { bot.style.flexBasis = h + 'px'; resize(); draw(); Aiuto.posiziona(); };
+  bot.style.flexBasis = altezza() + 'px';
+  splitter.addEventListener('pointerdown', e => {
+    presa = { y: e.clientY, h: bot.getBoundingClientRect().height };
+    bot.classList.remove('chiuso'); splitter.classList.add('active'); splitter.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  splitter.addEventListener('pointermove', e => {
+    if (!presa) return;
+    const h = Math.max(0, Math.min(window.innerHeight - 180, presa.h - (e.clientY - presa.y)));
+    frazione = h / window.innerHeight; applica(h);
+  });
+  const fine = () => {
+    if (!presa) return; presa = null; splitter.classList.remove('active');
+    if (bot.getBoundingClientRect().height < 50) { bot.classList.add('chiuso'); frazione = 0.38; bot.style.flexBasis = altezza() + 'px'; resize(); draw(); }
+  };
+  splitter.addEventListener('pointerup', fine); splitter.addEventListener('pointercancel', fine);
+  splitter.addEventListener('dblclick', () => { bot.classList.toggle('chiuso'); resize(); draw(); Aiuto.posiziona(); });
+  window.addEventListener('resize', () => { if (!bot.classList.contains('chiuso')) bot.style.flexBasis = altezza() + 'px'; resize(); draw(); Aiuto.posiziona(); });
+}
+
+// ===================================================================
+//  Avvio
+// ===================================================================
+Aiuto.init();
+renderFormula();
+divisore();
+resize();
+inizializzaParametri(CON_JZ, draw);
+setMode('under1');
+</script>
+</body>
+</html>

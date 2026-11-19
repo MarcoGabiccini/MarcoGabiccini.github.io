@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Costruzione grafica della caratteristica dell'assale</title>
+<!-- Widget didattico del blocco 6 (slide fr:costruzione): la costruzione
+     grafica della caratteristica dell'assale con la retta Delta Z_1 = k_1 Y_1
+     e le curve somma, senza e con barra antirollio anteriore. A sinistra i
+     passi da Delta Z_1 = xi_11 Y_1 + xi_12 Y_2 a k_1 esplicito: conta solo la
+     quota k_phi1^s/k_phi^s della rigidezza a rollio che sta davanti; sul
+     grafico il ventaglio delle rette fra quota 0 (tutta dietro) e 1 (tutta
+     davanti), con l'arco graduato nella quota.
+     Della curva somma di un Delta Z_1 si usa un solo punto: niente incroci con
+     le curve somma degli altri trasferimenti. Veicolo e pneumatico di
+     graph/caratteristica_assale.py (stessi numeri della slide): se cambiano
+     i parametri nello script, vanno cambiati anche qui. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root {
+  --bg: #1a1a2e; --panel: #16213e; --accent: #0f3460; --text: #e0e0e0; --muted: #9aa6b8;
+  --hl: #e94560; --dato: #ffd98a;
+  --senza: #c08bff; --con: #ff5c8a;
+  --tre: #4e9bff; --duequattro: #2ec4b6; --unocinque: #ff8c42;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text);
+  display: flex; height: 100vh; overflow: hidden; }
+.panel { background: var(--panel); padding: 10px; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: 8px; }
+#sx { width: 330px; flex: 0 0 auto; }
+.title { text-align: center; line-height: 1.3; }
+.title .t1 { font-size: 1em; font-weight: 700; color: var(--hl); }
+.title .t2 { font-size: .72em; color: #bbb; }
+.section { background: var(--accent); border-radius: 8px; padding: 7px 10px 8px; }
+.section-title { font-size: .68em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #aab; margin-bottom: 6px; }
+.note { font-size: .74em; color: var(--muted); line-height: 1.5; }
+.note b { color: #dfe6f5; }
+.formula { font-size: .82em; margin: 3px 0; text-align: center; }
+.formula.grande { font-size: 1.05em; }
+.passo { display: flex; gap: 7px; margin: 5px 0; font-size: .74em; color: var(--muted); line-height: 1.45; }
+.passo > div { flex: 1; min-width: 0; }
+.passo .n { flex: 0 0 17px; height: 17px; border-radius: 50%; background: var(--hl); color: #fff; font-weight: 700;
+  font-size: .9em; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.passo b { color: #dfe6f5; }
+.passo .formula { font-size: 1.1em; color: var(--text); }
+.passo .formula.grande { font-size: 1.4em; }
+table.xi tr.lim td { color: #8f98aa; font-weight: 400; }
+table.xi { width: 100%; border-collapse: collapse; font-size: .74em; margin-top: 4px; }
+table.xi th, table.xi td { padding: 2px 4px; text-align: right; font-family: Consolas, monospace; }
+table.xi th { color: #aab; font-family: inherit; font-weight: 600; }
+table.xi td:first-child, table.xi th:first-child { text-align: left; font-family: inherit; font-weight: 700; }
+.a { color: var(--senza); } .b { color: var(--con); }
+.chk { font-size: .8em; display: flex; align-items: center; gap: 6px; margin: 4px 0; cursor: pointer; }
+.chk input { accent-color: var(--hl); }
+.riga { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: .78em; }
+.riga .nome { flex: 0 0 auto; min-width: 54px; }
+.riga input[type=range] { flex: 1; min-width: 0; accent-color: var(--hl); }
+.riga input[type=number] { width: 60px; background: #1d2d52; color: #fff; border: 1px solid #4a5a80;
+  border-radius: 4px; padding: 2px 4px; font-family: Consolas, monospace; font-size: 1em; }
+.riga .val { flex: 0 0 64px; text-align: right; font-family: Consolas, monospace; color: var(--dato); }
+.riga .u { color: var(--muted); }
+.seg { display: flex; border-radius: 6px; overflow: hidden; border: 1px solid #4a5a80; margin: 3px 0 6px; }
+.seg button { flex: 1; border: none; border-right: 1px solid #4a5a80; background: #1d2d52; color: #dde;
+  font-size: .76em; font-weight: 600; padding: 5px 6px; cursor: pointer; }
+.seg button:last-child { border-right: none; }
+.seg button.on { background: var(--hl); color: #fff; }
+.bottoni { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.bottoni button { background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 5px;
+  font-size: .76em; padding: 4px 8px; cursor: pointer; }
+.bottoni button:hover { border-color: var(--hl); }
+.bottoni button.primo { background: var(--hl); border-color: var(--hl); color: #fff; font-weight: 700; }
+.solo-dz, .solo-y { }
+body.modo-y .solo-dz, body.modo-dz .solo-y { display: none; }
+
+#sx.chiuso { width: 0 !important; padding: 0; overflow: hidden; }
+.resizer { flex: 0 0 6px; cursor: col-resize; background: var(--accent); position: relative; transition: background .15s; }
+.resizer:hover, .resizer.attivo { background: var(--hl); }
+.resizer::after { content: '\22EE'; position: absolute; top: 50%; left: -2px; transform: translateY(-50%);
+  color: #8fa0c0; font-size: 12px; pointer-events: none; }
+#main { flex: 1; display: flex; flex-direction: column; min-width: 0; padding: 8px; gap: 8px; }
+.graf { background: var(--panel); border-radius: 8px; display: flex; flex-direction: column; min-height: 0; padding: 6px 10px 6px; position: relative; }
+.graf .tit { font-size: .86em; font-weight: 700; color: #dfe6f5; padding-right: 58px; }
+.graf .zoom { position: absolute; right: 10px; top: 6px; font-size: .8em; }
+.graf .zoom button { background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 4px; font-size: 1em; padding: 0 5px; cursor: pointer; }
+.graf .zoom button.aiuto-b { font-weight: 700; margin-right: 4px; padding: 0 6px; }
+.graf .zoom button.aiuto-b:hover, .graf .zoom button.aiuto-b.on { background: var(--hl); border-color: var(--hl); color: #fff; }
+#c-fz { cursor: grab; }
+canvas.trascina { cursor: grabbing !important; }
+/* help dei grafici: la scheda si apre accanto al suo grafico e si sposta trascinandone la testata */
+#aiuto { position: fixed; z-index: 40; display: none; flex-direction: column; background: #111a33; border: 1px solid #4a5a80;
+  border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,.65); }
+#aiuto.on { display: flex; }
+#aiuto .testa { display: flex; align-items: center; gap: 10px; padding: 8px 10px 7px 14px; border-bottom: 1px solid #2c3a5e; cursor: move; }
+#aiuto .testa .t { flex: 1; font-size: .84em; font-weight: 700; color: #fff; }
+#aiuto .testa button { background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 5px; font-size: .8em; padding: 1px 8px; cursor: pointer; }
+#aiuto .testa button:hover { border-color: var(--hl); }
+#aiuto .corpo { overflow-y: auto; padding: 4px 16px 12px; font-size: .8em; color: #c3ccdd; line-height: 1.5; }
+#aiuto h4 { font-size: 1em; color: #fff; margin: 11px 0 3px; }
+#aiuto h4 .n { color: var(--dato); margin-right: 5px; }
+#aiuto p { margin: 0 0 5px; }
+#aiuto b { color: #fff; }
+#aiuto ul, #aiuto ol { margin: 2px 0 6px 18px; }
+#aiuto li { margin: 2px 0; }
+#aiuto .sw { display: inline-block; width: 18px; height: 0; border-top: 2.5px solid; vertical-align: middle; margin-right: 5px; }
+#aiuto .sw.tr { border-top-style: dashed; }
+#aiuto .pal { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: middle; margin: 0 5px 1px 0; }
+#aiuto .piede { margin-top: 9px; font-size: .9em; }
+#aiuto canvas.sb { width: 100%; height: 280px; display: block; background: rgba(0,0,0,.22); border-radius: 8px; margin: 6px 0 4px; }
+#aiuto #sb-fronte { height: 300px; }
+#aiuto #sb-3d { height: 400px; }
+#aiuto .sb-com { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+#aiuto .sb-com .seg { margin: 0; flex: 0 0 210px; }
+#aiuto .sb-com > button { background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 5px; font-size: .95em; padding: 4px 10px; cursor: pointer; }
+#aiuto .sb-com .note { flex: 1; }
+#aiuto .riga { font-size: 1em; max-width: 520px; }
+#aiuto table.cat { width: 100%; border-collapse: collapse; margin: 4px 0 6px; }
+#aiuto table.cat th, #aiuto table.cat td { padding: 3px 8px; border-bottom: 1px solid #2c3a5e; text-align: right; white-space: nowrap; }
+#aiuto table.cat th { color: #aab; font-weight: 600; }
+#aiuto table.cat td:first-child, #aiuto table.cat th:first-child { text-align: left; white-space: normal; }
+#aiuto table.cat td.v { font-family: Consolas, monospace; color: var(--dato); }
+#aiuto table.cat td.fr { font-weight: 700; text-align: center; width: 24px; }
+#aiuto table.cat tr.chiave td { background: rgba(255,92,138,.08); }
+#aiuto table.cat tr.aparte td { color: #8f98aa; }
+#aiuto .punta { position: absolute; bottom: -7px; width: 12px; height: 12px; background: #111a33; transform: rotate(45deg);
+  border-right: 1px solid #4a5a80; border-bottom: 1px solid #4a5a80; }
+.graf .leg { font-size: .74em; color: var(--muted); margin: 2px 0; }
+.graf .leg > span { white-space: nowrap; margin-right: 12px; }
+.graf canvas { flex: 1; width: 100%; min-height: 0; display: block; }
+#g-costr { flex: 1; }
+#g-costr canvas { cursor: crosshair; }
+#basso { flex: 0 0 34%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 8px; min-height: 0; }
+#lettura { font-size: .92em; line-height: 1.55; color: #dfe6f5; overflow-y: auto; padding-top: 4px; }
+#lettura .num { font-family: Consolas, monospace; color: var(--dato); }
+#lettura .chiave { margin-top: 6px; padding: 5px 8px; border-left: 3px solid var(--hl); background: rgba(233,69,96,.08); border-radius: 4px; }
+</style>
+</head>
+<body class="modo-dz">
+
+<div id="sx" class="panel">
+  <div class="title">
+    <div class="t1">Costruzione grafica della caratteristica dell'assale</div>
+    <div class="t2">Assale anteriore, pneumatici rigidi, a regime (slide 70 e 71)</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">La retta: perché $\Delta Z_1$ dipende solo da $Y_1$</div>
+    <div class="passo"><span class="n">1</span><div><span class="t">Il trasferimento sull'anteriore dipende dalle forze laterali di <b>tutti e due</b> gli assali (slide 40):</span>
+      <div class="formula" data-tex="\Delta Z_1 = \xi_{11}\,Y_1 + \xi_{12}\,Y_2"></div></div></div>
+    <div class="passo"><span class="n">2</span><div><span class="t">A regime l'imbardata è in equilibrio, $a_1 Y_1 = a_2 Y_2$: la forza del posteriore è fissata da quella dell'anteriore,</span>
+      <div class="formula" data-tex="Y_2 = \tfrac{a_1}{a_2}\,Y_1"></div></div></div>
+    <div class="passo"><span class="n">3</span><div><span class="t">Quindi $\Delta Z_1$ dipende solo da $Y_1$: una retta per l'origine,</span>
+      <div class="formula grande" data-tex="\Delta Z_1 = k_1\,Y_1"></div>
+      <div class="formula" data-tex="\begin{aligned} k_1 &= \xi_{11} + \tfrac{a_1}{a_2}\,\xi_{12} \\ &= \frac{1}{t_1}\Big[\frac{k_{\varphi,1}^s}{k_\varphi^s}\,\frac{l}{a_2}\,(h - q^b) + q_1\Big] \end{aligned}"></div>
+      <span class="t">con $k_\varphi^s = k_{\varphi,1}^s + k_{\varphi,2}^s$ e $q^b = (a_2 q_1 + a_1 q_2)/l$.</span></div></div>
+    <div class="passo"><span class="n">4</span><div><span class="t">Conta solo la <b>ripartizione</b> della rigidezza a rollio. $k_\varphi^s = k_{\varphi,1}^s + k_{\varphi,2}^s$ è quella totale e
+      $k_{\varphi,1}^s/k_\varphi^s$ è la <b>quota che sta davanti</b>, fra 0 e 1. L'equilibrio fissa il momento di rollio $Y(h - q^b)$;
+      le due sospensioni rollano dello stesso $\phi$ e se lo dividono in proporzione alla loro rigidezza. Il totale non entra in $k_1$:
+      decide solo quanto rolla la cassa.</span>
+      <span class="t" style="display:block; margin-top:4px"><b>Più quota davanti, $k_1$ più grande</b>: come funzione $\Delta Z_1(Y_1)$ la retta è più pendente;
+      nel disegno, con $Y_1$ in verticale, si schiaccia verso l'asse $\Delta Z_1$. Le rette possibili stanno nel ventaglio fra
+      quota 0 (tutta dietro: davanti resta solo $q_1/t_1$, il trasferimento che passa per il centro di rollio) e quota 1 (tutta davanti).</span></div></div>
+    <table class="xi">
+      <tr><th></th><th>$k_{\varphi,1}^s$</th><th>$k_{\varphi,1}^s/k_\varphi^s$</th><th>$k_1$</th></tr>
+      <tr class="a"><td>(a) senza barra</td><td id="ka-phi"></td><td id="ka-rap"></td><td id="ka-k"></td></tr>
+      <tr class="b" id="riga-b"><td>(b) con barra</td><td id="kb-phi"></td><td id="kb-rap"></td><td id="kb-k"></td></tr>
+      <tr class="lim"><td>limiti</td><td>dietro … davanti</td><td>0 … 1</td><td id="k-lim"></td></tr>
+    </table>
+    <div class="note" style="margin-top:3px">$k_{\varphi,1}^s$ in kN m/rad; dietro $k_{\varphi,2}^s = 24$ kN m/rad.</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Barra antirollio anteriore: la retta ruota</div>
+    <label class="chk"><input type="checkbox" id="barra" checked> mostra anche il caso (b) con la barra</label>
+    <div class="riga"><span class="nome">$k_\varphi^{\text{barra}}$</span><input type="range" id="v-barra" min="0" max="200" step="1" value="49"><span class="val" id="barraval"></span></div>
+    <div class="note">Trascina: in (b) $k_{\varphi,1}^s = 36 + k_\varphi^{\text{barra}}$ mentre $k_{\varphi,2}^s = 24$ resta fisso, quindi la quota davanti
+      $(36 + k_\varphi^{\text{barra}})/(60 + k_\varphi^{\text{barra}})$ cresce, cresce $k_1$ e la retta ruota verso l'asse $\Delta Z_1$.
+      Una barra rigidissima fa crescere senza limite $k_{\varphi,1}^s$, ma con lei anche il totale: la quota tende a 1 e non lo supera.
+      Al limite tutta la rigidezza a rollio sta davanti: è il bordo del ventaglio.</div>
+    <label class="chk"><input type="checkbox" id="s-ventaglio" checked> il ventaglio delle rette, quota davanti da 0 a 1</label>
+    <div class="bottoni"><button id="b-schema" class="primo" title="schema animato della barra e la catena barra → trasferimento → deriva">⚙ Come funziona la barra, e perché l'assale diventa più cedevole</button></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Costruzione</div>
+    <div class="seg"><button id="m-dz" class="on">Entra con $\Delta Z_1$</button><button id="m-y">A parità di $Y_1$</button></div>
+    <div class="solo-dz">
+      <div class="riga"><span class="nome">$\Delta Z_1$</span><input type="range" id="dz" min="0" max="2.6" step="0.01" value="1"><span class="val" id="dzval"></span></div>
+      <div class="bottoni">
+        <button id="b-1">$\Delta Z_1 = 1$ kN ($2{+}4$)</button><button id="b-2">$\Delta Z_1 = 2$ kN ($1{+}5$)</button>
+        <button id="b-play" class="primo">▶ Traccia il luogo</button><button id="b-canc">↺ Cancella</button>
+      </div>
+      <div class="note" style="margin-top:5px">Si può anche trascinare sul semipiano sinistro. Il $\Delta Z_1$ con cui entri fissa <b>una sola</b> curva somma, quella delle ruote a $F_{z_0} \pm \Delta Z_1$ (in bianco), e la retta fissa $Y_1 = \Delta Z_1/k_1$: di quella curva serve <b>un solo punto</b>, quello a quella $Y_1$. Ogni $\Delta Z_1$ lascia il suo punto: il luogo dei punti è la caratteristica.</div>
+    </div>
+    <div class="solo-y">
+      <div class="riga"><span class="nome">$Y_1$</span><input type="range" id="yv" min="0.2" max="4.5" step="0.01" value="3"><span class="val" id="yval"></span></div>
+      <div class="note">Stessa $Y_1$ vuol dire stessa $\tilde a_y = Y_1/(m a_2/l)$. Si può trascinare in verticale.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Mostra</div>
+    <label class="chk"><input type="checkbox" id="s-somme" checked> curve somma di riferimento $3{+}3$, $2{+}4$, $1{+}5$</label>
+    <label class="chk"><input type="checkbox" id="s-ruote"> le due ruote della curva somma corrente</label>
+    <label class="chk"><input type="checkbox" id="s-intere"> le caratteristiche intere</label>
+  </div>
+</div>
+<div class="resizer" id="rz-sx" title="trascina per allargare o stringere; doppio clic: chiudi o riapri"></div>
+
+<div id="main">
+  <div class="graf" id="g-costr">
+    <div class="tit">Assale anteriore: $\Delta Z_1$ verso sinistra, $\alpha_1$ verso destra, $Y_1$ in verticale in comune</div>
+    <div class="zoom"><button class="aiuto-b" data-aiuto="costr" title="che cosa si vede in questo grafico">?</button><button data-v="costr" title="rotella: zoom; con ⇧ solo in orizzontale · tasto destro (o Ctrl) e trascina: sposta · clic qui o doppio clic sul grafico: vista di partenza">⟲</button></div>
+    <div class="leg"><span class="a">— (a) senza barra antirollio</span><span class="b" id="leg-b">— (b) con barra antirollio</span><span class="solo-dz" style="color:#ffffff; font-weight:700">━ la curva somma del $\Delta Z_1$ con cui entri: $F_y(\alpha_1, F_{z_0}+\Delta Z_1) + F_y(\alpha_1, F_{z_0}-\Delta Z_1)$</span></div>
+    <canvas id="c-costr"></canvas>
+  </div>
+  <div id="basso">
+    <div class="graf" id="g-fz">
+      <div class="tit">Perché la somma cala: $F_y(F_z)$ alla deriva del punto (a)</div>
+      <div class="zoom"><button class="aiuto-b" data-aiuto="fz" title="che cosa si vede in questo grafico">?</button><button data-v="fz" title="rotella: zoom; con ⇧ solo in orizzontale · trascina: sposta · clic qui o doppio clic sul grafico: vista di partenza">⟲</button></div>
+      <div class="leg"><span style="color:#ff8c42">● interna $F_{z_0}-\Delta Z_1$</span><span style="color:#2ec4b6">● esterna $F_{z_0}+\Delta Z_1$</span><span>◆ media delle due</span></div>
+      <canvas id="c-fz"></canvas>
+    </div>
+    <div class="graf">
+      <div class="tit">E quindi cosa vuol dire?</div>
+      <div id="lettura"></div>
+    </div>
+  </div>
+</div>
+
+<!-- help dei grafici: una scheda sola, riempita dal <template> del grafico (Aiuto, nello script) -->
+<div id="aiuto"><div class="testa" title="trascina per spostare"><span class="t"></span><button class="x" title="chiudi (Esc)">✕</button></div><div class="corpo"></div><div class="punta"></div></div>
+
+<template id="aiuto-costr">
+  <p>La caratteristica dell'assale anteriore $Y_1(\alpha_1)$ costruita a mano, senza iterare. Due semipiani con l'asse verticale
+    $Y_1$ in comune: a sinistra il trasferimento di carico $\Delta Z_1$, contato verso sinistra; a destra la deriva $\alpha_1$.</p>
+  <h4><span class="n">1</span>A sinistra: la retta $\Delta Z_1 = k_1 Y_1$</h4>
+  <p>A regime il trasferimento di carico sull'anteriore dipende solo da $Y_1$ (passi 1–3 nel pannello a sinistra): una retta per
+    l'origine, <span class="a">viola</span> senza barra, <span class="b">cremisi</span> con la barra. Più grande è $k_1$, più
+    trasferimento per la stessa forza, e più la retta si schiaccia verso l'asse $\Delta Z_1$. Il <b>ventaglio</b> grigio raccoglie
+    tutte le rette possibili; l'arco <b style="color:#ffd98a">giallo</b> è graduato nella quota $k_{\varphi,1}^s/k_\varphi^s$ della
+    rigidezza a rollio che sta davanti, da 0 a 1.</p>
+  <h4><span class="n">2</span>A destra: le curve somma</h4>
+  <p>Le due ruote dell'assale lavorano alla stessa deriva $\alpha_1$, con i carichi $F_{z_0} + \Delta Z_1$ (esterna) e
+    $F_{z_0} - \Delta Z_1$ (interna). Fissato $\Delta Z_1$, la forza dell'assale è la <b>curva somma</b>
+    $F_y(\alpha_1, F_{z_0}+\Delta Z_1) + F_y(\alpha_1, F_{z_0}-\Delta Z_1)$. Ce n'è una per ogni $\Delta Z_1$; le tre tenui sono di
+    riferimento: <span style="color:#4e9bff">$3{+}3$</span>, <span style="color:#2ec4b6">$2{+}4$</span> e
+    <span style="color:#ff8c42">$1{+}5$</span>, cioè $\Delta Z_1 = 0$, 1 e 2 kN. Più trasferimento, curva più bassa: il grafico
+    sotto a sinistra spiega perché.</p>
+  <h4><span class="n">3</span>La costruzione, in tre mosse</h4>
+  <ol>
+    <li><b>si sceglie $\Delta Z_1$</b>: il triangolo giallo sull'asse, dal cursore o trascinando nel semipiano sinistro;</li>
+    <li><b>in verticale fino alla retta</b>: la retta dice quale forza produce quel trasferimento, $Y_1 = \Delta Z_1/k_1$;</li>
+    <li><b>in orizzontale fino alla curva somma dello stesso $\Delta Z_1$</b>, quella in bianco: dice a quale deriva le ruote, con
+      quel trasferimento, danno proprio quella $Y_1$. È $\bar\alpha$, e $(\bar\alpha, Y_1)$ è un punto della caratteristica.</li>
+  </ol>
+  <h4><span class="n">4</span>Perché funziona: è il loop, sciolto dall'altra parte</h4>
+  <p>Il punto trovato soddisfa insieme due condizioni: con quel trasferimento le ruote danno $Y_1$ (curva somma), e quel
+    trasferimento è proprio quello che $Y_1$ produce (retta). È la stessa coerenza che il widget del campionamento cerca iterando.
+    Lì si fissa $\alpha_1$ e l'incognita gira nel loop; qui si fissa $\Delta Z_1$, la retta dà subito $Y_1$ e resta solo da leggere
+    su una curva somma a quale deriva corrisponde. Niente iterazioni: si è scelto come ingresso proprio la grandezza che spezza il
+    loop.</p>
+  <h4><span class="n">5</span>Un solo punto per curva somma</h4>
+  <p>Della curva bianca serve solo il punto a quella $Y_1$. Gli altri suoi punti hanno un'altra $Y_1$, quindi per la retta un altro
+    $\Delta Z_1 = k_1 Y_1$: appartengono a un'altra curva somma. Ogni $\Delta Z_1$ lascia il suo punto; «▶ Traccia il luogo» li fa
+    scorrere tutti, e il luogo dei punti, la linea spessa nel colore del caso, è la caratteristica.</p>
+  <h4><span class="n">6</span>Con e senza barra</h4>
+  <p>Entrando con lo stesso $\Delta Z_1$ i due casi usano la <b>stessa</b> curva somma: con la barra $k_1$ è più grande, la stessa
+    $\Delta Z_1$ arriva già con una $Y_1$ più bassa e il punto scende sulla stessa curva. Il confronto che conta però è a parità di
+    $Y_1$, cioè di $\tilde a_y$. Con «A parità di $Y_1$» si fissa l'orizzontale gialla; ciascun caso ha il suo
+    $\Delta Z_1 = k_1 Y_1$ (pallini nel semipiano sinistro) e la sua curva somma (tratteggiata nel suo colore). Con la barra il
+    trasferimento è maggiore, la curva somma più bassa, e per la stessa $Y_1$ serve più deriva: la freccia gialla in basso è il
+    $\Delta\alpha_1$ in più, cioè più sottosterzo.</p>
+  <h4><span class="n">7</span>Che cos'altro si può accendere</h4>
+  <p>Nella sezione «Mostra» del pannello a sinistra: le curve somma di riferimento; le due ruote della curva somma corrente,
+    tratteggiate (<span style="color:#ff8c42">arancio</span> l'interna, <span style="color:#2ec4b6">verde acqua</span> l'esterna);
+    le caratteristiche intere, tratteggiate nel colore del caso.</p>
+</template>
+
+<template id="aiuto-barra" data-titolo="La barra antirollio: come funziona, e perché rende l'assale anteriore più cedevole">
+  <p>Mettere una barra antirollio davanti, o irrobustire quella che c'è, abbassa la caratteristica dell'assale anteriore: per la
+    stessa forza laterale l'assale chiede più deriva. Il perché sta in tre passi: che cosa fa la barra, che cosa fa ai carichi
+    delle due ruote, che cosa ne fa la concavità del pneumatico.</p>
+  <h4><span class="n">1</span>Com'è fatta, e quando lavora</h4>
+  <canvas id="sb-3d" class="sb"></canvas>
+  <div class="sb-com"><div class="seg"><button data-m="rollio" class="on">rollio</button><button data-m="sobbalzo">sobbalzo</button></div>
+    <button id="sb-play">⏸ ferma</button>
+    <span class="note">Vista da dietro e un po' dall'alto, solidale alla cassa: le ruote salgono e scendono rispetto a lei.
+      Spostamenti e angoli esagerati.</span></div>
+  <p>È una barra d'acciaio a U. Il tratto centrale, trasversale, è fissato alla cassa con due <b>boccole</b> in cui può ruotare; i
+    due <b>bracci</b> vanno verso le ruote e con due <b>bielle</b> si attaccano alle sospensioni.</p>
+  <ul>
+    <li><b>Sobbalzo</b>: le due ruote salgono insieme, i bracci ruotano dello stesso angolo e la barra gira nelle boccole senza
+      torcersi. Non lavora: la rigidezza verticale resta quella delle molle.</li>
+    <li><b>Rollio</b>: rispetto alla cassa una ruota sale e l'altra scende, i bracci ruotano in versi opposti e il tratto centrale
+      si <b>torce</b> (la riga scura sulla barra si avvita). La barra reagisce con un momento proporzionale alla torsione: spinge giù
+      la ruota esterna, tira su l'interna e sulla cassa fa un momento che si oppone al rollio.</li>
+  </ul>
+  <p>È una molla che lavora solo in rollio, e solo sull'assale dove sta: si somma alla rigidezza a rollio delle molle davanti,
+    $k_{\varphi,1}^s = 36 + k_\varphi^{\text{barra}}$ kN m/rad, e non tocca quella di dietro, $k_{\varphi,2}^s = 24$ kN m/rad.</p>
+  <h4><span class="n">2</span>Che cosa fa ai carichi, a parità di $\tilde a_y$</h4>
+  <canvas id="sb-fronte" class="sb"></canvas>
+  <p>A parità di $\tilde a_y$ il momento di rollio $m\tilde a_y\,(h - q^b)$ è lo stesso. Le due sospensioni rollano dello stesso
+    $\phi$ e se lo dividono in proporzione alla loro rigidezza a rollio. Con la barra la rigidezza totale è più grande, quindi la
+    cassa <b>rolla meno</b>. Ma la quota che sta davanti è più grande: l'anteriore si prende una parte maggiore del momento e la
+    scarica sulle sue ruote, quindi <b>$\Delta Z_1$ cresce</b>, l'esterna si carica di più e l'interna si scarica di più. Dietro
+    succede il contrario.</p>
+  <h4><span class="n">3</span>La catena, con i numeri</h4>
+  <div class="riga"><span class="nome">$Y_1$</span><input type="range" id="sb-y" min="0.2" max="4.5" step="0.01"><span class="val" id="sb-yv"></span></div>
+  <div class="note">È la stessa $Y_1$ del confronto «A parità di $Y_1$»; la barra è quella del cursore nel pannello a sinistra.</div>
+  <div id="sb-catena"></div>
+  <p>L'ultimo passo è la concavità in $F_z$ (il grafico in basso a sinistra): con i carichi più sbilanciati l'interna perde più di
+    quanto guadagni l'esterna, la curva somma è più bassa e, per arrivare alla stessa $Y_1$, le ruote devono derivare di più.
+    Il pneumatico è lo stesso, e anche il carico totale sull'assale: cambia solo come si divide fra le due ruote.</p>
+  <h4><span class="n">4</span>«Più cedevole»: quanto, e dove</h4>
+  <div id="sb-tabella"></div>
+  <div id="sb-commento"></div>
+</template>
+
+<template id="aiuto-fz">
+  <p>Lo stesso pneumatico guardato in un altro modo: non $F_y$ in funzione della deriva, ma $F_y$ in funzione del carico $F_z$, a
+    deriva fissata. La deriva è quella del punto (a) della costruzione, scritta in fondo alla curva.</p>
+  <h4>La curva è concava</h4>
+  <p><span class="sw" style="color:#e8ecf5"></span>Al crescere del carico la forza laterale cresce sempre meno: il coefficiente
+    d'attrito cala con il carico e la rigidezza di deriva cresce meno che in proporzione. È la sensibilità al carico del
+    pneumatico.</p>
+  <h4>I punti</h4>
+  <ul>
+    <li><span class="pal" style="background:#8f98aa"></span><b>il carico statico</b> $F_{z_0}$: una ruota senza trasferimento;</li>
+    <li><span class="pal" style="background:#ff8c42"></span><b>l'interna</b>, a $F_{z_0} - \Delta Z_1$: perde $\delta^-$;</li>
+    <li><span class="pal" style="background:#2ec4b6"></span><b>l'esterna</b>, a $F_{z_0} + \Delta Z_1$: guadagna $\delta^+$;</li>
+    <li>◆ <b>la media</b> delle due forze: sta sulla corda tratteggiata che le unisce, sulla verticale di $F_{z_0}$.</li>
+  </ul>
+  <h4>Perché la somma cala</h4>
+  <p>Per la concavità $\delta^- \gt \delta^+$: l'interna perde più di quanto guadagna l'esterna. Detto con la corda: la corda di
+    una curva concava sta sotto la curva, quindi la media delle due ruote sta sotto $F_y(F_{z_0})$ e la somma, che è il doppio
+    della media, sta sotto $2F_y(F_{z_0})$. Più $\Delta Z_1$, corda più lunga e media più bassa: $3{+}3 \gt 2{+}4 \gt 1{+}5$.
+    Se la curva fosse una retta la corda ci starebbe sopra e il trasferimento non cambierebbe la forza dell'assale: tutto l'effetto
+    viene dalla concavità.</p>
+  <p>Sono i $\delta^+$ e $\delta^-$ della slide sull'effetto del trasferimento di carico, e il motivo dell'ordine delle curve somma
+    nel grafico sopra.</p>
+</template>
+
+<script>
+// =====================================================================
+// <modello>  stesso veicolo e pneumatico di graph/caratteristica_assale.py
+// =====================================================================
+const G = 9.81, M = 1100, L = 2.50, A1 = 1.11, A2 = L - A1, H = 0.60;
+const T1 = 1.35, Q1 = 0.03, Q2 = 0.08, KPHI1_MOLLE = 36e3, KPHI2 = 24e3;
+const FZ0 = M * G * A2 / L / 2, C1 = M * A2 / L;
+const PC = 1.65, PD1 = 0.88, PD2 = -0.22, PK1 = 15.0, PK2 = 1.6, PE1 = 0.5;
+const RAD = Math.PI / 180;
+
+function fy(alpha, fz) {
+  if (fz <= 0) return 0;
+  const dfz = (fz - FZ0) / FZ0, d = (PD1 + PD2 * dfz) * fz;
+  if (d <= 0) return 0;
+  const ky = PK1 * FZ0 * Math.sin(2 * Math.atan(fz / (PK2 * FZ0)));
+  const ba = ky / (PC * d) * alpha;
+  return d * Math.sin(PC * Math.atan(ba - PE1 * (ba - Math.atan(ba))));
+}
+const somma = (alpha, dz) => fy(alpha, FZ0 + dz) + fy(alpha, FZ0 - dz);
+
+// k_1 = xi_11 + (a_1/a_2) xi_12 = [ (k_phi1/k_phi) (l/a_2)(h - q^b) + q_1 ] / t_1  (scheda A3.4)
+const QB = (A2 * Q1 + A1 * Q2) / L;
+const kDa = rap => (rap * L / A2 * (H - QB) + Q1) / T1;
+const KMIN = kDa(0), KMAX = kDa(1);          // il ventaglio: k_phi1 -> 0 e k_phi1 -> infinito
+function coefficienti(kbarra) {
+  const kphi1 = KPHI1_MOLLE + kbarra, kphi = kphi1 + KPHI2;
+  const xi11 = (kphi1 * H + KPHI2 * Q1) / (T1 * kphi), xi12 = kphi1 * (H - Q2) / (T1 * kphi);
+  return { kphi1, rap: kphi1 / kphi, xi11, xi12, k: xi11 + A1 / A2 * xi12 };
+}
+
+// alpha [rad] sul ramo crescente della curva somma dz dove vale y; NaN se non ci arriva
+function alfaSuSomma(y, dz) {
+  if (y <= 0) return 0;
+  let a0 = 0, s0 = 0;
+  for (let i = 1; i <= 400; i++) {
+    const a1 = i * 0.05 * RAD, s1 = somma(a1, dz);
+    if (s1 >= y) {
+      let lo = a0, hi = a1;
+      for (let k = 0; k < 50; k++) { const c = (lo + hi) / 2; if (somma(c, dz) >= y) hi = c; else lo = c; }
+      return (lo + hi) / 2;
+    }
+    if (s1 < s0) return NaN;          // la curva somma ha gia' passato il massimo
+    a0 = a1; s0 = s1;
+  }
+  return NaN;
+}
+
+// Y [N] della caratteristica per alpha [rad]: Y = somma(alpha, k Y)
+function caratteristica(alpha, k) {
+  if (alpha === 0) return 0;
+  let lo = 0, hi = FZ0 / k;
+  for (let i = 0; i < 60; i++) { const c = (lo + hi) / 2; if (somma(alpha, k * c) - c > 0) lo = c; else hi = c; }
+  return (lo + hi) / 2;
+}
+// </modello>
+
+// =====================================================================
+//  Stato e interfaccia
+// =====================================================================
+const $ = id => document.getElementById(id);
+const COL = { a: '#c08bff', b: '#ff5c8a', s: '#e8ecf5', tre: '#4e9bff', dq: '#2ec4b6', uc: '#ff8c42' };
+const st = { modo: 'dz', dz: 1000, y: 3000, barra: true, ca: null, cb: null,
+  tracce: { a: new Map(), b: new Map() }, intere: { a: [], b: [] }, gira: false,
+  vista: { kx: 1, ky: 1, tx: 0, ty: 0 }, vfz: null };   // le viste dei due grafici (zoom e spostamento)
+
+function ricalcola() {
+  st.barra = $('barra').checked;
+  st.ca = coefficienti(0);
+  const kb = parseFloat($('v-barra').value) || 0;
+  st.cb = coefficienti(kb * 1e3);
+  $('barraval').textContent = kb.toFixed(0) + ' kN m/rad';
+  $('k-lim').textContent = `${KMIN.toFixed(3)} … ${KMAX.toFixed(3)}`;
+  for (const [c, q] of [['a', st.ca], ['b', st.cb]]) {
+    console.assert(Math.abs(q.k - kDa(q.rap)) < 1e-12, 'k_1: le due forme non coincidono');
+    $(`k${c}-phi`).textContent = (q.kphi1 / 1e3).toFixed(0);
+    $(`k${c}-rap`).textContent = q.rap.toFixed(3);
+    $(`k${c}-k`).textContent = q.k.toFixed(3);
+    const pts = [];
+    for (let a = 0; a <= 15.0001; a += 0.05) pts.push({ a, y: caratteristica(a * RAD, q.k) });
+    st.intere[c] = pts;
+    let im = 0; pts.forEach((p, i) => { if (p.y > pts[im].y) im = i; });
+    q.max = pts[im];
+  }
+  $('riga-b').style.opacity = st.barra ? 1 : .35;
+  $('leg-b').style.display = st.barra ? '' : 'none';
+}
+
+// il punto della costruzione per un caso: retta -> Y, curva somma -> alpha
+function punto(c, dz) {
+  const q = st[c === 'a' ? 'ca' : 'cb'], y = dz / q.k, al = alfaSuSomma(y, dz);
+  return { dz, y, al: al / RAD, ok: !isNaN(al) };
+}
+function lascia(dz) {
+  for (const c of st.barra ? ['a', 'b'] : ['a']) {
+    const p = punto(c, dz);
+    if (p.ok) st.tracce[c].set(Math.round(dz / 10), p);
+  }
+}
+
+// =====================================================================
+//  Disegno della costruzione
+// =====================================================================
+const DZMAX = 2.7, AMAX = 15.8, YMAX = 5.8;
+function prepara(cv) {
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  cv.width = Math.max(1, Math.round(r.width * dpr)); cv.height = Math.max(1, Math.round(r.height * dpr));
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+  return { g, W: r.width, H: r.height };
+}
+let T = null;   // trasformazione corrente del grafico grande
+// la geometria di partenza e sopra la vista dell'utente, in pixel: x -> tx + kx x, y -> ty + ky y
+// (rotella: zoom attorno al puntatore; tasto destro o Ctrl e trascina: sposta). sa, sz, sy: pixel per grado e per N
+function geometria(W, H) {
+  const m = { l: 18, r: 40, t: 14, b: 34 }, Wp = W - m.l - m.r, v = st.vista;
+  const bx0 = m.l + 0.3 * Wp, by0 = H - m.b, bsa = 0.7 * Wp / AMAX;
+  const x0 = v.tx + v.kx * bx0, y0 = v.ty + v.ky * by0;
+  const sz = 0.3 * Wp / DZMAX / 1e3 * v.kx, sa = bsa * v.kx, sy = (H - m.t - m.b) / YMAX / 1e3 * v.ky;
+  return { m, x0, y0, W, H, sa, sz, sy,
+    base: { x0: bx0, y0: by0, XA: a => bx0 + a * bsa },      // per quello che resta fermo sullo schermo (la legenda)
+    XA: a => x0 + a * sa, XZ: dz => x0 - dz * sz, Y: y => y0 - y * sy,
+    invA: x => (x - x0) / sa, invZ: x => (x0 - x) / sz, invY: y => (y0 - y) / sy };
+}
+const VISTA0 = () => ({ kx: 1, ky: 1, tx: 0, ty: 0 });
+// passo delle tacche: 1, 2 o 5 per una potenza di 10, con almeno 'min' pixel fra due tacche
+function passoTacche(pxUnita, min) {
+  const p = 10 ** Math.floor(Math.log10(min / pxUnita));
+  return [1, 2, 5, 10].map(f => f * p).find(s => s * pxUnita >= min);
+}
+const cifre = p => Math.max(0, -Math.floor(Math.log10(p) + 1e-9));
+// i valori delle tacche fra lo e hi (estremi compresi), multipli di p, senza lo zero
+function tacche(lo, hi, p) {
+  const v = [];
+  for (let i = Math.max(1, Math.ceil(lo / p - 1e-9)); i * p <= hi + 1e-9 * p; i++) v.push(i * p);
+  return v;
+}
+function linea(g, pts, col, lw, dash = []) {
+  g.save(); g.strokeStyle = col; g.lineWidth = lw; g.setLineDash(dash); g.beginPath();
+  pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); g.restore();
+}
+function cerchio(g, x, y, r, fill, stroke = '#1a1a2e', lw = 1.2) {
+  g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI);
+  if (fill) { g.fillStyle = fill; g.fill(); }
+  if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); }
+}
+// testo sul canvas: a_b, a_{bc} in pedice e a^b, a^{bc} in apice (corpo piu' piccolo);
+// un apice e un pedice di seguito si impilano, come in k^s_{φ,1}
+function pezziTesto(g, s, font) {
+  const px = parseFloat(font.match(/([\d.]+)px/)[1]), fp = font.replace(/[\d.]+px/, (px * .72).toFixed(1) + 'px');
+  const pz = [...s.matchAll(/([_^])\{([^}]*)\}|([_^])(.)|([^_^]+)/gu)].map(m => {
+    if (m[5] !== undefined) return { t: m[5], f: font, dy: 0 };
+    const tipo = m[1] ?? m[3];
+    return { t: m[2] ?? m[4], f: fp, dy: tipo === '_' ? px * .25 : -px * .4, tipo };
+  });
+  let x = 0, prec = null;
+  for (const p of pz) {
+    g.font = p.f; p.l = g.measureText(p.t).width;
+    if (p.tipo && prec?.tipo && prec.tipo !== p.tipo) { p.x = prec.x; x = prec.x + Math.max(prec.l, p.l); prec = null; continue; }
+    p.x = x; x += p.l; prec = p;
+  }
+  return { pz, w: x };
+}
+function scritta(g, x, y, s, col, al = 'left', font = '12px Segoe UI, sans-serif') {
+  g.save(); g.font = font; g.fillStyle = col;
+  if (!/[_^]/.test(s)) { g.textAlign = al; g.fillText(s, x, y); g.restore(); return; }
+  const { pz, w } = pezziTesto(g, s, font), xs = al === 'right' ? x - w : al === 'center' ? x - w / 2 : x;
+  g.textAlign = 'left';
+  for (const p of pz) { g.font = p.f; g.fillText(p.t, xs + p.x, y + p.dy); }
+  g.restore();
+}
+function freccia(g, x1, y1, x2, y2, col, lw = 1.6) {
+  linea(g, [[x1, y1], [x2, y2]], col, lw);
+  const an = Math.atan2(y2 - y1, x2 - x1), l = 8;
+  g.save(); g.fillStyle = col; g.beginPath(); g.moveTo(x2, y2);
+  g.lineTo(x2 - l * Math.cos(an - .4), y2 - l * Math.sin(an - .4));
+  g.lineTo(x2 - l * Math.cos(an + .4), y2 - l * Math.sin(an + .4)); g.closePath(); g.fill(); g.restore();
+}
+const AS = Array.from({ length: 317 }, (_, i) => i * 0.05);
+const curvaSomma = (dz, T) => AS.map(a => [T.XA(a), T.Y(somma(a * RAD, dz))]);
+
+function disegnaCostruzione() {
+  const { g, W, H } = prepara($('c-costr'));
+  T = geometria(W, H);
+  const { x0, y0, m } = T;
+  // assi: griglia e tacche dentro il campo dei dati, col passo adatto allo zoom
+  const pa = passoTacche(T.sa, 70), pz = passoTacche(T.sz * 1e3, 70), py = passoTacche(T.sy * 1e3, 60);
+  const ta = tacche(Math.max(0, T.invA(0)), Math.min(AMAX - .5, T.invA(W)), pa);
+  const tz = tacche(Math.max(0, T.invZ(W) / 1e3), Math.min(DZMAX - .1, T.invZ(0) / 1e3), pz);
+  const ty = tacche(Math.max(0, T.invY(H) / 1e3), Math.min(YMAX - .5, T.invY(0) / 1e3), py);
+  const xa = T.XA(AMAX), xz = T.XZ(DZMAX * 1e3), yt = T.Y(YMAX * 1e3);
+  g.save(); g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 1;
+  for (const a of ta) { g.beginPath(); g.moveTo(T.XA(a), yt); g.lineTo(T.XA(a), y0); g.stroke(); }
+  for (const y of ty) { g.beginPath(); g.moveTo(xz, T.Y(y * 1e3)); g.lineTo(xa, T.Y(y * 1e3)); g.stroke(); }
+  g.restore();
+  freccia(g, x0, y0, xa + 8, y0, '#8f98aa', 1.2);
+  freccia(g, x0, y0, xz - 8, y0, '#8f98aa', 1.2);
+  freccia(g, x0, y0, x0, yt - 6, '#8f98aa', 1.2);
+  // i numeri restano sul bordo del grafico quando lo zoom porta gli assi fuori
+  const yn = Math.min(y0, H - m.b) + 15, xn = Math.min(Math.max(x0, 30), W - 4);
+  const na = cifre(pa), nz = Math.max(1, cifre(pz)), ny = cifre(py);
+  for (const a of ta) scritta(g, T.XA(a), yn, a.toFixed(na), '#8f98aa', 'center', '11px Segoe UI');
+  for (const z of tz) scritta(g, T.XZ(z * 1e3), yn, z.toFixed(nz), '#8f98aa', 'center', '11px Segoe UI');
+  for (const y of ty) scritta(g, xn - 5, T.Y(y * 1e3) + 4, y.toFixed(ny), '#8f98aa', 'right', '11px Segoe UI');
+  scritta(g, W - m.r, yn + 14, 'α₁ [°]', '#cfd8ea', 'right');
+  scritta(g, m.l, yn + 14, '← ΔZ₁ [kN]', '#cfd8ea', 'left');
+  scritta(g, xn - 8, Math.max(yt, m.t) + 6, 'Y₁ [kN]', '#cfd8ea', 'right');
+  // curve somma di riferimento: tenui e sottili, con il nome in fondo e una legenda in basso a destra; quella che
+  // coincide con la curva somma corrente non si traccia (la copre la bianca e ne sbordava ai lati), resta il nome
+  const RIF = [[0, COL.tre, '3+3', 'ΔZ₁ = 0'], [1000, COL.dq, '2+4', 'ΔZ₁ = 1 kN'], [2000, COL.uc, '1+5', 'ΔZ₁ = 2 kN']];
+  if ($('s-somme').checked) {
+    let ultimo = -Infinity;
+    for (const [dz, col, et] of RIF) {
+      const pts = curvaSomma(dz, T), fine = pts[pts.length - 1];
+      if (!(st.modo === 'dz' && Math.abs(st.dz - dz) < 6)) { g.globalAlpha = .5; linea(g, pts, col, 1); g.globalAlpha = 1; }
+      const y = Math.max(fine[1] + 4, ultimo + 14); ultimo = y;          // nomi in fondo, senza sovrapporsi
+      scritta(g, fine[0] + 4, y, et, col, 'left', 'bold 12px Segoe UI');
+    }
+  }
+  // il ventaglio: tutte le rette possibili, da k_phi1 -> 0 a k_phi1 -> infinito
+  if ($('s-ventaglio').checked) ventaglio(g);
+  // caratteristiche intere (tratteggio) e luoghi dei punti
+  const casi = st.barra ? ['a', 'b'] : ['a'];
+  for (const c of casi) {
+    if ($('s-intere').checked)
+      linea(g, st.intere[c].map(p => [T.XA(p.a), T.Y(p.y)]), COL[c], 1.6, [6, 4]);
+    const tr = [...st.tracce[c].values()].sort((p, q) => p.dz - q.dz);
+    if (tr.length > 1) linea(g, [[x0, y0], ...tr.map(p => [T.XA(p.al), T.Y(p.y)])], COL[c], 3);
+    for (const p of tr) cerchio(g, T.XA(p.al), T.Y(p.y), 2.2, COL[c], null);
+  }
+  // rette Delta Z = k Y
+  for (const c of casi) {
+    const k = st[c === 'a' ? 'ca' : 'cb'].k, ytop = Math.min(5.5e3, DZMAX * 1e3 / k);
+    linea(g, [[x0, y0], [T.XZ(k * ytop), T.Y(ytop)]], COL[c], 2.2);
+    if (c === 'a') scritta(g, T.XZ(k * ytop) + 8, T.Y(ytop) + 4, `k₁ = ${k.toFixed(3)}`, COL[c], 'left', 'bold 12px Segoe UI');
+    else scritta(g, T.XZ(k * 3200) - 8, T.Y(3200), `k₁ = ${k.toFixed(3)}`, COL[c], 'right', 'bold 12px Segoe UI');
+  }
+  if (st.modo === 'dz') costruzioneDZ(g, casi); else costruzioneY(g, casi);
+  legendaSomme(g, RIF);
+}
+
+// legenda delle curve somma, in basso a destra (zona vuota del grafico)
+function legendaSomme(g, RIF) {
+  const righe = [];
+  if ($('s-somme').checked) RIF.forEach(([dz, col, et, val]) => righe.push({ col, lw: 1.6, alfa: .8, t: `${et}    ${val}`, on: st.modo === 'dz' && Math.abs(st.dz - dz) < 6 }));
+  if (st.modo === 'dz') righe.push({ col: '#ffffff', lw: 4, alfa: 1, t: `ΔZ₁ = ${(st.dz / 1e3).toFixed(2)} kN: quella con cui entri`, on: true, forte: true });
+  else righe.push({ col: '#ffffff', lw: 1.6, alfa: 1, tratto: [7, 3], t: '(a), (b): quelle dei loro ΔZ₁ = k₁ Y₁', on: true });
+  const x = T.base.XA(8.2), w = T.base.XA(AMAX) - x, h = 24 + 19 * righe.length, y = T.base.y0 - 10 - h;   // ferma sullo schermo
+  g.save(); g.fillStyle = 'rgba(22,33,62,.88)'; g.strokeStyle = 'rgba(255,255,255,.15)'; g.lineWidth = 1;
+  g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, 6) : g.rect(x, y, w, h); g.fill(); g.stroke(); g.restore();
+  scritta(g, x + 10, y + 17, 'curve somma  F_y(α₁, F_{z0} + ΔZ₁) + F_y(α₁, F_{z0} − ΔZ₁)', '#dfe6f5', 'left', 'bold 13px Segoe UI');
+  righe.forEach((r, i) => {
+    const yy = y + 37 + 19 * i;
+    g.save(); g.globalAlpha = r.alfa; if (r.forte) { g.shadowColor = '#fff'; g.shadowBlur = 6; }
+    linea(g, [[x + 12, yy - 4], [x + 44, yy - 4]], r.col, r.lw, r.tratto || []); g.restore();
+    scritta(g, x + 52, yy, r.t, r.on ? (r.forte ? '#ffffff' : r.col) : '#9aa6b8', 'left', (r.on ? 'bold ' : '') + '13px Segoe UI');
+  });
+}
+// tutte le rette possibili Delta Z_1 = k_1 Y_1: conta solo la quota k_phi1/k_phi della rigidezza a rollio che sta
+// davanti, da 0 (tutta dietro) a 1 (tutta davanti); piu' quota davanti, k_1 piu' grande e la retta si schiaccia
+// verso l'asse Delta Z_1
+const QUOTA = 'k^s_{φ,1} / k^s_φ';
+function ventaglio(g) {
+  const { x0, y0 } = T, ytop = k => Math.min(5.5e3, DZMAX * 1e3 / k);
+  g.save(); g.fillStyle = 'rgba(255,255,255,.035)'; g.beginPath(); g.moveTo(x0, y0);
+  g.lineTo(T.XZ(KMIN * ytop(KMIN)), T.Y(ytop(KMIN))); g.lineTo(T.XZ(DZMAX * 1e3), T.Y(ytop(KMIN)));
+  g.lineTo(T.XZ(KMAX * ytop(KMAX)), T.Y(ytop(KMAX))); g.closePath(); g.fill(); g.restore();
+  for (const k of [KMIN, KMAX]) linea(g, [[x0, y0], [T.XZ(k * ytop(k)), T.Y(ytop(k))]], '#8f98aa', 1.2, [5, 4]);
+  // quota 0 in cima alla retta quasi verticale
+  const xn = T.XZ(KMIN * ytop(KMIN)) - 6, yn = T.Y(ytop(KMIN));
+  scritta(g, xn, yn + 14, `${QUOTA} = 0`, '#b3bccc', 'right', '13px Segoe UI');
+  scritta(g, xn, yn + 30, 'tutta la rigidezza a rollio dietro', '#9aa6b8', 'right', '12px Segoe UI');
+  // quota 1 a meta' della sua retta, sotto: sopra passa la retta di (b), che le si avvicina con la barra rigida
+  const xm = T.XZ(KMAX * ytop(KMAX)), ym = T.Y(ytop(KMAX));
+  g.save(); g.translate(x0 + .6 * (xm - x0), y0 + .6 * (ym - y0)); g.rotate(Math.atan2(y0 - ym, x0 - xm));
+  scritta(g, 0, 19, `${QUOTA} = 1: tutta davanti`, '#b3bccc', 'center', '13px Segoe UI'); g.restore();
+  // arco graduato nella quota, con la freccia nel verso in cui ruota la retta quando la quota cresce
+  const ang = k => Math.atan2(T.Y(3000) - y0, T.XZ(k * 3000) - x0), r = Math.min(95, 0.55 * (T.base.x0 - T.m.l));
+  const a0 = ang(KMIN) - 0.04, a1 = ang(KMAX) + 0.05;
+  g.save(); g.strokeStyle = '#ffd98a'; g.lineWidth = 1.6; g.beginPath(); g.arc(x0, y0, r, a0, a1, true); g.stroke(); g.restore();
+  const xe = x0 + r * Math.cos(a1), ye = y0 + r * Math.sin(a1), tx = -Math.sin(a1), ty = Math.cos(a1);   // tangente nel verso dell'arco
+  g.save(); g.fillStyle = '#ffd98a'; g.beginPath(); g.moveTo(xe + 2 * tx, ye + 2 * ty);
+  g.lineTo(xe - 8 * tx - 4 * Math.cos(a1), ye - 8 * ty - 4 * Math.sin(a1)); g.lineTo(xe - 8 * tx + 4 * Math.cos(a1), ye - 8 * ty + 4 * Math.sin(a1));
+  g.closePath(); g.fill(); g.restore();
+  for (const q of [0, .25, .5, .75, 1]) {
+    const a = ang(kDa(q)), c = Math.cos(a), s = Math.sin(a);
+    linea(g, [[x0 + (r - 4) * c, y0 + (r - 4) * s], [x0 + (r + 4) * c, y0 + (r + 4) * s]], '#ffd98a', 1.4);
+    if (q % .5 === 0) scritta(g, x0 + (r + 13) * c, y0 + (r + 13) * s + 4, q === .5 ? '½' : String(q), '#ffd98a', 'center', 'bold 12px Segoe UI');
+  }
+}
+
+function costruzioneDZ(g, casi) {
+  const { x0, y0 } = T, dz = st.dz;
+  if ($('s-ruote').checked) {
+    linea(g, AS.map(a => [T.XA(a), T.Y(fy(a * RAD, FZ0 + dz))]), '#2ec4b6', 1.2, [4, 4]);
+    linea(g, AS.map(a => [T.XA(a), T.Y(fy(a * RAD, FZ0 - dz))]), '#ff8c42', 1.2, [4, 4]);
+  }
+  // la curva somma del Delta Z_1 con cui si entra: l'unica che conta, in evidenza
+  const pts = curvaSomma(dz, T);
+  g.save(); g.shadowColor = 'rgba(255,255,255,.9)'; g.shadowBlur = 8; linea(g, pts, '#ffffff', 3.4); g.restore();
+  // ingresso
+  const xz = T.XZ(dz);
+  g.save(); g.fillStyle = '#ffd98a'; g.beginPath(); g.moveTo(xz, y0); g.lineTo(xz - 7, y0 + 11); g.lineTo(xz + 7, y0 + 11); g.closePath(); g.fill(); g.restore();
+  st.punti = {};
+  for (const c of casi) {
+    const p = punto(c, dz); st.punti[c] = p;
+    const yr = T.Y(p.y), xr = T.XZ(dz);
+    freccia(g, xr, y0, xr, yr + 4, COL[c], 1.6);
+    cerchio(g, xr, yr, 4.5, COL[c]);
+    if (p.ok) {
+      const xp = T.XA(p.al);
+      freccia(g, xr, yr, xp - 5, yr, COL[c], 1.6);
+      cerchio(g, xp, yr, 6, COL[c], '#fff', 1.5);
+      linea(g, [[xp, yr], [xp, y0]], COL[c], 1.2, [3, 3]);
+      scritta(g, xp + (c === 'a' ? 4 : -4), y0 - 5, `ᾱ = ${p.al.toFixed(2)}°`, COL[c], c === 'a' ? 'left' : 'right', 'bold 12px Segoe UI');
+      scritta(g, x0 + 6, yr - 5, `${(p.y / 1e3).toFixed(2)} kN`, COL[c], 'left', '11px Segoe UI');
+    } else {
+      linea(g, [[xr, yr], [T.XA(AMAX), yr]], COL[c], 1, [2, 4]);
+      scritta(g, x0 + 10, yr - 6, 'nessun punto: la curva somma non arriva a questa Y₁', COL[c], 'left', '11px Segoe UI');
+    }
+  }
+}
+
+function costruzioneY(g, casi) {
+  const { x0, y0 } = T, y = st.y, yy = T.Y(y);
+  linea(g, [[T.XZ(DZMAX * 1e3), yy], [T.XA(AMAX), yy]], '#ffd98a', 1.2, [5, 4]);
+  scritta(g, T.XA(AMAX), yy - 6, `Y₁ = ${(y / 1e3).toFixed(2)} kN  (ã_y = ${(y / C1).toFixed(2)} m/s²)`, '#ffd98a', 'right');
+  st.punti = {};
+  casi.forEach((c, i) => {
+    const k = st[c === 'a' ? 'ca' : 'cb'].k, dz = k * y, al = alfaSuSomma(y, dz) / RAD;
+    st.punti[c] = { dz, y, al, ok: !isNaN(al) };
+    linea(g, curvaSomma(dz, T), COL[c], 1.6, [7, 3]);
+    const xr = T.XZ(dz);
+    cerchio(g, xr, yy, 5, COL[c]);
+    freccia(g, xr, yy, xr, y0 - 3, COL[c], 1.4);
+    scritta(g, xr, y0 + 28 + (i ? 0 : 0), `${(dz / 1e3).toFixed(2)}`, COL[c], 'center', 'bold 11px Segoe UI');
+    if (!isNaN(al)) {
+      const xp = T.XA(al);
+      cerchio(g, xp, yy, 6, COL[c], '#fff', 1.5);
+      linea(g, [[xp, yy], [xp, y0]], COL[c], 1.2, [3, 3]);
+      scritta(g, xp + (i ? 4 : -4), y0 - 6 - (i ? 0 : 14), `α₁ = ${al.toFixed(2)}°`, COL[c], i ? 'left' : 'right', 'bold 12px Segoe UI');
+    }
+  });
+  const pa = st.punti.a, pb = st.punti.b;
+  if (pb && pa.ok && pb.ok) {
+    const yv = y0 + 22;
+    freccia(g, T.XA(pa.al), yv - 12, T.XA(pb.al), yv - 12, '#ffd98a', 2);
+  }
+}
+
+// =====================================================================
+//  F_y(F_z) alla deriva del punto (a): concavita'
+// =====================================================================
+// vista di partenza del grafico F_y(F_z), in N; st.vfz = null la ripristina
+const VFZ = { x: [0, 6500], y: [0, 4000] };
+let TF = null;   // trasformazione corrente del grafico F_y(F_z), per zoom e spostamento
+function disegnaFz() {
+  const { g, W, H } = prepara($('c-fz'));
+  const m = { l: 40, r: 12, t: 10, b: 30 }, v = st.vfz || VFZ, B = { l: m.l, r: W - m.r, t: m.t, b: H - m.b };
+  const X = f => B.l + (f - v.x[0]) / (v.x[1] - v.x[0]) * (B.r - B.l), Y = f => B.b - (f - v.y[0]) / (v.y[1] - v.y[0]) * (B.b - B.t);
+  TF = { B, v };
+  const px = passoTacche((B.r - B.l) / (v.x[1] - v.x[0]) * 1e3, 80), py = passoTacche((B.b - B.t) / (v.y[1] - v.y[0]) * 1e3, 45);
+  const tx = tacche(v.x[0] / 1e3, v.x[1] / 1e3, px).filter(f => X(f * 1e3) > B.l + 2), ty = tacche(v.y[0] / 1e3, v.y[1] / 1e3, py).filter(f => Y(f * 1e3) < B.b - 2);
+  g.save(); g.strokeStyle = 'rgba(255,255,255,.06)';
+  for (const f of tx) { g.beginPath(); g.moveTo(X(f * 1e3), B.t); g.lineTo(X(f * 1e3), B.b); g.stroke(); }
+  for (const f of ty) { g.beginPath(); g.moveTo(B.l, Y(f * 1e3)); g.lineTo(B.r, Y(f * 1e3)); g.stroke(); }
+  g.restore();
+  linea(g, [[B.l, B.b], [B.r, B.b]], '#7d8aa8', 1); linea(g, [[B.l, B.t], [B.l, B.b]], '#7d8aa8', 1);
+  for (const f of tx) scritta(g, X(f * 1e3), B.b + 13, f.toFixed(cifre(px)), '#8f98aa', 'center', '11px Segoe UI');
+  for (const f of ty) scritta(g, B.l - 4, Y(f * 1e3) + 4, f.toFixed(cifre(py)), '#8f98aa', 'right', '11px Segoe UI');
+  scritta(g, B.r, H - 3, 'F_z [kN]', '#cfd8ea', 'right'); scritta(g, B.l + 4, B.t + 10, 'F_y [kN]', '#cfd8ea');
+  const p = st.punti && st.punti.a;
+  if (!p || !p.ok || p.al <= 0) { scritta(g, W / 2, H / 2, 'scegli un ΔZ₁ con un punto (a)', '#8f98aa', 'center'); return null; }
+  const al = p.al * RAD, dz = p.dz;
+  // da qui si disegna dentro il riquadro: con lo zoom curve e punti non escono sugli assi
+  g.save(); g.beginPath(); g.rect(B.l, B.t, B.r - B.l, B.b - B.t); g.clip();
+  const f0v = Math.max(0, v.x[0]), fs = Array.from({ length: 201 }, (_, i) => f0v + i / 200 * (v.x[1] - f0v));
+  linea(g, fs.map(f => [X(f), Y(fy(al, f))]), '#e8ecf5', 2);
+  scritta(g, X(6.4e3), Y(fy(al, 6.4e3)) - 8, `α = ${p.al.toFixed(2)}°`, COL.a, 'right', 'bold 12px Segoe UI');
+  const fi = fy(al, FZ0 - dz), fe = fy(al, FZ0 + dz), f0 = fy(al, FZ0), med = (fi + fe) / 2;
+  linea(g, [[X(FZ0 - dz), Y(fi)], [X(FZ0 + dz), Y(fe)]], '#9fb0d0', 1.2, [4, 3]);
+  linea(g, [[X(FZ0), Y(0)], [X(FZ0), Y(f0)]], 'rgba(255,255,255,.3)', 1, [2, 3]);
+  cerchio(g, X(FZ0 - dz), Y(fi), 5, '#ff8c42'); cerchio(g, X(FZ0 + dz), Y(fe), 5, '#2ec4b6');
+  cerchio(g, X(FZ0), Y(f0), 4.5, '#8f98aa');
+  g.save(); g.fillStyle = '#fff'; const xm = X(FZ0), ym = Y(med);
+  g.beginPath(); g.moveTo(xm, ym - 6); g.lineTo(xm + 6, ym); g.lineTo(xm, ym + 6); g.lineTo(xm - 6, ym); g.closePath(); g.fill(); g.restore();
+  scritta(g, X(FZ0) - 8, Y(f0) - 8, `a F_{z0}: ${(f0 / 1e3).toFixed(2)} kN`, '#cfd8ea', 'right');
+  scritta(g, X(FZ0) + 8, Y(med) + 16, `media: ${(med / 1e3).toFixed(2)} kN`, '#fff');
+  scritta(g, X(FZ0 - dz), Y(fi) + 18, `δ⁻ = ${((f0 - fi) / 1e3).toFixed(2)}`, '#ff8c42', 'center');
+  scritta(g, X(FZ0 + dz), Y(fe) - 10, `δ⁺ = ${((fe - f0) / 1e3).toFixed(2)}`, '#2ec4b6', 'center');
+  g.restore();
+  return { f0, fi, fe };
+}
+
+// =====================================================================
+//  Lettura
+// =====================================================================
+const N = (x, d = 2) => `<span class="num">${x.toFixed(d)}</span>`;
+function leggi(fz) {
+  const a = st.punti.a, b = st.punti.b, ka = st.ca.k, kb = st.cb.k;
+  let h = '';
+  if (st.modo === 'dz') {
+    h += `Entro con ΔZ₁ = ${N(st.dz / 1e3)} kN. `;
+    h += a.ok ? `<span class="a">Senza barra</span> la retta (k₁ = ${N(ka, 3)}) dà Y₁ = ${N(a.y / 1e3)} kN; ` +
+      `sulla curva somma di quel ΔZ₁ (in bianco) il punto sta a ᾱ = ${N(a.al)}°. ` +
+      `È l'unico punto che serve di quella curva: le altre curve somma hanno un altro ΔZ₁ e qui non c'entrano. `
+      : `<span class="a">Senza barra</span> Y₁ = ${N(a.y / 1e3)} kN è oltre il massimo della curva somma: l'assale non ci arriva. `;
+    if (b) h += b.ok ? `<span class="b">Con la barra</span> (k₁ = ${N(kb, 3)}) lo stesso ΔZ₁ arriva già con Y₁ = ${N(b.y / 1e3)} kN: ` +
+      `<b>stessa</b> curva somma, punto più in basso, ᾱ = ${N(b.al)}°. ` : `<span class="b">Con la barra</span> non c'è punto. `;
+    if (fz) h += `<br>Sotto a sinistra: con ΔZ₁ l'interna perde δ⁻ = ${N((fz.f0 - fz.fi) / 1e3)} kN, l'esterna guadagna solo δ⁺ = ${N((fz.fe - fz.f0) / 1e3)} kN: ` +
+      `più trasferimento, somma più bassa (3+3 &gt; 2+4 &gt; 1+5).`;
+    if (b && a.ok && b.ok) h += `<div class="chiave">ᾱ più piccolo con la barra <b>non</b> vuol dire che l'assale deriva meno: a parità di ΔZ₁ i due punti hanno Y₁ diverse. ` +
+      `Il confronto che conta è a parità di Y₁, cioè di ã<sub>y</sub>: passa ad «A parità di Y₁».</div>`;
+  } else {
+    h += `Stessa Y₁ = ${N(st.y / 1e3)} kN, cioè stessa ã<sub>y</sub> = ${N(st.y / C1)} m/s². `;
+    h += `<span class="a">Senza barra</span> ΔZ₁ = ${N(a.dz / 1e3)} kN` + (a.ok ? ` e serve α₁ = ${N(a.al)}°. ` : `: oltre il massimo. `);
+    if (b) {
+      h += `<span class="b">Con la barra</span> ΔZ₁ = ${N(b.dz / 1e3)} kN, la curva somma è più bassa` + (b.ok ? ` e serve α₁ = ${N(b.al)}°` : `: oltre il massimo`) + '. ';
+      if (a.ok && b.ok) h += `<div class="chiave">Per la stessa accelerazione l'anteriore con la barra deve derivare di più: Δα₁ = ${N(b.al - a.al)}°. ` +
+        `α₁ − α₂ cresce, il veicolo è <b>più sottosterzante</b>; il massimo di Y₁ scende da ${N(st.ca.max.y / 1e3)} a ${N(st.cb.max.y / 1e3)} kN, quindi l'anteriore satura prima. ` +
+        `Dietro la quota di trasferimento cala e α₂ diminuisce: l'effetto si somma.</div>`;
+      else h += `<div class="chiave">Con la barra l'anteriore non riesce a dare questa Y₁: il massimo scende da ${N(st.ca.max.y / 1e3)} a ${N(st.cb.max.y / 1e3)} kN.</div>`;
+    }
+  }
+  $('lettura').innerHTML = h;
+}
+
+function disegna() {
+  disegnaCostruzione();
+  if (!st.barra) delete st.punti.b;
+  const fz = disegnaFz();
+  leggi(fz);
+  Aiuto.aggiorna();
+}
+
+// =====================================================================
+//  Help dei grafici: il "?" apre la scheda del grafico (il testo sta nel
+//  <template id="aiuto-...">); la si sposta trascinandone la testata
+// =====================================================================
+const PIEDE = {
+  costr: 'Rotella: zoom attorno al puntatore (con ⇧ solo in orizzontale). Tasto destro, o Ctrl, e trascina: sposta la vista; il trascinamento semplice resta per scegliere $\\Delta Z_1$ o $Y_1$. ⟲ o doppio clic sul grafico: vista di partenza.',
+  fz: 'Rotella: zoom attorno al puntatore (con ⇧ solo in orizzontale). Trascina: sposta. ⟲ o doppio clic sul grafico: vista di partenza.',
+};
+const Aiuto = {
+  aperto: null, spostata: false,
+  apri(id) {
+    if (this.aperto === id) return this.chiudi();
+    const box = $('aiuto'), corpo = box.querySelector('.corpo');
+    if (this.aperto === 'barra') SchemaBarra.ferma();
+    this.aperto = id; this.spostata = false;
+    const tpl = $('aiuto-' + id);
+    box.querySelector('.testa .t').innerHTML = tpl.dataset.titolo || $('g-' + id).querySelector('.tit').innerHTML;
+    corpo.replaceChildren(tpl.content.cloneNode(true));
+    if (PIEDE[id]) corpo.insertAdjacentHTML('beforeend', `<p class="note piede">${PIEDE[id]}</p>`);
+    if (window.katex) corpo.innerHTML = corpo.innerHTML.replace(/\$([^$]+)\$/g, (m, s) => katex.renderToString(s, { throwOnError: false }));
+    corpo.scrollTop = 0;
+    document.querySelectorAll('.aiuto-b').forEach(b => b.classList.toggle('on', b.dataset.aiuto === id));
+    $('b-schema').classList.toggle('on', id === 'barra');
+    box.classList.add('on');
+    if (id === 'barra') SchemaBarra.avvia();
+    this.aggiorna();
+  },
+  chiudi() {
+    if (this.aperto === 'barra') SchemaBarra.ferma();
+    this.aperto = null;
+    $('aiuto').classList.remove('on');
+    document.querySelectorAll('.aiuto-b').forEach(b => b.classList.remove('on'));
+  },
+  // grafico grande: sopra il pannello a sinistra, cosi' il grafico resta scoperto;
+  // F_y(F_z): sopra il suo grafico, con la punta verso di lui; la barra: al centro, larga.
+  // Spostata a mano, resta dov'e'
+  aggiorna() {
+    if (!this.aperto) return;
+    if (!this.spostata) this.posiziona();
+    if (this.aperto === 'barra') SchemaBarra.aggiorna();      // dopo la posizione: i canvas hanno gia' la larghezza giusta
+  },
+  posiziona() {
+    const box = $('aiuto'), punta = box.querySelector('.punta'), W = window.innerWidth, Hh = window.innerHeight;
+    if (this.aperto === 'barra') {
+      const w = Math.min(1000, W - 20);
+      Object.assign(box.style, { width: w + 'px', left: (W - w) / 2 + 'px', top: '14px', bottom: 'auto', maxHeight: (Hh - 28) + 'px' });
+      punta.style.display = 'none';
+    } else if (this.aperto === 'costr') {
+      const r = $('g-costr').getBoundingClientRect(), w = Math.min(W - 20, Math.max(460, $('sx').getBoundingClientRect().width));
+      Object.assign(box.style, { width: w + 'px', left: '10px', top: (r.top + 4) + 'px', bottom: 'auto', maxHeight: (Hh - r.top - 14) + 'px' });
+      punta.style.display = 'none';
+    } else {
+      const r = $('g-fz').getBoundingClientRect(), w = Math.min(540, W - 20), x = Math.max(10, Math.min(W - w - 10, r.left + r.width / 2 - w / 2));
+      Object.assign(box.style, { width: w + 'px', left: x + 'px', top: 'auto', bottom: (Hh - r.top + 10) + 'px', maxHeight: Math.max(140, r.top - 20) + 'px' });
+      punta.style.display = ''; punta.style.left = Math.max(16, Math.min(w - 28, r.left + r.width / 2 - x - 6)) + 'px';
+    }
+  },
+  init() {
+    document.querySelectorAll('.aiuto-b').forEach(b => b.addEventListener('click', () => this.apri(b.dataset.aiuto)));
+    $('b-schema').addEventListener('click', () => this.apri('barra'));
+    const box = $('aiuto'), testa = box.querySelector('.testa');
+    box.querySelector('.x').addEventListener('click', () => this.chiudi());
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.aperto) this.chiudi(); });
+    let presa = null;
+    testa.addEventListener('pointerdown', e => {
+      if (e.target.closest('button')) return;
+      const r = box.getBoundingClientRect();
+      presa = { dx: e.clientX - r.left, dy: e.clientY - r.top, h: r.height }; testa.setPointerCapture(e.pointerId);
+    });
+    testa.addEventListener('pointermove', e => {
+      if (!presa) return;
+      this.spostata = true; box.querySelector('.punta').style.display = 'none';
+      const top = Math.max(0, Math.min(window.innerHeight - 40, e.clientY - presa.dy));
+      Object.assign(box.style, { left: (e.clientX - presa.dx) + 'px', top: top + 'px', bottom: 'auto', maxHeight: (window.innerHeight - top - 10) + 'px' });
+    });
+    const fine = () => { presa = null; };
+    testa.addEventListener('pointerup', fine); testa.addEventListener('pointercancel', fine);
+  },
+};
+
+// =====================================================================
+//  Scheda della barra antirollio: la barra a U animata (rollio o sobbalzo), la vista da
+//  dietro con e senza barra alla stessa Y_1 (cioe' alla stessa a~_y), la catena barra ->
+//  trasferimento -> deriva e la tabella di quanta deriva in piu' serve
+// =====================================================================
+const kx = s => window.katex ? katex.renderToString(s, { throwOnError: false }) : s;
+const SchemaBarra = {
+  modo: 'rollio', gira: true, t: 0, prec: null, raf: null,
+  avvia() {
+    const box = $('aiuto'), bot = box.querySelectorAll('.sb-com .seg button');
+    this.modo = 'rollio'; this.gira = true; this.prec = null;
+    bot.forEach(b => b.addEventListener('click', () => { this.modo = b.dataset.m; bot.forEach(x => x.classList.toggle('on', x === b)); }));
+    $('sb-play').addEventListener('click', () => { this.gira = !this.gira; $('sb-play').textContent = this.gira ? '⏸ ferma' : '▶ muovi'; });
+    $('sb-y').addEventListener('input', () => impostaY(parseFloat($('sb-y').value) * 1e3));
+    const passo = ora => {
+      if (Aiuto.aperto !== 'barra') return;
+      if (this.gira && this.prec !== null) this.t += (ora - this.prec) / 1000;
+      this.prec = ora; this.disegna3d(); this.raf = requestAnimationFrame(passo);
+    };
+    this.raf = requestAnimationFrame(passo);
+  },
+  ferma() { cancelAnimationFrame(this.raf); this.raf = null; },
+  aggiorna() {
+    if (!$('sb-y')) return;
+    $('sb-y').value = (st.y / 1e3).toFixed(2); $('sb-yv').textContent = (st.y / 1e3).toFixed(2) + ' kN';
+    this.disegnaFronte(); this.catena(); this.tabella();
+  },
+  // un caso alla forza y [N]: rollio, trasferimento, carichi e deriva
+  caso(q, y) {
+    const dz = q.k * y;
+    return { kphi1: q.kphi1, rap: q.rap, k: q.k, dz, fi: FZ0 - dz, fe: FZ0 + dz, al: alfaSuSomma(y, dz) / RAD,
+      phi: (H - QB) * y * L / A2 / (q.kphi1 + KPHI2) / RAD };
+  },
+
+  // 1: la barra vista da dietro e dall'alto, solidale alla cassa. x in avanti (verso il fondo, in alto a destra),
+  // y a destra, z in su; i bracci vengono verso chi guarda. Ruote: sinistra 's', destra 'd'
+  disegna3d() {
+    const cv = $('sb-3d');
+    if (!cv) return;
+    const { g, W, H: Hc } = prepara(cv);
+    // sopra due righe di lettura e le frecce sulla cassa (fino a 0.37 S), sotto le ruote con il nome (fino a 0.70 S)
+    const S = Math.min(W / 2.3, (Hc - 62) / 1.07), cx = W / 2 + 0.06 * S, cz = 54 + 0.37 * S;
+    const P = (x, y, z) => [cx + S * (y + 0.40 * x), cz - S * (z + 0.28 * x)];
+    const LA = 0.30, YB = 0.55, YC = 0.33, YR = 0.80, A = 0.11, s = Math.sin(2 * Math.PI * this.t / 2.6);
+    const zr = this.modo === 'rollio' ? { s: A * s, d: -A * s } : { s: A * s, d: A * s };   // le ruote rispetto alla cassa
+    const th = { s: Math.asin(zr.s / LA), d: Math.asin(zr.d / LA) }, tor = th.s - th.d, lato = { s: -1, d: 1 };
+    const tratto = (pts, col, lw, alfa = 1) => {
+      g.save(); g.globalAlpha = alfa; g.strokeStyle = col; g.lineWidth = lw; g.lineCap = 'round'; g.lineJoin = 'round';
+      g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); g.restore();
+    };
+    const poli = (pts, fill, col) => {
+      g.save(); g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath();
+      g.fillStyle = fill; g.fill(); g.strokeStyle = col; g.lineWidth = 1.2; g.stroke(); g.restore();
+    };
+    const tip = j => [-LA * Math.cos(th[j]), lato[j] * YB, LA * Math.sin(th[j])];          // punta del braccio
+    const kn = j => { const t = tip(j); return [t[0], t[1], t[2] - 0.16]; };                // attacco della biella alla sospensione
+    // la cassa, sopra
+    poli([P(0.12, -0.8, 0.17), P(0.12, 0.8, 0.17), P(-0.1, 0.8, 0.17), P(-0.1, -0.8, 0.17)], 'rgba(255,255,255,.06)', 'rgba(255,255,255,.3)');
+    scritta(g, ...P(0.12, 0.8, 0.17).map((v, i) => v + (i ? 4 : 6)), 'cassa', '#aab4c8', 'left', '12px Segoe UI');
+    // le ruote (due facce per dare lo spessore) e il montante fino alla biella
+    for (const j of ['s', 'd']) {
+      const zc = -0.16 + zr[j], fac = dy => Array.from({ length: 41 }, (_, i) => { const u = i / 40 * 2 * Math.PI; return P(-0.30 + 0.26 * Math.cos(u), lato[j] * (YR + dy), zc + 0.26 * Math.sin(u)); });
+      poli(fac(0.07), 'rgba(30,38,62,.9)', '#5c6a8a'); poli(fac(-0.07), 'rgba(42,51,80,.92)', '#7d8aa8');
+      tratto([P(...kn(j)), P(-0.30, lato[j] * (YR - 0.07), zc)], '#7d8aa8', 4);
+      scritta(g, ...P(-0.30, lato[j] * YR, zc - 0.34), j === 's' ? 'ruota sinistra' : 'ruota destra', '#8f98aa', 'center', '12px Segoe UI');
+    }
+    // staffe dalla cassa alle boccole
+    for (const j of ['s', 'd']) tratto([P(0, lato[j] * YC, 0.17), P(0, lato[j] * YC, 0.02)], '#7d8aa8', 3);
+    // tratto centrale: acciaio, tinto di cremisi quanto piu' e' torto; la riga scura segue la rotazione di ogni sezione
+    const fT = Math.min(1, Math.abs(tor) / 0.75);
+    tratto([P(0, -YB, 0), P(0, YB, 0)], '#b9c3d6', 16);
+    if (fT > 0.01) tratto([P(0, -YB, 0), P(0, YB, 0)], COL.b, 16, 0.85 * fT);
+    tratto(Array.from({ length: 41 }, (_, i) => {
+      const y = -YB + i / 40 * 2 * YB, ps = 0.87 - (th.s + (th.d - th.s) * (y + YB) / (2 * YB));
+      return P(-0.019 * Math.sin(ps), y, 0.019 * Math.cos(ps));
+    }), '#1a1a2e', 2.2);
+    for (const j of ['s', 'd']) tratto([P(0, lato[j] * YC - 0.025, 0), P(0, lato[j] * YC + 0.025, 0)], '#3b4766', 23);
+    // bracci e bielle
+    for (const j of ['s', 'd']) {
+      tratto([P(0, lato[j] * YB, 0), P(...tip(j))], '#b9c3d6', 12);
+      tratto([P(...tip(j)), P(...kn(j))], '#d9dee8', 4);
+      for (const p of [tip(j), kn(j)]) cerchio(g, ...P(...p), 3.5, '#d9dee8', '#1a1a2e', 1);
+    }
+    // forze: solo se la barra e' torta. Spinge giu' la ruota salita (l'esterna), tira su l'altra; sulla cassa il contrario
+    if (Math.abs(tor) > 0.03) {
+      const lf = 0.05 + 0.13 * fT;
+      for (const j of ['s', 'd']) {
+        const giu = (j === 's') === (tor > 0), k = kn(j), b0 = P(0, lato[j] * YC, 0.19);
+        freccia(g, ...P(...k), ...P(k[0], k[1], k[2] + (giu ? -lf : lf)), COL.b, 2.4);
+        freccia(g, ...b0, b0[0], b0[1] + (giu ? -1 : 1) * lf * S, '#ffd98a', 2.2);
+        // la scritta sta sotto, verso l'interno (fuori c'e' la ruota): sotto la punta se la freccia scende, sotto l'attacco se sale
+        if (fT > 0.25) scritta(g, ...P(k[0], k[1] - lato[j] * 0.04, k[2] - (giu ? lf + 0.06 : 0.07)), giu ? 'spinge giù l\'esterna' : 'tira su l\'interna', COL.b, j === 's' ? 'left' : 'right', 'bold 12px Segoe UI');
+      }
+    }
+    // nomi dei pezzi, sul lato sinistro, verso l'interno: la boccola sopra la barra, il braccio sotto, accanto all'attacco
+    const pb = P(0, -YC, 0), pa = P(0, -YB, 0), k_ = kn('s'), pl = P(k_[0], -YB, k_[2] + 0.07);
+    scritta(g, pb[0] + 14, pb[1] - 14, 'boccola', '#cfd8ea', 'left', '12px Segoe UI');
+    scritta(g, pa[0] + 24, pa[1] + 26, 'braccio', '#cfd8ea', 'left', '12px Segoe UI');
+    scritta(g, pl[0] + 8, pl[1] + 4, 'biella', '#cfd8ea', 'left', '12px Segoe UI');
+    scritta(g, ...P(0, 0.05, -0.07), 'tratto centrale: lavora a torsione', '#cfd8ea', 'center', '12px Segoe UI');
+    // la lettura in alto
+    const t1 = this.modo === 'rollio'
+      ? `Rollio: i bracci ruotano in versi opposti, la barra si torce di ${(Math.abs(tor) / RAD).toFixed(0)}° e lavora`
+      : 'Sobbalzo: i bracci ruotano insieme, la barra gira nelle boccole senza torcersi e non lavora';
+    scritta(g, 12, 20, t1, this.modo === 'rollio' ? COL.b : '#9fb0d0', 'left', 'bold 13px Segoe UI');
+    if (this.modo === 'rollio') {
+      const r1 = 'frecce rosse: la barra sulle sospensioni; ';
+      scritta(g, 12, 40, r1, COL.b, 'left', '12px Segoe UI');
+      g.font = '12px Segoe UI';
+      scritta(g, 12 + g.measureText(r1).width, 40, 'frecce gialle: sulla cassa, un momento che si oppone al rollio', '#ffd98a', 'left', '12px Segoe UI');
+    } else scritta(g, 12, 40, 'nessuna forza: il sobbalzo lo portano solo le molle', '#8f98aa', 'left', '12px Segoe UI');
+  },
+
+  // 2: le due versioni dell'assale viste da dietro, alla stessa Y_1: rollio (esagerato) e carichi delle ruote
+  disegnaFronte() {
+    const cv = $('sb-fronte');
+    if (!cv) return;
+    const { g, W, H: Hc } = prepara(cv), y = st.y, EX = 4;
+    const S = Math.min((W / 2 - 40) / 1.8, (Hc - 160) / 1.1), gy = 52 + 1.05 * S, LZ = 0.25 * S / FZ0;
+    scritta(g, W / 2, 16, `stessa Y₁ = ${(y / 1e3).toFixed(2)} kN, cioè stessa ã_y = ${(y / C1).toFixed(2)} m/s²; curva a sinistra, rollio disegnato ×${EX}`, '#8f98aa', 'center', '12px Segoe UI');
+    const molla = (a, b) => {
+      const dx = b[0] - a[0], dy = b[1] - a[1], Lm = Math.hypot(dx, dy), nx = -dy / Lm * 5, ny = dx / Lm * 5, pts = [a];
+      for (let k = 0; k <= 8; k++) { const f = 0.15 + 0.7 * k / 8, sg = k === 0 || k === 8 ? 0 : (k % 2 ? 1 : -1); pts.push([a[0] + f * dx + sg * nx, a[1] + f * dy + sg * ny]); }
+      pts.push(b); linea(g, pts, '#9fb0d0', 1.4);
+    };
+    [['a', st.ca, '(a) senza barra'], ['b', st.cb, '(b) con barra']].forEach(([c, q, nome], i) => {
+      const cx = W / 4 + i * W / 2, P = (yy, zz) => [cx + yy * S, gy - zz * S], v = this.caso(q, y);
+      const psi = -v.phi * RAD * EX, R = (yy, zz) => { const d = zz - Q1; return P(yy * Math.cos(psi) - d * Math.sin(psi), Q1 + yy * Math.sin(psi) + d * Math.cos(psi)); };
+      scritta(g, cx, 36, nome, COL[c], 'center', 'bold 13px Segoe UI');
+      // suolo, ruote, bracci inferiori e molle
+      linea(g, [P(-0.95, 0), P(0.95, 0)], '#7d8aa8', 1.2);
+      for (const sg of [-1, 1]) {
+        const [x0, y0] = P(sg * 0.675 - 0.1, 0.6);
+        g.save(); g.fillStyle = '#2a3350'; g.strokeStyle = '#7d8aa8'; g.lineWidth = 1.2; g.beginPath();
+        g.roundRect ? g.roundRect(x0, y0, 0.2 * S, 0.6 * S, 4) : g.rect(x0, y0, 0.2 * S, 0.6 * S); g.fill(); g.stroke(); g.restore();
+        linea(g, [P(sg * 0.575, 0.24), P(sg * 0.18, 0.24)], '#7d8aa8', 3);
+        molla(P(sg * 0.46, 0.24), R(sg * 0.46, 0.44));
+      }
+      // la cassa, ruotata attorno al centro di rollio; G e la forza d'inerzia verso l'esterno
+      g.save(); g.beginPath();
+      [[-0.62, 0.44], [0.62, 0.44], [0.62, 0.78], [0.42, 1.02], [-0.42, 1.02], [-0.62, 0.78]].forEach(([a, b], k) => { const p = R(a, b); k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); });
+      g.closePath(); g.fillStyle = 'rgba(143,155,176,.16)'; g.fill(); g.strokeStyle = '#aab4c8'; g.lineWidth = 1.3; g.stroke(); g.restore();
+      const gG = R(0, H);
+      cerchio(g, gG[0], gG[1], 3.5, '#e8ecf5', null);
+      freccia(g, gG[0], gG[1], gG[0] + 0.3 * S, gG[1], '#8f98aa', 1.4);
+      scritta(g, gG[0] + 0.3 * S, gG[1] - 6, 'm ã_y', '#8f98aa', 'right', '11px Segoe UI');
+      cerchio(g, ...P(0, Q1), 2.5, '#8f98aa', null);
+      // la barra, attaccata alla cassa, con le bielle ai bracci
+      if (v.kphi1 > KPHI1_MOLLE) {
+        linea(g, [R(-0.3, 0.4), R(0.3, 0.4)], COL.b, 5);
+        for (const sg of [-1, 1]) linea(g, [R(sg * 0.3, 0.4), P(sg * 0.3, 0.24)], COL.b, 2);
+        scritta(g, ...R(0, 0.4).map((u, k) => u + (k ? -6 : 0)), 'barra', COL.b, 'center', 'bold 11px Segoe UI');
+      }
+      // i carichi: frecce verso l'alto fino all'impronta, lunghe quanto Z; tratteggio al carico statico
+      linea(g, [[P(-0.95, 0)[0], gy + FZ0 * LZ], [P(0.95, 0)[0], gy + FZ0 * LZ]], 'rgba(255,255,255,.3)', 1, [4, 4]);
+      scritta(g, P(0.95, 0)[0], gy + FZ0 * LZ - 4, 'statico', '#8f98aa', 'right', '10px Segoe UI');
+      for (const [sg, Z, col, t] of [[-1, v.fi, '#ff8c42', 'interna  Z₁₁'], [1, v.fe, '#2ec4b6', 'esterna  Z₁₂']]) {
+        const xw = P(sg * 0.675, 0)[0];
+        freccia(g, xw, gy + Math.max(Z, 0) * LZ, xw, gy + 2, col, 3);
+        scritta(g, xw, gy + Math.max(Z, 0) * LZ + 15, `${t} = ${(Z / 1e3).toFixed(2)} kN`, col, 'center', 'bold 12px Segoe UI');
+      }
+      scritta(g, cx, Hc - 8, `φ = ${v.phi.toFixed(2)}°   ΔZ₁ = ${(v.dz / 1e3).toFixed(2)} kN   ` + (isNaN(v.al) ? 'oltre il massimo' : `serve α₁ = ${v.al.toFixed(2)}°`), COL[c], 'center', 'bold 12px Segoe UI');
+    });
+  },
+
+  // 3: la catena con i numeri dei due casi
+  catena() {
+    const y = st.y, a = this.caso(st.ca, y), b = this.caso(st.cb, y);
+    const kN = v => (v / 1e3).toFixed(2), gr = v => isNaN(v) ? 'oltre il max' : v.toFixed(2) + '°';
+    const fr = (va, vb, tol) => isNaN(va) || isNaN(vb) || Math.abs(vb - va) < tol ? '=' : vb > va ? '↑' : '↓';
+    const sa = isNaN(a.al) ? NaN : somma(a.al * RAD, b.dz);
+    const righe = [
+      ['la barra si somma alle molle davanti', 'k^s_{\\varphi,1}\\ [\\text{kN m/rad}]', (a.kphi1 / 1e3).toFixed(0), (b.kphi1 / 1e3).toFixed(0), fr(a.kphi1, b.kphi1, 1)],
+      ['cresce la quota della rigidezza a rollio che sta davanti', 'k^s_{\\varphi,1}/k^s_\\varphi', a.rap.toFixed(3), b.rap.toFixed(3), fr(a.rap, b.rap, 1e-6)],
+      ['cresce $k_1$: la retta si schiaccia verso l\'asse $\\Delta Z_1$', 'k_1', a.k.toFixed(3), b.k.toFixed(3), fr(a.k, b.k, 1e-6)],
+      ['a parità di $Y_1$, più trasferimento', '\\Delta Z_1 = k_1 Y_1\\ [\\text{kN}]', kN(a.dz), kN(b.dz), fr(a.dz, b.dz, 1), 'chiave'],
+      ['l\'interna si scarica di più', 'F_{z_0} - \\Delta Z_1\\ [\\text{kN}]', kN(a.fi), kN(b.fi), fr(a.fi, b.fi, 1)],
+      ['l\'esterna si carica di più', 'F_{z_0} + \\Delta Z_1\\ [\\text{kN}]', kN(a.fe), kN(b.fe), fr(a.fe, b.fe, 1)],
+      ['alla deriva di (a) le ruote di (b) danno meno: la curva somma è più bassa', 'F_{y_{11}} + F_{y_{12}}\\ [\\text{kN}]', kN(y), isNaN(sa) ? '—' : kN(sa), fr(y, sa, 1)],
+      ['per dare la stessa $Y_1$ serve più deriva', '\\alpha_1', gr(a.al), gr(b.al), fr(a.al, b.al, 1e-4), 'chiave'],
+      ['a parte: la cassa rolla meno', '\\phi', gr(a.phi), gr(b.phi), fr(a.phi, b.phi, 1e-4), 'aparte'],
+    ];
+    const testo = s => s.replace(/\$([^$]+)\$/g, (m, t) => kx(t));
+    $('sb-catena').innerHTML = `<table class="cat"><tr><th>passo</th><th></th><th style="color:${COL.a}">(a) senza barra</th><th style="color:${COL.b}">(b) con barra</th><th></th></tr>` +
+      righe.map(([t, q, va, vb, f, cl]) => `<tr class="${cl || ''}"><td>${testo(t)}</td><td>${kx(q)}</td><td class="v">${va}</td><td class="v">${vb}</td><td class="fr">${f}</td></tr>`).join('') + '</table>';
+  },
+
+  // 4: quanta deriva in piu' serve, a varie forze laterali
+  tabella() {
+    const ys = [500, 1000, 2000, 3000, 4000], d = y => this.caso(st.cb, y).al - this.caso(st.ca, y).al;
+    const gr = v => isNaN(v) ? 'oltre il max' : v.toFixed(v < 0.1 ? 3 : 2) + '°';
+    $('sb-tabella').innerHTML = `<table class="cat"><tr><th>${kx('Y_1')}</th><th style="color:${COL.a}">${kx('\\alpha_1')} (a)</th><th style="color:${COL.b}">${kx('\\alpha_1')} (b)</th><th>in più con la barra</th></tr>` +
+      ys.map(y => { const a = this.caso(st.ca, y).al, b = this.caso(st.cb, y).al;
+        return `<tr><td>${(y / 1e3).toFixed(1)} kN</td><td class="v">${gr(a)}</td><td class="v">${gr(b)}</td><td class="v">${gr(b - a)}</td></tr>`; }).join('') +
+      `<tr class="chiave"><td>massimo di ${kx('Y_1')}</td><td class="v">${(st.ca.max.y / 1e3).toFixed(2)} kN</td><td class="v">${(st.cb.max.y / 1e3).toFixed(2)} kN</td><td class="v">${((st.cb.max.y - st.ca.max.y) / 1e3).toFixed(2)} kN</td></tr></table>`;
+    if (st.cb.kphi1 === st.ca.kphi1) { $('sb-commento').innerHTML = `<p>Con ${kx('k_\\varphi^{\\text{barra}} = 0')} i due casi coincidono: alza il cursore della barra nel pannello a sinistra.</p>`; return; }
+    const c0 = k => caratteristica(0.5 * RAD, k) / 0.5, f = v => isNaN(v) ? 'molto di più (oltre il massimo)' : v.toFixed(v < 0.1 ? 3 : 2) + '°';
+    $('sb-commento').innerHTML = `<p>Vicino all'origine la barra non cambia quasi nulla: a 0.5 kN servono ${f(d(500))} in più, e la pendenza iniziale della caratteristica
+      è praticamente la stessa (${c0(st.ca.k).toFixed(0)} e ${c0(st.cb.k).toFixed(0)} N per grado). Con poco trasferimento la concavità non si sente.
+      L'effetto cresce con la forza: a 3 kN servono ${f(d(3000))} in più, a 4 kN ${f(d(4000))}, e il massimo dell'assale scende di ${((st.ca.max.y - st.cb.max.y) / 1e3).toFixed(2)} kN.
+      È in questo senso che l'assale è <b>più cedevole</b>: visto come un pneumatico equivalente ha la stessa rigidezza iniziale ma cede prima, proprio quando la forza laterale è grande.</p>
+      <p>Sul veicolo: davanti serve più ${kx('\\alpha_1')}; dietro la quota di rigidezza a rollio cala, quindi cala ${kx('\\Delta Z_2')} e serve meno ${kx('\\alpha_2')}.
+      ${kx('\\alpha_1 - \\alpha_2')} cresce e il veicolo è <b>più sottosterzante</b>. È la leva classica dell'assetto: più barra davanti sposta il bilancio verso il sottosterzo, più barra dietro verso il sovrasterzo.</p>`;
+  },
+};
+
+// =====================================================================
+//  Zoom e spostamento dei due grafici; separatore del pannello a sinistra
+// =====================================================================
+function initViste() {
+  const cv = $('c-costr'), cf = $('c-fz');
+  // grafico grande: il trascinamento semplice sceglie Delta Z_1 o Y_1, la vista si sposta col tasto destro o con Ctrl
+  let presa = null;
+  cv.addEventListener('contextmenu', ev => ev.preventDefault());
+  cv.addEventListener('pointerdown', ev => {
+    cv.setPointerCapture(ev.pointerId);
+    if (ev.button === 2 || ev.ctrlKey) { presa = { x: ev.clientX, y: ev.clientY, tx: st.vista.tx, ty: st.vista.ty }; cv.classList.add('trascina'); return; }
+    trascina(ev);
+  });
+  cv.addEventListener('pointermove', ev => {
+    if (!presa) return trascina(ev);
+    st.vista.tx = presa.tx + ev.clientX - presa.x; st.vista.ty = presa.ty + ev.clientY - presa.y; disegna();
+  });
+  const rilascia = () => { presa = null; cv.classList.remove('trascina'); };
+  cv.addEventListener('pointerup', rilascia); cv.addEventListener('pointercancel', rilascia);
+  cv.addEventListener('wheel', ev => {
+    ev.preventDefault();
+    const r = cv.getBoundingClientRect(), f = Math.exp(-ev.deltaY * 0.0015), px = ev.clientX - r.left, py = ev.clientY - r.top, v = st.vista;
+    v.kx *= f; v.tx = px + (v.tx - px) * f;
+    if (!ev.shiftKey) { v.ky *= f; v.ty = py + (v.ty - py) * f; }
+    disegna();
+  }, { passive: false });
+  cv.addEventListener('dblclick', () => { st.vista = VISTA0(); disegna(); });
+  // F_y(F_z): rotella e trascinamento, come nel widget del campionamento
+  const ix = X => TF.v.x[0] + (X - TF.B.l) / (TF.B.r - TF.B.l) * (TF.v.x[1] - TF.v.x[0]);
+  const iy = Y => TF.v.y[1] - (Y - TF.B.t) / (TF.B.b - TF.B.t) * (TF.v.y[1] - TF.v.y[0]);
+  cf.addEventListener('wheel', ev => {
+    if (!TF) return;
+    ev.preventDefault();
+    const r = cf.getBoundingClientRect(), x = ix(ev.clientX - r.left), y = iy(ev.clientY - r.top), f = Math.exp(ev.deltaY * 0.0015), v = TF.v;
+    st.vfz = { x: v.x.map(u => x + (u - x) * f), y: ev.shiftKey ? v.y.slice() : v.y.map(u => y + (u - y) * f) };
+    disegna();
+  }, { passive: false });
+  let presaF = null;
+  cf.addEventListener('pointerdown', ev => {
+    if (!TF || ev.button !== 0) return;
+    presaF = { x: ev.clientX, y: ev.clientY, v: { x: TF.v.x.slice(), y: TF.v.y.slice() }, B: TF.B };
+    cf.setPointerCapture(ev.pointerId); cf.classList.add('trascina');
+  });
+  cf.addEventListener('pointermove', ev => {
+    if (!presaF) return;
+    const { v, B } = presaF, sx = (v.x[1] - v.x[0]) / (B.r - B.l), sy = (v.y[1] - v.y[0]) / (B.b - B.t);
+    const dx = (ev.clientX - presaF.x) * sx, dy = (ev.clientY - presaF.y) * sy;
+    st.vfz = { x: v.x.map(u => u - dx), y: v.y.map(u => u + dy) };
+    disegna();
+  });
+  const lasciaF = () => { presaF = null; cf.classList.remove('trascina'); };
+  cf.addEventListener('pointerup', lasciaF); cf.addEventListener('pointercancel', lasciaF);
+  cf.addEventListener('dblclick', () => { st.vfz = null; disegna(); });
+  document.querySelectorAll('.zoom button[data-v]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.v === 'costr') st.vista = VISTA0(); else st.vfz = null;
+    disegna();
+  }));
+  // separatore fra il pannello a sinistra e i grafici
+  const rz = $('rz-sx'), pan = $('sx');
+  let x0 = null, w0 = 0;
+  rz.addEventListener('pointerdown', e => { if (pan.classList.contains('chiuso')) return; x0 = e.clientX; w0 = pan.getBoundingClientRect().width; rz.setPointerCapture(e.pointerId); rz.classList.add('attivo'); });
+  rz.addEventListener('pointermove', e => { if (x0 === null) return; pan.style.width = Math.max(240, Math.min(window.innerWidth * 0.6, w0 + e.clientX - x0)) + 'px'; disegna(); });
+  const fine = () => { x0 = null; rz.classList.remove('attivo'); };
+  rz.addEventListener('pointerup', fine); rz.addEventListener('pointercancel', fine);
+  rz.addEventListener('dblclick', () => { pan.classList.toggle('chiuso'); disegna(); });
+}
+
+// =====================================================================
+//  Interazione
+// =====================================================================
+function impostaDZ(dz, traccia = true) {
+  st.dz = Math.max(0, Math.min(DZMAX * 1e3 - 100, dz));
+  $('dz').value = (st.dz / 1e3).toFixed(2); $('dzval').textContent = (st.dz / 1e3).toFixed(2) + ' kN';
+  if (traccia) lascia(st.dz);
+  disegna();
+}
+function impostaY(y) {
+  st.y = Math.max(200, Math.min(4500, y));
+  $('yv').value = (st.y / 1e3).toFixed(2); $('yval').textContent = (st.y / 1e3).toFixed(2) + ' kN';
+  disegna();
+}
+function modo(m) {
+  st.modo = m; document.body.className = 'modo-' + m;
+  $('m-dz').classList.toggle('on', m === 'dz'); $('m-y').classList.toggle('on', m === 'y');
+  disegna();
+}
+function traccia() {
+  if (st.gira) { st.gira = false; $('b-play').textContent = '▶ Traccia il luogo'; return; }
+  st.gira = true; $('b-play').textContent = '⏸ Ferma';
+  if (st.dz >= 2.55e3) st.dz = 0;
+  let prec = null;
+  const passo = ora => {
+    if (!st.gira) return;
+    if (prec !== null) {
+      const nuovo = st.dz + (ora - prec) / 1000 * 330;     // 330 N al secondo
+      for (let z = st.dz; z < nuovo; z += 10) lascia(z);
+      impostaDZ(nuovo);
+      if (st.dz >= 2.55e3) { st.gira = false; $('b-play').textContent = '▶ Traccia il luogo'; $('s-intere').checked = true; disegna(); return; }
+    }
+    prec = ora; requestAnimationFrame(passo);
+  };
+  requestAnimationFrame(passo);
+}
+function trascina(ev) {
+  if (!T || !(ev.buttons & 1)) return;
+  const r = $('c-costr').getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
+  if (st.modo === 'dz') { if (x < T.x0) impostaDZ(T.invZ(x)); }
+  else impostaY(T.invY(y));
+}
+
+function init() {
+  if (window.katex) {
+    document.querySelectorAll('[data-tex]').forEach(el => katex.render(el.dataset.tex, el, { throwOnError: false, displayMode: false }));
+    document.querySelectorAll('.note, .section-title, .seg button, .riga .nome, .chk, .graf .tit, .graf .leg, table.xi th, .bottoni button, .passo .t').forEach(el => {
+      el.innerHTML = el.innerHTML.replace(/\$([^$]+)\$/g, (m, s) => katex.renderToString(s, { throwOnError: false }));
+    });
+  }
+  ricalcola();
+  $('barra').onchange = () => { ricalcola(); disegna(); };
+  $('v-barra').oninput = () => { ricalcola(); st.tracce.b.clear(); disegna(); };
+  $('s-ventaglio').onchange = disegna;
+  $('dz').oninput = () => impostaDZ(parseFloat($('dz').value) * 1e3);
+  $('yv').oninput = () => impostaY(parseFloat($('yv').value) * 1e3);
+  $('b-1').onclick = () => impostaDZ(1000);
+  $('b-2').onclick = () => impostaDZ(2000);
+  $('b-play').onclick = traccia;
+  $('b-canc').onclick = () => { st.tracce.a.clear(); st.tracce.b.clear(); $('s-intere').checked = false; disegna(); };
+  $('m-dz').onclick = () => modo('dz');
+  $('m-y').onclick = () => modo('y');
+  for (const id of ['s-somme', 's-ruote', 's-intere']) $(id).onchange = disegna;
+  initViste(); Aiuto.init();
+  window.addEventListener('resize', disegna);
+  $('yval').textContent = (st.y / 1e3).toFixed(2) + ' kN';
+  impostaDZ(1000);
+}
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

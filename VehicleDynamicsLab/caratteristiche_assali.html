@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caratteristiche Assali — Pacejka Magic Formula</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --panel: #16213e;
+  --accent: #0f3460;
+  --text: #e0e0e0;
+  --highlight: #e94560;
+  --front: #e94560;
+  --rear: #00b4d8;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* --- Panels --- */
+.panel {
+  background: var(--panel);
+  padding: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#left-panel {
+  width: 340px;
+  min-width: 260px;
+  max-width: 40vw;
+}
+#right-panel {
+  width: 300px;
+  min-width: 200px;
+  max-width: 35vw;
+}
+.panel h1 { font-size: 1.05em; color: var(--highlight); text-align: center; }
+.panel h2 { font-size: 0.78em; color: #aaa; text-align: center; font-weight: normal; margin-bottom: 2px; }
+
+/* --- Resizer handles --- */
+.resizer {
+  width: 5px;
+  cursor: col-resize;
+  background: var(--accent);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.resizer:hover, .resizer.dragging { background: var(--highlight); }
+
+/* --- Sections --- */
+.section {
+  background: var(--accent);
+  border-radius: 8px;
+  padding: 7px 9px;
+  overflow: hidden;
+}
+.section-title {
+  font-size: 0.72em; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: #aaa; margin-bottom: 5px;
+}
+.param-row { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; }
+.param-row label { flex: 0 0 85px; font-size: 0.8em; text-align: right; }
+.param-row input[type="range"] { flex: 1; min-width: 0; accent-color: var(--highlight); }
+.param-row .val { flex: 0 0 55px; font-size: 0.76em; font-family: monospace; color: #ccc; text-align: right; white-space: nowrap; overflow: hidden; }
+
+/* Color-coded labels */
+.label-front { color: var(--front); }
+.label-rear { color: var(--rear); }
+
+button {
+  background: var(--highlight); color: white; border: none;
+  padding: 5px 10px; border-radius: 5px; cursor: pointer;
+  font-size: 0.78em; font-weight: 600;
+  transition: background 0.15s;
+}
+button:hover { background: #c73e54; }
+button.secondary { background: var(--accent); border: 1px solid #555; }
+button.secondary:hover { background: #1a3a6a; }
+button.active { background: var(--highlight); border-color: var(--highlight); }
+
+.toggle-group {
+  display: flex; gap: 0; border-radius: 6px; overflow: hidden;
+}
+.toggle-group button {
+  flex: 1; border-radius: 0; border: 1px solid #555;
+  background: var(--accent); font-size: 0.78em; padding: 6px 10px;
+}
+.toggle-group button.active {
+  background: var(--highlight); border-color: var(--highlight); color: white;
+}
+.toggle-group button:first-child { border-radius: 6px 0 0 6px; }
+.toggle-group button:last-child { border-radius: 0 6px 6px 0; }
+
+/* --- Canvas area --- */
+#canvas-container {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  position: relative; padding: 6px;
+}
+canvas#main-canvas { background: #0d1117; border-radius: 8px; }
+
+/* --- Formula box --- */
+#formula-box {
+  background: var(--accent);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: center;
+}
+#formula-box .section-title { margin-bottom: 4px; }
+#formula-box .katex { font-size: 0.92em; }
+
+/* --- Info box (right panel) --- */
+#info-box {
+  background: rgba(0,0,0,0.3); border-radius: 6px; padding: 8px 12px;
+  font-family: monospace; font-size: 0.88em; line-height: 1.6; white-space: pre-line;
+}
+
+/* --- Legend --- */
+.legend-section { display: flex; flex-direction: column; gap: 3px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.72em; }
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+/* --- Section header colored --- */
+.section-front .section-title { color: var(--front); }
+.section-rear .section-title { color: var(--rear); }
+</style>
+</head>
+<body>
+
+<!-- ========= LEFT PANEL: Controls ========= -->
+<div id="left-panel" class="panel">
+  <h1>Caratteristiche Assali</h1>
+  <h2>Pacejka Magic Formula</h2>
+  <div style="text-align:center;font-size:0.68em;color:#888;line-height:1.4;margin-bottom:2px;">
+    Prof. Marco Gabiccini<br>
+    Dinamica del Veicolo<br>
+    <span style="font-size:0.9em;color:#666;">Tutti i diritti riservati</span>
+  </div>
+
+  <!-- Formula (KaTeX) -->
+  <div id="formula-box" class="section">
+    <div class="section-title">Magic Formula</div>
+    <div id="formula-render"></div>
+  </div>
+
+  <!-- Steering mode toggle -->
+  <div class="section">
+    <div class="section-title">Configurazione veicolo</div>
+    <div class="toggle-group">
+      <button id="btn-under" class="active" onclick="setMode('under')">Understeer</button>
+      <button id="btn-over" onclick="setMode('over')">Oversteer</button>
+    </div>
+  </div>
+
+  <!-- Front axle parameters -->
+  <div class="section section-front">
+    <div class="section-title">Assale anteriore (1)</div>
+    <div class="param-row">
+      <label class="label-front">B<sub>1</sub> (1/rad):</label>
+      <input type="range" id="B1-slider" min="1" max="30" value="9.86" step="0.01">
+      <span class="val" id="B1-val">9.86</span>
+    </div>
+    <div class="param-row">
+      <label class="label-front">C<sub>1</sub> (&mdash;):</label>
+      <input type="range" id="C1-slider" min="0.5" max="3" value="1.87" step="0.01">
+      <span class="val" id="C1-val">1.87</span>
+    </div>
+    <div class="param-row">
+      <label class="label-front">D<sub>1</sub> (N):</label>
+      <input type="range" id="D1-slider" min="1000" max="20000" value="9778" step="10">
+      <span class="val" id="D1-val">9778</span>
+    </div>
+    <div class="param-row">
+      <label class="label-front">E<sub>1</sub> (&mdash;):</label>
+      <input type="range" id="E1-slider" min="-2" max="1" value="0.28" step="0.01">
+      <span class="val" id="E1-val">0.28</span>
+    </div>
+  </div>
+
+  <!-- Rear axle parameters -->
+  <div class="section section-rear">
+    <div class="section-title">Assale posteriore (2)</div>
+    <div class="param-row">
+      <label class="label-rear">B<sub>2</sub> (1/rad):</label>
+      <input type="range" id="B2-slider" min="1" max="30" value="18.75" step="0.01">
+      <span class="val" id="B2-val">18.75</span>
+    </div>
+    <div class="param-row">
+      <label class="label-rear">C<sub>2</sub> (&mdash;):</label>
+      <input type="range" id="C2-slider" min="0.5" max="3" value="1.53" step="0.01">
+      <span class="val" id="C2-val">1.53</span>
+    </div>
+    <div class="param-row">
+      <label class="label-rear">D<sub>2</sub> (N):</label>
+      <input type="range" id="D2-slider" min="1000" max="20000" value="9234" step="10">
+      <span class="val" id="D2-val">9234</span>
+    </div>
+    <div class="param-row">
+      <label class="label-rear">E<sub>2</sub> (&mdash;):</label>
+      <input type="range" id="E2-slider" min="-2" max="1" value="0.30" step="0.01">
+      <span class="val" id="E2-val">0.30</span>
+    </div>
+  </div>
+
+  <!-- Cursor alpha -->
+  <div class="section">
+    <div class="section-title">Cursore &alpha;</div>
+    <div class="param-row">
+      <label>&alpha; (deg):</label>
+      <input type="range" id="alpha-slider" min="0" max="20" value="5" step="0.1">
+      <span class="val" id="alpha-val">5.0&deg;</span>
+    </div>
+  </div>
+
+  <!-- Cursor Fy -->
+  <div class="section">
+    <div class="section-title">Cursore F<sub>y</sub></div>
+    <div class="param-row">
+      <label>F<sub>y</sub> (N):</label>
+      <input type="range" id="fy-slider" min="0" max="10000" value="5000" step="50">
+      <span class="val" id="fy-val">5000</span>
+    </div>
+    <div id="fy-cursor-info" style="font-size:0.76em;font-family:monospace;color:#bbb;line-height:1.5;margin-top:3px;"></div>
+  </div>
+
+  <!-- Legend -->
+  <div class="section">
+    <div class="section-title">Legenda</div>
+    <div class="legend-section">
+      <div class="legend-item"><span class="legend-dot" style="background:#e94560"></span> F<sub>y1</sub>(&alpha;) &mdash; Assale anteriore</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#00b4d8"></span> F<sub>y2</sub>(&alpha;) &mdash; Assale posteriore</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#ffdd57"></span> Cursore &alpha;</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#06d6a0"></span> Cursore F<sub>y</sub></div>
+      <div class="legend-item"><span class="legend-dot" style="background:rgba(255,255,255,0.3)"></span> Cornering stiffness</div>
+    </div>
+  </div>
+</div>
+
+<div id="left-resizer" class="resizer"></div>
+
+<!-- ========= CENTER: Canvas ========= -->
+<div id="canvas-container">
+  <canvas id="main-canvas"></canvas>
+</div>
+
+<div id="right-resizer" class="resizer"></div>
+
+<!-- ========= RIGHT PANEL: Output ========= -->
+<div id="right-panel" class="panel">
+  <div class="section">
+    <div class="section-title">Stato corrente</div>
+    <div id="info-box">Muovi gli slider o seleziona un modo.</div>
+  </div>
+</div>
+
+<script>
+// --- Preset data ---
+const PRESETS = {
+  under: {
+    B1: 9.86,  C1: 1.87, D1: 9778, E1: 0.28,
+    B2: 18.75, C2: 1.53, D2: 9234, E2: 0.30
+  },
+  over: {
+    B1: 14.5,  C1: 1.89, D1: 9778, E1: 0.29,
+    B2: 13.5,  C2: 1.45, D2: 9234, E2: 0.31
+  }
+};
+
+let currentMode = 'under';
+let lastFyCursorAlphas1 = [];
+let lastFyCursorAlphas2 = [];
+let lastFyCursorVal = 0;
+
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+
+// --- Render KaTeX formula once loaded ---
+function renderFormula() {
+  if (typeof katex !== 'undefined') {
+    katex.render(
+      String.raw`F_{y_i}(\alpha_i) = D_i \sin\!\Big(C_i \arctan\!\big(B_i\alpha_i - E_i(B_i\alpha_i - \arctan(B_i\alpha_i))\big)\Big)`,
+      document.getElementById('formula-render'),
+      { displayMode: true, throwOnError: false }
+    );
+  } else {
+    setTimeout(renderFormula, 100);
+  }
+}
+renderFormula();
+
+// --- Pacejka Magic Formula ---
+function Fy(alpha, B, C, D, E) {
+  const Ba = B * alpha;
+  return D * Math.sin(C * Math.atan(Ba - E * (Ba - Math.atan(Ba))));
+}
+
+// Cornering stiffness: dFy/da|_{a=0} = D*C*B
+function corneringStiffness(B, C, D, E) {
+  return D * C * B;
+}
+
+// Inverse lookup: find alpha values (deg) where Fy(alpha) = target
+function inverseFy(target, B, C, D, E, alphaMaxDeg) {
+  const N = 2000;
+  const alphaMaxRad = alphaMaxDeg * Math.PI / 180;
+  const results = [];
+  let prevF = Fy(0, B, C, D, E);
+  for (let i = 1; i <= N; i++) {
+    const aRad = i / N * alphaMaxRad;
+    const f = Fy(aRad, B, C, D, E);
+    if ((prevF - target) * (f - target) <= 0) {
+      let lo = (i - 1) / N * alphaMaxRad, hi = aRad;
+      for (let it = 0; it < 40; it++) {
+        const mid = (lo + hi) / 2;
+        if ((Fy(mid, B, C, D, E) - target) * (Fy(lo, B, C, D, E) - target) <= 0) hi = mid;
+        else lo = mid;
+      }
+      results.push((lo + hi) / 2 * 180 / Math.PI);
+    }
+    prevF = f;
+  }
+  return results;
+}
+
+// --- Resize: fill the center container ---
+function resize() {
+  const container = document.getElementById('canvas-container');
+  const w = container.clientWidth - 12;
+  const h = container.clientHeight - 12;
+  canvas.width = Math.max(w, 300);
+  canvas.height = Math.max(h, 200);
+}
+
+// --- Read slider values ---
+function getParams() {
+  return {
+    B1: parseFloat(document.getElementById('B1-slider').value),
+    C1: parseFloat(document.getElementById('C1-slider').value),
+    D1: parseFloat(document.getElementById('D1-slider').value),
+    E1: parseFloat(document.getElementById('E1-slider').value),
+    B2: parseFloat(document.getElementById('B2-slider').value),
+    C2: parseFloat(document.getElementById('C2-slider').value),
+    D2: parseFloat(document.getElementById('D2-slider').value),
+    E2: parseFloat(document.getElementById('E2-slider').value),
+  };
+}
+
+// --- Set mode ---
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('btn-under').classList.toggle('active', mode === 'under');
+  document.getElementById('btn-over').classList.toggle('active', mode === 'over');
+  const p = PRESETS[mode];
+  for (const key of Object.keys(p)) {
+    document.getElementById(key + '-slider').value = p[key];
+    updateValDisplay(key);
+  }
+  updateFySliderMax();
+  draw();
+}
+
+function updateValDisplay(key) {
+  const slider = document.getElementById(key + '-slider');
+  const valEl = document.getElementById(key + '-val');
+  const v = parseFloat(slider.value);
+  valEl.textContent = key.startsWith('D') ? v.toFixed(0) : v.toFixed(2);
+}
+
+function updateFySliderMax() {
+  const p = getParams();
+  const newMax = Math.max(p.D1, p.D2);
+  const fySlider = document.getElementById('fy-slider');
+  fySlider.max = Math.ceil(newMax / 100) * 100;
+  if (parseFloat(fySlider.value) > parseFloat(fySlider.max)) {
+    fySlider.value = fySlider.max;
+  }
+  document.getElementById('fy-val').textContent = parseFloat(fySlider.value).toFixed(0);
+}
+
+// --- Wire sliders ---
+const paramKeys = ['B1','C1','D1','E1','B2','C2','D2','E2'];
+for (const key of paramKeys) {
+  document.getElementById(key + '-slider').addEventListener('input', () => {
+    updateValDisplay(key);
+    updateFySliderMax();
+    draw();
+  });
+}
+document.getElementById('alpha-slider').addEventListener('input', () => {
+  document.getElementById('alpha-val').textContent = parseFloat(document.getElementById('alpha-slider').value).toFixed(1) + '\u00b0';
+  draw();
+});
+document.getElementById('fy-slider').addEventListener('input', () => {
+  document.getElementById('fy-val').textContent = parseFloat(document.getElementById('fy-slider').value).toFixed(0);
+  draw();
+});
+
+// ===================================================================
+//  DRAWING
+// ===================================================================
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  const pad = { l: 72, r: 25, t: 30, b: 45 };
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, W, H);
+
+  const p = getParams();
+  const alphaMax = 20;
+  const alphaMaxRad = alphaMax * Math.PI / 180;
+  const N = 500;
+
+  // Compute curves
+  let fy1 = [], fy2 = [];
+  let peakMax = 0;
+  for (let i = 0; i <= N; i++) {
+    const aRad = i / N * alphaMaxRad;
+    const f1 = Fy(aRad, p.B1, p.C1, p.D1, p.E1);
+    const f2 = Fy(aRad, p.B2, p.C2, p.D2, p.E2);
+    fy1.push(f1); fy2.push(f2);
+    peakMax = Math.max(peakMax, Math.abs(f1), Math.abs(f2));
+  }
+  let yMax = Math.ceil(peakMax * 1.25 / 1000) * 1000;
+  if (yMax < 2000) yMax = 2000;
+
+  function toX(aDeg) { return pad.l + (aDeg / alphaMax) * pw; }
+  function toY(f) { return pad.t + ph - (f / yMax) * ph; }
+
+  // --- Grid ---
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+  for (let d = 0; d <= alphaMax; d += 2) {
+    const x = toX(d);
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, H - pad.b); ctx.stroke();
+  }
+  const yStep = yMax > 10000 ? 2000 : 1000;
+  for (let f = 0; f <= yMax; f += yStep) {
+    const y = toY(f);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+  }
+
+  // --- Axes ---
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, H - pad.b);
+  ctx.lineTo(W - pad.r, H - pad.b); ctx.stroke();
+
+  // X ticks
+  ctx.fillStyle = '#888'; ctx.font = '11px "Segoe UI", sans-serif';
+  for (let d = 0; d <= alphaMax; d += 2) {
+    ctx.fillText(d + '\u00b0', toX(d) - 8, H - pad.b + 16);
+  }
+  ctx.fillStyle = '#aaa'; ctx.font = 'italic 13px "Segoe UI", sans-serif';
+  ctx.fillText('\u03B1 (deg)', W - pad.r - 55, H - 6);
+
+  // Y ticks (right-aligned just left of axis)
+  ctx.fillStyle = '#888'; ctx.font = '10px monospace';
+  for (let f = 0; f <= yMax; f += yStep) {
+    const lbl = f.toFixed(0);
+    ctx.fillText(lbl, pad.l - ctx.measureText(lbl).width - 6, toY(f) + 3);
+  }
+  // Y label
+  ctx.save();
+  ctx.translate(13, pad.t + ph / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#aaa'; ctx.font = 'italic 13px "Segoe UI", sans-serif';
+  ctx.fillText('Fy (N)', -20, 0);
+  ctx.restore();
+
+  // --- Cornering stiffness tangent lines ---
+  const cs1 = corneringStiffness(p.B1, p.C1, p.D1, p.E1);
+  const cs2 = corneringStiffness(p.B2, p.C2, p.D2, p.E2);
+  ctx.setLineDash([6, 4]); ctx.lineWidth = 1.5;
+  const te1 = Math.min(alphaMax, (yMax / cs1) * 180 / Math.PI, 8);
+  ctx.beginPath(); ctx.moveTo(toX(0), toY(0));
+  ctx.lineTo(toX(te1), toY(Math.min(cs1 * te1 * Math.PI / 180, yMax)));
+  ctx.strokeStyle = 'rgba(233,69,96,0.35)'; ctx.stroke();
+  const te2 = Math.min(alphaMax, (yMax / cs2) * 180 / Math.PI, 8);
+  ctx.beginPath(); ctx.moveTo(toX(0), toY(0));
+  ctx.lineTo(toX(te2), toY(Math.min(cs2 * te2 * Math.PI / 180, yMax)));
+  ctx.strokeStyle = 'rgba(0,180,216,0.35)'; ctx.stroke();
+  ctx.setLineDash([]);
+
+  // --- Curves ---
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const x = toX(i / N * alphaMax), y = toY(fy1[i]);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = '#e94560'; ctx.lineWidth = 2.5; ctx.stroke();
+
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const x = toX(i / N * alphaMax), y = toY(fy2[i]);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = '#00b4d8'; ctx.lineWidth = 2.5; ctx.stroke();
+
+  // --- Alpha cursor ---
+  const alphaCur = parseFloat(document.getElementById('alpha-slider').value);
+  const alphaCurRad = alphaCur * Math.PI / 180;
+  const fy1Cur = Fy(alphaCurRad, p.B1, p.C1, p.D1, p.E1);
+  const fy2Cur = Fy(alphaCurRad, p.B2, p.C2, p.D2, p.E2);
+
+  const cxA = toX(alphaCur);
+  ctx.beginPath(); ctx.moveTo(cxA, pad.t); ctx.lineTo(cxA, H - pad.b);
+  ctx.strokeStyle = 'rgba(255,221,87,0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.l, toY(fy1Cur)); ctx.lineTo(cxA, toY(fy1Cur));
+  ctx.strokeStyle = 'rgba(233,69,96,0.4)'; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad.l, toY(fy2Cur)); ctx.lineTo(cxA, toY(fy2Cur));
+  ctx.strokeStyle = 'rgba(0,180,216,0.4)'; ctx.stroke();
+  ctx.setLineDash([]);
+
+  drawDot(cxA, toY(fy1Cur), 6, '#e94560');
+  drawDot(cxA, toY(fy2Cur), 6, '#00b4d8');
+
+  ctx.font = 'bold 12px monospace';
+  ctx.fillStyle = '#e94560';
+  ctx.fillText(fy1Cur.toFixed(0) + ' N', cxA + 10, toY(fy1Cur) - 6);
+  ctx.fillStyle = '#00b4d8';
+  ctx.fillText(fy2Cur.toFixed(0) + ' N', cxA + 10, toY(fy2Cur) + 14);
+
+  // --- Fy cursor (horizontal) ---
+  const fyCur = parseFloat(document.getElementById('fy-slider').value);
+  if (fyCur > 0 && fyCur <= yMax) {
+    const yLine = toY(fyCur);
+    ctx.beginPath(); ctx.moveTo(pad.l, yLine); ctx.lineTo(W - pad.r, yLine);
+    ctx.strokeStyle = 'rgba(6,214,160,0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    const alphas1 = inverseFy(fyCur, p.B1, p.C1, p.D1, p.E1, alphaMax);
+    const alphas2 = inverseFy(fyCur, p.B2, p.C2, p.D2, p.E2, alphaMax);
+
+    ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+    for (const a of alphas1) {
+      ctx.beginPath(); ctx.moveTo(toX(a), yLine); ctx.lineTo(toX(a), H - pad.b);
+      ctx.strokeStyle = 'rgba(233,69,96,0.4)'; ctx.stroke();
+    }
+    for (const a of alphas2) {
+      ctx.beginPath(); ctx.moveTo(toX(a), yLine); ctx.lineTo(toX(a), H - pad.b);
+      ctx.strokeStyle = 'rgba(0,180,216,0.4)'; ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    for (const a of alphas1) drawDot(toX(a), yLine, 5, '#e94560');
+    for (const a of alphas2) drawDot(toX(a), yLine, 5, '#00b4d8');
+
+    // Alpha labels below intersection dots
+    ctx.font = 'bold 11px monospace';
+    for (const a of alphas1) {
+      const lbl = a.toFixed(1) + '\u00b0';
+      ctx.fillStyle = '#e94560';
+      ctx.fillText(lbl, toX(a) - ctx.measureText(lbl).width / 2, yLine + 16);
+    }
+    for (const a of alphas2) {
+      const lbl = a.toFixed(1) + '\u00b0';
+      ctx.fillStyle = '#00b4d8';
+      ctx.fillText(lbl, toX(a) - ctx.measureText(lbl).width / 2, yLine + 28);
+    }
+
+    // Fy label
+    ctx.font = 'bold 11px monospace'; ctx.fillStyle = '#06d6a0';
+    ctx.fillText(fyCur.toFixed(0) + ' N', pad.l + 4, yLine - 5);
+
+    lastFyCursorAlphas1 = alphas1;
+    lastFyCursorAlphas2 = alphas2;
+    lastFyCursorVal = fyCur;
+
+    let infoHtml = '';
+    infoHtml += alphas1.length > 0
+      ? '<span style="color:#e94560">\u03B1\u2081 = ' + alphas1.map(a => a.toFixed(2) + '\u00b0').join(', ') + '</span>'
+      : '<span style="color:#e94560">\u03B1\u2081: nessuna</span>';
+    infoHtml += '<br>';
+    infoHtml += alphas2.length > 0
+      ? '<span style="color:#00b4d8">\u03B1\u2082 = ' + alphas2.map(a => a.toFixed(2) + '\u00b0').join(', ') + '</span>'
+      : '<span style="color:#00b4d8">\u03B1\u2082: nessuna</span>';
+    document.getElementById('fy-cursor-info').innerHTML = infoHtml;
+  } else {
+    document.getElementById('fy-cursor-info').innerHTML = '';
+    lastFyCursorAlphas1 = []; lastFyCursorAlphas2 = []; lastFyCursorVal = 0;
+  }
+
+  // --- In-graph legend box ---
+  {
+    const legX = W - pad.r - 155, legY = pad.t + 6;
+    const legW = 145, legH = 50, legR = 6;
+    ctx.beginPath(); ctx.roundRect(legX, legY, legW, legH, legR);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.stroke();
+    const ly1 = legY + 18;
+    ctx.beginPath(); ctx.moveTo(legX + 10, ly1); ctx.lineTo(legX + 35, ly1);
+    ctx.strokeStyle = '#e94560'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.font = 'bold 12px "Segoe UI", sans-serif'; ctx.fillStyle = '#e94560';
+    ctx.fillText('Fy\u2081(\u03B1)  Ant.', legX + 40, ly1 + 4);
+    const ly2 = legY + 38;
+    ctx.beginPath(); ctx.moveTo(legX + 10, ly2); ctx.lineTo(legX + 35, ly2);
+    ctx.strokeStyle = '#00b4d8'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#00b4d8';
+    ctx.fillText('Fy\u2082(\u03B1)  Post.', legX + 40, ly2 + 4);
+  }
+
+  // --- Mode label ---
+  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '12px "Segoe UI", sans-serif';
+  const modeLabel = currentMode === 'under' ? 'UNDERSTEER' : 'OVERSTEER';
+  ctx.fillText(modeLabel, W - pad.r - ctx.measureText(modeLabel).width - 5, H - pad.b - 8);
+
+  // --- Max points ---
+  let max1 = 0, max1Alpha = 0, max2 = 0, max2Alpha = 0;
+  for (let i = 0; i <= N; i++) {
+    if (fy1[i] > max1) { max1 = fy1[i]; max1Alpha = i / N * alphaMax; }
+    if (fy2[i] > max2) { max2 = fy2[i]; max2Alpha = i / N * alphaMax; }
+  }
+  drawTriangle(toX(max1Alpha), toY(max1), '#e94560');
+  drawTriangle(toX(max2Alpha), toY(max2), '#00b4d8');
+
+  // --- Update right panel ---
+  updateInfo(p, alphaCur, fy1Cur, fy2Cur, cs1, cs2, max1, max1Alpha, max2, max2Alpha);
+}
+
+function drawDot(x, y, r, color) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+function drawTriangle(x, y, color) {
+  const s = 5;
+  ctx.beginPath();
+  ctx.moveTo(x, y - s - 3); ctx.lineTo(x - s, y - 2*s - 3); ctx.lineTo(x + s, y - 2*s - 3);
+  ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+}
+
+function updateInfo(p, alphaCur, fy1Cur, fy2Cur, cs1, cs2, max1, max1Alpha, max2, max2Alpha) {
+  const dFy = fy1Cur - fy2Cur;
+  const sep = '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500';
+  let t = '';
+  t += `${currentMode === 'under' ? 'Sottosterzante' : 'Sovrasterzante'}\n`;
+  t += sep + '\n';
+  t += `\u03B1 = ${alphaCur.toFixed(1)}\u00b0  (${(alphaCur * Math.PI / 180).toFixed(4)} rad)\n`;
+  t += `Fy\u2081(\u03B1) = ${fy1Cur.toFixed(1)} N\n`;
+  t += `Fy\u2082(\u03B1) = ${fy2Cur.toFixed(1)} N\n`;
+  t += `\u0394Fy = ${dFy.toFixed(1)} N\n`;
+  t += sep + '\n';
+  t += `C\u03B1\u2081 = ${(cs1 / 1000).toFixed(2)} kN/rad\n`;
+  t += `C\u03B1\u2082 = ${(cs2 / 1000).toFixed(2)} kN/rad\n`;
+  t += sep + '\n';
+  t += `Fy\u2081_max = ${max1.toFixed(0)} N  @ ${max1Alpha.toFixed(1)}\u00b0\n`;
+  t += `Fy\u2082_max = ${max2.toFixed(0)} N  @ ${max2Alpha.toFixed(1)}\u00b0\n`;
+  if (lastFyCursorVal > 0) {
+    t += sep + '\n';
+    t += `Cursore Fy = ${lastFyCursorVal.toFixed(0)} N\n`;
+    if (lastFyCursorAlphas1.length > 0)
+      t += `\u03B1\u2081 = ${lastFyCursorAlphas1.map(a => a.toFixed(2) + '\u00b0').join(', ')}\n`;
+    else
+      t += `\u03B1\u2081: nessuna intersezione\n`;
+    if (lastFyCursorAlphas2.length > 0)
+      t += `\u03B1\u2082 = ${lastFyCursorAlphas2.map(a => a.toFixed(2) + '\u00b0').join(', ')}`;
+    else
+      t += `\u03B1\u2082: nessuna intersezione`;
+  }
+  document.getElementById('info-box').textContent = t;
+}
+
+// ===================================================================
+//  RESIZERS (both panels)
+// ===================================================================
+function setupResizer(resizerId, panelId, side) {
+  const panel = document.getElementById(panelId);
+  const resizer = document.getElementById(resizerId);
+  let startX, startW;
+  resizer.addEventListener('mousedown', e => {
+    e.preventDefault();
+    startX = e.clientX; startW = panel.offsetWidth;
+    resizer.classList.add('dragging');
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  function onMove(e) {
+    const delta = side === 'left' ? (e.clientX - startX) : (startX - e.clientX);
+    const w = startW + delta;
+    const minW = parseInt(getComputedStyle(panel).minWidth) || 200;
+    const maxW = window.innerWidth * 0.40;
+    panel.style.width = Math.max(minW, Math.min(w, maxW)) + 'px';
+    resize(); draw();
+  }
+  function onUp() {
+    resizer.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+}
+setupResizer('left-resizer', 'left-panel', 'left');
+setupResizer('right-resizer', 'right-panel', 'right');
+
+// --- Init ---
+window.addEventListener('resize', () => { resize(); draw(); });
+resize();
+updateFySliderMax();
+setMode('under');
+</script>
+</body>
+</html>
