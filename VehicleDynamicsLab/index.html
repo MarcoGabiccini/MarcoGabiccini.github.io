@@ -286,6 +286,38 @@
 </div>
 
 <!-- ================================================================= -->
+<div class="topic"><h2>Double-track simulations</h2><p>manoeuvres of the full model, replayed in 3D</p></div>
+<div class="grid">
+
+  <!-- Viewer del double track con le prove gia' simulate. Non e' una pagina di html/: e' la cartella
+       doubletrack_viewer/ del sito, generata nel repo Progetto (easy/docente/genera_viewer_online.m)
+       e copiata a mano. pubblica_sito.py non la copia e non la tocca (l'href ha una barra). -->
+  <a class="card" href="doubletrack_viewer/index.html">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- the path, and the car on it seen from above, sliding a little -->
+      <path d="M4 46 C 20 46, 30 37, 34 26 S 42 10, 49 6" stroke="#58a6ff" stroke-width="1.4" opacity="0.75"/>
+      <g transform="rotate(8 34 26)">
+        <!-- tyre forces towards the inside of the bend -->
+        <line x1="28.5" y1="20.5" x2="20.5" y2="20.5" stroke="#f78166" stroke-width="1.6"/>
+        <polygon points="18,20.5 21.6,18.5 21.6,22.5" fill="#f78166"/>
+        <line x1="28.5" y1="31.5" x2="17.5" y2="31.5" stroke="#f78166" stroke-width="1.6"/>
+        <polygon points="15,31.5 18.6,29.5 18.6,33.5" fill="#f78166"/>
+        <rect x="29.5" y="16.5" width="9" height="19" rx="2.6" fill="#161b22" stroke="#c9d1d9" stroke-width="1.5"/>
+        <rect x="27.6" y="18.2" width="2.4" height="4.8" rx="0.8" fill="#c9d1d9" transform="rotate(-16 28.8 20.6)"/>
+        <rect x="38" y="18.2" width="2.4" height="4.8" rx="0.8" fill="#c9d1d9" transform="rotate(-16 39.2 20.6)"/>
+        <rect x="27.6" y="29.1" width="2.4" height="4.8" rx="0.8" fill="#c9d1d9"/>
+        <rect x="38" y="29.1" width="2.4" height="4.8" rx="0.8" fill="#c9d1d9"/>
+      </g>
+    </svg>
+    <div class="card-body">
+      <h3>Double-track simulations in 3D</h3>
+      <p>Four manoeuvres of the double-track model replayed in 3D: a fast lap of the Circuito del Sele, a ramp steer up to the grip limit, an ISO double lane change and a Scandinavian flick. Tyre forces on the friction circle, load transfers and signals, in step with the animation.</p>
+    </div>
+  </a>
+
+</div>
+
+<!-- ================================================================= -->
 <div class="topic"><h2>Handling diagram</h2><p>branches, local understeer gradient, equilibria and stability</p></div>
 <div class="grid">
 
