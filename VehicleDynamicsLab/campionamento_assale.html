@@ -184,6 +184,9 @@ details.spieg .note { margin: 4px 0 2px; }
 #barra > button { background: #1d2d52; border: 1px solid #4a5a80; color: #dde; border-radius: 5px; font-size: .74em; padding: 3px 9px; cursor: pointer; }
 #barra > button:hover { border-color: var(--hl); }
 #barra > button.spento { color: #8f9bb0; }
+/* suoni accesi ma non ancora permessi dal browser: il pulsante pulsa finche' non arriva il primo clic */
+#barra > button.attesa { border-color: var(--hl); animation: attesa-audio 1.6s ease-in-out infinite; }
+@keyframes attesa-audio { 50% { box-shadow: 0 0 0 3px rgba(255, 210, 90, .28); } }
 /* legenda: fascia in basso sul canvas, due righe (tipi cliccabili; segni e comandi) */
 #leg { position: absolute; left: 10px; right: 10px; bottom: 8px; z-index: 6; background: rgba(22,33,62,.94);
   border: 1px solid #3b5384; border-radius: 8px; padding: 4px 9px 5px; font-size: .68em; }
@@ -234,6 +237,7 @@ details.sez > summary::before { content: '▸'; margin-right: 6px; color: var(--
 details.sez[open] > summary::before { content: '▾'; }
 details.sez > summary .q { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 600; color: #ffd1a1; }
 details.sez[open] > summary { margin-bottom: 6px; }
+details.sez > summary .katex { text-transform: none; letter-spacing: 0; }   /* alpha_1 non diventi una A maiuscola */
 .bottone-grande { display: block; width: 100%; margin: 6px 0 2px; padding: 7px 8px; border-radius: 7px; cursor: pointer;
   background: linear-gradient(90deg, rgba(255,159,67,.25), rgba(255,79,216,.22)); border: 1px solid var(--loop);
   color: #fff; font-size: .78em; font-weight: 700; text-align: left; }
@@ -695,7 +699,7 @@ details.sotto[open] > summary::before { content: '▾'; }
     <div class="section-title">Blocco selezionato</div>
     <div id="dettaglio"></div>
   </div>
-  <details class="section sez" id="sez-loop" open>
+  <details class="section sez" id="sez-loop">
     <summary>Loop algebrico <span class="q" id="loop-dim"></span></summary>
     <div class="note" id="loop-nota"></div>
     <button class="bottone-grande" id="b-riduzione" title="apre la scheda della riduzione al centro">&#9986; Riduzione del loop: le equazioni, le incognite e perché ne restano <span id="b-rid-n"></span> &rarr;</button>
@@ -2130,6 +2134,9 @@ const Aiuto = {
 // ===========================================================================
 const Suoni = {
   attivi: true, ac: null, out: null, ultimi: {},
+  // i browser non lasciano suonare una pagina prima di un gesto (clic, tocco, tasto): fino ad allora niente
+  // AudioContext e il pulsante lo dice; il primo gesto, ovunque nella pagina, accende l'audio (sblocca)
+  sbloccato: !!(navigator.userActivation && navigator.userActivation.hasBeenActive), daPulsante: false,
   init() {
     if (this.ac) return this.ac;
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -2149,7 +2156,7 @@ const Suoni = {
     return ac;
   },
   pronto(chiave, minimo = 0.03) {
-    if (!this.attivi) return false;
+    if (!this.attivi || !this.sbloccato) return false;
     const ac = this.init();
     if (!ac) return false;
     if (ac.state === 'suspended') ac.resume();
@@ -2236,11 +2243,26 @@ const Suoni = {
     if (!this.pronto()) return;
     for (let i = 0; i < 9; i++) { const f = this.hz(i + 2, 523.25); this.nota(f, f * 1.02, 0.035, { forma: 'triangle', vol: 0.11, ritardo: i * 0.026 }); }
   },
+  sblocca(e) {
+    if (this.sbloccato) return;
+    this.sbloccato = true;
+    this.daPulsante = !!(e && e.target && e.target.closest && e.target.closest('#b-suoni'));   // quel clic accende, non spegne
+    const ac = this.init();
+    if (ac && ac.state === 'suspended') ac.resume();
+    this.etichetta();
+  },
+  etichetta() {
+    const b = $('b-suoni');
+    if (!b) return;
+    const attesa = this.attivi && !this.sbloccato;
+    b.innerHTML = !this.attivi ? '&#128263; muto' : attesa ? '&#128266; clic per l\'audio' : '&#128266; suoni';
+    b.classList.toggle('spento', !this.attivi); b.classList.toggle('attesa', attesa);
+    b.title = attesa ? 'il browser fa partire l\'audio solo dopo un clic: un clic qui, o in qualunque punto della pagina'
+                     : 'effetti sonori dei pallini: acceso o spento';
+  },
   imposta(acceso) {
     this.attivi = acceso;
-    try { localStorage.setItem('struttura-suoni', acceso ? '1' : '0'); } catch (e) { /* senza memoria va bene lo stesso */ }
-    const b = $('b-suoni');
-    if (b) { b.innerHTML = acceso ? '&#128266; suoni' : '&#128263; muto'; b.classList.toggle('spento', !acceso); }
+    this.etichetta();
     if (acceso && this.pronto()) this.nota(880, 1320, 0.08, { vol: 0.18 });
   },
 };
@@ -3038,10 +3060,10 @@ function costruisciComandi() {
   $('s-tutta').addEventListener('click', campionaTutto);
   $('chk-salta').addEventListener('change', e => { Flusso.saltaLoop = e.target.checked; });
   $('chk-caldo').addEventListener('change', e => { Flusso.caldo = e.target.checked; });
-  let suoni = true;
-  try { suoni = localStorage.getItem('struttura-suoni') !== '0'; } catch (e) { /* preferenza non disponibile */ }
-  Suoni.attivi = suoni; $('b-suoni').innerHTML = suoni ? '&#128266; suoni' : '&#128263; muto'; $('b-suoni').classList.toggle('spento', !suoni);
-  $('b-suoni').addEventListener('click', () => Suoni.imposta(!Suoni.attivi));
+  // suoni accesi all'apertura: partono al primo gesto nella pagina, appena il browser lo permette
+  Suoni.etichetta();
+  for (const t of ['pointerdown', 'keydown']) window.addEventListener(t, e => Suoni.sblocca(e), { capture: true });
+  $('b-suoni').addEventListener('click', () => { if (Suoni.daPulsante) { Suoni.daPulsante = false; return; } Suoni.imposta(!Suoni.attivi); });
   costruisciLegenda();
 }
 function aggiornaCursori() {
@@ -3071,7 +3093,7 @@ function scegliFormulazione(k) {
   aggiornaCursori(); riempiBersagli();
   calcola();
   if (st.scheda === 'riduzione' && !(st.calc && st.calc.loop)) setScheda('schema');
-  disegna();
+  return disegna();
 }
 // le schede del centro: schema a blocchi, albero delle dipendenze, riduzione del loop
 function setScheda(s) {
@@ -3251,10 +3273,13 @@ function initSeparatori() {
   });
 }
 
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
   costruisciComandi(); Assetto.leggi(); initInterazione(); initSeparatori(); Grafici.init(); Aiuto.init();
   if (window.renderMathInElement) ['sx', 'dx', 'grafici'].forEach(id => renderMathInElement($(id), { delimiters: [{ left: '\\(', right: '\\)', display: false }] }));
-  scegliFormulazione(st.fk);
+  // all'apertura il campionamento parte da solo, appena lo schema e' disegnato: un alpha_1 dopo l'altro
+  // (a destra la sezione del campionamento e' aperta, quella del loop chiusa)
+  try { await scegliFormulazione(st.fk); } catch (e) { return; }
+  if (!Flusso.play && Vista.geo) Flusso.suona('sim');
 });
 window.addEventListener('resize', () => { Grafico.disegna(); Grafici.disegna(); if (!Vista.toccata) inquadra(); });
 </script>
