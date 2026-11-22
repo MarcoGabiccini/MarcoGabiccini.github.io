@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mappe degli equilibri del double track — Dinamica dei Veicoli · Università di Pisa</title>
+<meta name="description" content="Mappe degli equilibri (MAP) di un modello double track di autoveicolo, per tre veicoli: quattro piani collegati, curve di livello, il veicolo in terna body con il centro delle velocità e il viewer 3D delle prove. Corso di Dinamica dei Veicoli, Prof. Marco Gabiccini, Università di Pisa.">
+<link rel="icon" href="data:,">
+
+<style>
+  :root {
+    --bg: #1e1e24; --bg2: #2a2a33; --bg3: #24242c; --fg: #ddd; --muted: #9a9aa6;
+    --line: #444; --ctl: #3a3a44; --ctlb: #555; --accent: #5ab0ff;
+  }
+  html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-serif; background: var(--bg); color: var(--fg); }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+  button, select, input { font: inherit; font-size: 12px; }
+  button { background: var(--ctl); color: var(--fg); border: 1px solid var(--ctlb); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+  button.attivo { background: #1f4f7a; border-color: var(--accent); color: #fff; }
+  select { background: var(--bg2); color: var(--fg); border: 1px solid var(--ctlb); border-radius: 4px; padding: 1px 4px; }
+  label { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; cursor: pointer; }
+
+  .barra { padding: 5px 10px; display: flex; align-items: center; gap: 12px; flex: 0 0 auto; flex-wrap: wrap; font-size: 12px; }
+  #barra1 { background: var(--bg2); }
+  #barra2 { background: var(--bg3); }
+  .gruppo { display: flex; align-items: center; gap: 8px; }
+  .gruppo + .gruppo { border-left: 1px solid var(--line); padding-left: 12px; }
+  #barra1 { position: relative; padding-right: 44px; }
+  #btnAiuto { position: absolute; right: 10px; top: 5px; width: 24px; height: 22px; padding: 0; border-radius: 50%; font-weight: 600; }
+  .titoletto { color: var(--muted); font-size: 11px; }
+  #voci, #chips { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  #chips { gap: 5px; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 11px; padding: 1px 9px 1px 6px;
+    background: transparent; border: 1px solid #4a4a56; color: var(--muted); }
+  .chip:hover { color: var(--fg); border-color: var(--ctlb); }
+  .chip.acceso { background: #2b3542; border-color: #7fa9d6; color: var(--fg); }
+  .chip svg { opacity: 0.55; }
+  .chip.acceso svg { opacity: 1; }
+  #btn3D { background: #1f4f7a; border-color: var(--accent); color: #fff; font-weight: 600; }
+  #btn3D:hover { background: #2a6396; }
+  #btnMatlab { font-size: 11px; color: var(--muted); }
+  #btnMatlab.copiato { color: #8fd18f; border-color: #8fd18f; }
+  #finestre3d { position: absolute; left: 0; right: 0; top: -5px; height: 2px; border-radius: 1px; display: none; }
+  .campione { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; }
+  #slider { flex: 1; min-width: 160px; }
+  #sliderBox { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 260px; position: relative; }
+  #sliderWrap { flex: 1; position: relative; display: flex; align-items: center; }
+  #sliderWrap input { width: 100%; margin: 0; }
+  #banda { position: absolute; left: 0; right: 0; bottom: -4px; height: 3px; border-radius: 2px; display: none; }
+  #tempo { font-variant-numeric: tabular-nums; min-width: 9em; }
+  #valori { padding: 4px 10px; background: #19191e; border-bottom: 1px solid var(--line); font-size: 12.5px;
+    font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+  #valori b { font-weight: 600; }
+  #valori .v { margin-right: 12px; }
+  #valori .stato-ok { color: #8fd18f; }
+  #valori .stato-limite { color: #e6c86e; }
+  #valori .stato-oltre { color: #ff9d1a; }
+  #valori span[title] { cursor: help; }
+
+  #layout { flex: 1 1 auto; display: flex; min-height: 0; }
+  #piani { flex: 1 1 62%; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; min-width: 0; }
+  .piano { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .piano header { font-size: 11px; padding: 3px 6px; display: flex; gap: 6px; align-items: center; color: var(--muted); }
+  .piano header select { font-size: 11px; }
+  .graficoWrap { position: relative; flex: 1 1 auto; min-height: 0; }
+  .grafico { position: absolute; inset: 0; }
+  .sopra { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #voci label.spento { opacity: 0.4; cursor: default; }
+  #voci svg, .chip svg { vertical-align: middle; }
+  .sfumatura { display: inline-block; width: 24px; height: 4px; border-radius: 2px; vertical-align: middle; }
+  .pallino { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  /* i due punti dei piani: quello fissato con un clic (magenta) e quello sotto il mouse (bianco) */
+  .segno { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 8px 0 2px; vertical-align: middle; }
+  .segno.fissato { background: #ff70dc; box-shadow: 0 0 0 1.5px #fff; }
+  .segno.mouse { background: #fff; box-shadow: 0 0 0 1.5px #000; }
+  #slider { accent-color: #ff70dc; }
+  #selNome { white-space: nowrap; }
+  #viste { flex: 0 0 38%; display: flex; flex-direction: column; min-width: 300px; }
+  .vista { position: relative; min-height: 0; border-bottom: 1px solid var(--line); background: #17171c; }
+  #vistaBody { flex: 1 1 58%; }
+  #vistaTerra { flex: 1 1 42%; }
+  .vista svg { display: block; width: 100%; height: 100%; cursor: grab; }
+  .vista svg:active { cursor: grabbing; }
+  .vistaCtl { position: absolute; left: 6px; top: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px;
+    background: rgba(20,20,26,0.78); padding: 4px 6px; border-radius: 5px; max-width: calc(100% - 24px); }
+  .vistaCtl button { font-size: 11px; padding: 1px 6px; }
+  .vistaTitolo { position: absolute; right: 8px; bottom: 6px; font-size: 11px; color: var(--muted); pointer-events: none; text-align: right; }
+  #k { width: 90px; }
+
+  #aiuto { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 10; }
+  #aiuto.aperto { display: flex; }
+  #aiuto > div { background: var(--bg2); border: 1px solid var(--ctlb); border-radius: 8px; padding: 16px 22px; font-size: 13px; line-height: 1.5;
+    max-width: min(1320px, calc(100vw - 32px)); max-height: calc(100vh - 24px); overflow-y: auto; box-sizing: border-box; }
+  /* su uno schermo largo l'aiuto va su due colonne e sta nella finestra senza scorrere */
+  #aiuto .colonne { columns: 2 460px; column-gap: 40px; }
+  #aiuto .colonne h4:first-child { margin-top: 0; }
+  #aiuto .colonne li { break-inside: avoid; }
+  #aiuto .colonne h4 { break-after: avoid; }
+  #aiuto h3 { margin: 0 0 8px; font-size: 15px; }
+  #aiuto h4 { margin: 12px 0 2px; font-size: 13px; color: var(--accent); font-weight: 600; }
+  #aiuto ul { margin: 4px 0; padding-left: 20px; }
+  #aiuto .firma { margin: 12px 0 0; color: var(--muted); font-size: 12px; }
+  #aiuto a, #credito { color: var(--muted); }
+  #credito { text-decoration: none; white-space: nowrap; }
+  #credito:hover { color: var(--fg); text-decoration: underline; }
+  /* finché i dati delle mappe non sono arrivati (in rete sono qualche megabyte) */
+  #carico { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); color: var(--muted); font-size: 15px; }
+  #manca { padding: 40px; font-size: 15px; }
+  svg text { font-family: system-ui, "Segoe UI", sans-serif; }
+</style>
+</head>
+<body>
+<div id="carico">Carico i dati delle mappe…</div>
+
+<div id="barra1" class="barra">
+  <div class="gruppo">
+    <label>veicolo <select id="veicoloSel"></select></label>
+    <label>confronta <select id="confrontoSel"></select></label>
+  </div>
+  <div class="gruppo">
+    <label>piani <select id="presetSel"></select></label>
+  </div>
+  <div class="gruppo" id="mostra"><span class="titoletto">mostra</span><span id="voci"></span></div>
+  <div class="gruppo" id="livelli"><span class="titoletto" title="curve su cui una grandezza resta costante, ricavate dalla griglia degli equilibri">curve di livello</span><span id="chips"></span></div>
+  <button id="btnAiuto" title="come si usa (tasto ?)">?</button>
+</div>
+
+<div id="barra2" class="barra">
+  <div class="gruppo">
+    <button id="btnPlay" title="percorri la curva scelta">▶</button>
+    <button id="btnPausa" title="pausa">⏸</button>
+    <select id="velSel" title="velocità del replay"></select>
+  </div>
+  <div id="sliderBox">
+    <span id="selNome" title="la curva scelta e il suo punto fissato (magenta nei piani): un clic su una curva in un piano li cambia, ▶ parte dal punto fissato">—</span>
+    <div id="sliderWrap"><input id="slider" type="range" min="0" max="10000" value="0"><div id="banda"></div><div id="finestre3d"></div></div>
+    <span id="tempo"></span>
+  </div>
+  <div class="gruppo">
+    <button id="btn3D">3D ↗</button>
+    <label title="Con la spunta, questa pagina e il viewer 3D aperto con «3D ↗» vanno insieme: chiocciola, istante, ▶ e pausa valgono per tutte e due (riproduce la pagina in cui ▶ è stato premuto per ultimo, con la sua velocità, e l'altra la segue). Le due pagine vanno affiancate, in due finestre: una scheda nascosta non si anima. Senza la spunta sono indipendenti."><input type="checkbox" id="chkSincro">sincronizza</label>
+    
+    <a id="credito" href="https://marcogabiccini.github.io/VehicleDynamicsLab/" target="_blank" rel="noopener" title="Corso di Dinamica dei Veicoli: gli altri simulatori del Vehicle Dynamics Lab">Prof. Marco Gabiccini · Università di Pisa</a>
+  </div>
+</div>
+
+<div id="valori">—</div>
+
+<div id="layout">
+  <div id="piani"></div>
+  <div id="viste">
+    <div id="vistaBody" class="vista">
+      <svg id="svgBody"></svg>
+      <div class="vistaCtl">
+        <label title="esagera insieme sterzo, assetto e curvatura: C resta coerente (S non cambia, R diventa R/k)">k <input id="k" type="range" min="0" max="1" step="0.01" value="0"> <span id="kVal">1×</span></label>
+        <label><input type="checkbox" id="stDerive" checked>velocità e derive</label>
+        <label><input type="checkbox" id="stForze" checked>forze</label>
+        <label><input type="checkbox" id="stCarichi" checked>carichi</label>
+        <label><input type="checkbox" id="stAcc" checked>a<sub>G</sub></label>
+        <button id="btnBodyVeicolo" title="torna sul veicolo">veicolo</button>
+        <button id="btnBodyC" title="inquadra veicolo e centro delle velocità">inquadra C</button>
+        <label title="a ogni passo inquadra veicolo e C"><input type="checkbox" id="seguiC">segui C</label>
+      </div>
+      <div class="vistaTitolo">terna del veicolo: x avanti, y a sinistra · rotella = zoom, trascina = sposta</div>
+    </div>
+    <div id="vistaTerra" class="vista">
+      <svg id="svgTerra"></svg>
+      <div class="vistaCtl">
+        <button id="btnTerraVeicolo" title="segui il veicolo">segui</button>
+        <button id="btnTerraTutto" title="tutta la traiettoria">tutto</button>
+        <label title="esagera l'assetto rispetto alla traiettoria, che resta vera: tan β diventa k tan β, e lo sterzo delle ruote allo stesso modo (sempre sotto i 90°)">esagera β <select id="terraK"><option value="1">no</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="20">20×</option><option value="50">50×</option></select></label>
+      </div>
+      <div class="vistaTitolo">sul terreno: traiettoria di G e cerchio di regime</div>
+    </div>
+  </div>
+</div>
+
+<div id="aiuto"><div>
+  <h3>Mappe degli equilibri del double track</h3>
+  <div class="colonne">
+  <h4>Che cosa c&#39;è</h4>
+  <ul>
+    <li>Gli <b>equilibri</b> (regime) di un modello double track di autoveicolo: volante fermo, velocità costante, il veicolo gira
+      in tondo. Ogni punto delle curve è un equilibrio.</li>
+    <li>Vengono dalle <b>chiocciole</b>: 35 simulazioni per veicolo, da 10 a 180 km/h ogni 5, a velocità costante (la tiene un
+      regolatore sulla coppia motrice) e con il volante che cresce di 1°/s da 0 a 540°, così piano che ogni istante è un equilibrio.</li>
+    <li><b>ã<sub>y</sub></b> è l&#39;accelerazione laterale della prova (le forze laterali divise per la massa): all&#39;equilibrio vale u r,
+      e da quella vengono ρ = ã<sub>y</sub>/u² e S = −βR. Non si legge come u r perché, quando il veicolo comincia
+      a girarsi, u r cresce con l&#39;imbardata e l&#39;accelerazione laterale no.</li>
+    <li>Una chiocciola ha fino a tre tratti. <b>Mappa</b> (in colore): ã<sub>y</sub> cresce con il volante fino al picco (◆),
+      il massimo fra gli equilibri; oltre, sterzando di più, ã<sub>y</sub> cala. Se il veicolo comincia a girarsi prima che ã<sub>y</sub>
+      cali, la mappa finisce 1,5 s prima che cominci.
+      <b>Plateau</b> (grigio): oltre il picco, ancora equilibri (la prova è quasi statica), ma il volante in più toglie un po&#39; di ã<sub>y</sub>.
+      <b>Testacoda</b> (grigio a punti): il veicolo si gira e non sono più equilibri.
+      La prova finisce a 540° di volante o quando u scende sotto 1 m/s. La banda sotto il cursore del tempo mostra i tre tratti.</li>
+    <li>Il <b>bordo</b> della mappa è fatto dei picchi: bianco dove dopo il picco c&#39;è il plateau (o il volante è a fine corsa),
+      arancione dove il veicolo comincia a girarsi prima che ã<sub>y</sub> cali: nel base da 115 km/h, nel sovrasterzante da 30,
+      con la deportanza mai.</li>
+  </ul>
+  <h4>I tre veicoli</h4>
+  <ul>
+    <li><b>Base</b>: il veicolo di riferimento, sottosterzante. 1100 kg, passo 2,5 m, il 56% del peso sull&#39;assale anteriore,
+      trazione posteriore, niente deportanza.</li>
+    <li><b>Deportanza</b>: il base con in più la deportanza aerodinamica, maggiore al posteriore (C<sub>z1</sub> = 0,6 e
+      C<sub>z2</sub> = 0,9 su 2 m² di superficie). Cresce con u²: a 140 km/h vale 2,7 kN, un quarto del peso. Con il carico cresce
+      l&#39;accelerazione laterale che i pneumatici reggono (8,5 m/s² a 180 km/h, contro 6,5 del base), e più va forte più il veicolo
+      sottosterza.</li>
+    <li><b>Sovrasterzante</b>: il base con due modifiche, il baricentro arretrato di 24 cm (il peso sull&#39;anteriore scende dal 56% al 46%)
+      e una barra antirollio al posteriore. I pneumatici sono gli stessi, ma la loro rigidezza di deriva cresce meno del carico:
+      l&#39;assale posteriore, ora più carico, ne ha meno per ogni newton che porta, e il veicolo sovrasterza già a piccole accelerazioni
+      laterali (gradiente di sottosterzo circa −0,6° di volante per m/s², contro +0,9 del base). La barra dà al posteriore più
+      trasferimento di carico in curva: verso il limite l&#39;assale posteriore cede per primo, e il veicolo si gira prima di arrivare al
+      limite di aderenza.</li>
+    <li>Il menu «veicolo» ne sceglie uno; «confronta» ne disegna un secondo in grigio nei piani (le chiocciole fino alla fine
+      della mappa e il bordo, tratteggiato).</li>
+  </ul>
+  <h4>I piani</h4>
+  <ul>
+    <li>Gli assi di ogni piano si scelgono dai menu; «piani» ne imposta quattro insieme.</li>
+    <li>«mostra» accende e spegne le parti delle prove; le <b>curve di livello</b> (i bottoni a destra) tengono fissa una grandezza:
+      iso-δ (volante fermo), iso-ã<sub>y</sub>, iso-ρ (stesso raggio: steering pad), iso-β. «monotraccia» è l&#39;handling diagram
+      del modello monotraccia con le caratteristiche degli assali (bianco tratteggiato, solo nei piani in cui si può disegnare;
+      con la deportanza non c&#39;è).</li>
+    <li><b>Passa sopra</b> a una curva: la curva si accende in giallo sottile e lo stesso equilibrio, un punto bianco, in tutti i piani;
+      le viste e la riga dei valori mostrano quel punto finché il mouse è lì.</li>
+    <li><b>Clic</b>: il punto resta <b>fissato</b>, magenta in tutti i piani, e la sua curva diventa quella scelta (gialla spessa, con il nome
+      accanto a ▶). Il punto fissato non si muove con il mouse: lo spostano un altro clic, il cursore del tempo e ▶, che parte da lì
+      e percorre la curva (per le chiocciole nel tempo vero della prova, anche oltre il limite; quando il veicolo si gira il replay
+      rallenta da solo a ×0,5). Il pallino in testa alla riga dei valori dice di quale punto sono: magenta il fissato, bianco quello
+      sotto il mouse. Barra spaziatrice: ▶ e pausa.</li>
+    <li>Il <b>bordo</b>, sotto il mouse e quando è scelto, si accende in arancione e non in giallo: non è una prova ma il contorno
+      della mappa, con i picchi di tutte le velocità, e ▶ lo percorre un equilibrio dopo l&#39;altro.</li>
+    <li>Rotella e trascinamento: zoom e spostamento nei piani e nelle due viste (doppio clic in un piano: torna alla vista intera).</li>
+  </ul>
+  <h4>Le due viste del veicolo</h4>
+  <ul>
+    <li>In terna body: il veicolo è fermo, C = (S, R) è il centro delle velocità, R = 1/ρ, S = −βR (nel testacoda, che non è un
+      equilibrio, quello dell&#39;istante: u/r e −v/r). Il cursore k esagera sterzo, assetto e curvatura insieme: C si avvicina (R/k)
+      e la figura resta coerente. Forze bianche prima del picco di aderenza del pneumatico, arancioni oltre.</li>
+    <li>Sul terreno: la traiettoria è vera; «esagera β» ruota il veicolo rispetto alla traiettoria (tan β diventa k tan β, fino a 50×)
+      per vedere da che parte sta il muso: fuori dalla curva a bassa velocità, dentro ad alta.</li>
+  </ul>
+  <h4>Il viewer 3D</h4>
+  <ul>
+    <li><b>3D ↗</b> apre il viewer 3D (in un&#39;altra scheda) sulla chiocciola scelta, all&#39;istante del cursore: ruote, forze,
+      pneumatici, segnali. Per le altre curve apre la chiocciola più vicina, al volante del punto. Il viewer ha la prova intera; con
+      «intervallo t» si restringe la riproduzione a un tratto, e il suo menu «prova» passa alle altre chiocciole dello stesso
+      veicolo.</li>
+    <li><b>sincronizza</b>: con la spunta, questa pagina e il viewer aperto con 3D ↗ vanno insieme. Un clic su una curva, il cursore del
+      tempo e ▶ portano il viewer alla stessa chiocciola e allo stesso istante; ▶, pausa, il cursore del tempo e il menu «prova» del
+      viewer spostano qui il punto fissato. Riproduce la pagina in cui ▶ è stato premuto per ultimo, con la sua velocità, e l&#39;altra la
+      segue. Le due pagine vanno affiancate in due finestre (la scheda del viewer si trascina fuori): una scheda nascosta non si anima.
+      Senza la spunta le due pagine sono indipendenti.</li>
+  </ul>
+  </div>
+  <p class="firma">Corso di Dinamica dei Veicoli · Prof. Marco Gabiccini · Università di Pisa ·
+    <a href="https://marcogabiccini.github.io/VehicleDynamicsLab/" target="_blank" rel="noopener">Vehicle Dynamics Lab</a></p>
+  <button id="btnChiudiAiuto">chiudi</button>
+</div></div>
+
+<script src="viewer/lib/plotly.min.js"></script>
+<script src="dati/mappe.js"></script>
+<script>window.MAPPE_RETE = {"viewer":"viewer/index.html","prove":"dati/prove_{veicolo}.js"};</script>
+<script src="js/grandezze.js"></script>
+<script src="js/piani.js"></script>
+<script src="js/veicolo.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
