@@ -554,6 +554,7 @@
   $('btnTerraVeicolo').onclick = () => { vTerra.modo = 'segui'; vTerra.zoomUtente = 1; disegnaViste(); };
   $('btnTerraTutto').onclick = () => { vTerra.tutto(app.curva, app.riga, statoVista()); disegnaViste(); };
   $('terraK').onchange = () => disegnaViste();
+  for (const e of document.querySelectorAll('.icoIntera')) e.innerHTML = ICONA_INTERA;     // l'icona citata nell'aiuto
   $('btnAiuto').onclick = () => $('aiuto').classList.add('aperto');
   $('btnChiudiAiuto').onclick = () => $('aiuto').classList.remove('aperto');
   $('aiuto').onclick = e => { if (e.target === $('aiuto')) $('aiuto').classList.remove('aperto'); };

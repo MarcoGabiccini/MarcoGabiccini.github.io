@@ -43,6 +43,11 @@ function rangeAsse(nome, veicoli) {
   return [lo - m, hi + m];
 }
 
+// «vista intera»: il riquadro con le quattro frecce sulle diagonali, verso i vertici
+const ICONA_INTERA = '<svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<rect class="riquadro" x="0.75" y="0.75" width="16.5" height="16.5" rx="2.5"/>' +
+  '<path d="M7.4 7.4 4.2 4.2M4.2 7V4.2H7 M10.6 7.4 13.8 4.2M11 4.2H13.8V7 M7.4 10.6 4.2 13.8M4.2 11V13.8H7 M10.6 10.6 13.8 13.8M11 13.8H13.8V11"/></svg>';
+
 class Piano {
   constructor(contenitore, indice, app) {
     this.app = app;
@@ -54,7 +59,13 @@ class Piano {
     this.selY = menuGrandezze();
     const lx = document.createElement('span'); lx.textContent = 'x';
     const ly = document.createElement('span'); ly.textContent = 'y';
-    header.append(lx, this.selX, ly, this.selY);
+    this.btnIntera = document.createElement('button');
+    this.btnIntera.className = 'btnIntera';
+    this.btnIntera.title = 'vista intera: toglie zoom e spostamento di questo piano (come un doppio clic nel piano)';
+    this.btnIntera.setAttribute('aria-label', 'vista intera');
+    this.btnIntera.innerHTML = ICONA_INTERA;
+    this.btnIntera.onclick = () => this.vistaIntera();
+    header.append(lx, this.selX, ly, this.selY, this.btnIntera);
     const wrap = document.createElement('div');
     wrap.className = 'graficoWrap';
     this.gd = document.createElement('div');
@@ -84,11 +95,26 @@ class Piano {
     this.selX.value = x; this.selY.value = y;
   }
 
+  // torna alla vista intera, quella con tutta la mappa
+  vistaIntera() {
+    if (!this.pronto || !this.intera) return;
+    Plotly.relayout(this.gd, { 'xaxis.range': this.intera.x.slice(), 'yaxis.range': this.intera.y.slice() });
+  }
+
+  // il bottone della vista intera si accende quando il piano è ingrandito o spostato
+  segnaIntera() {
+    const L = this.gd._fullLayout, I = this.intera;
+    if (!L || !I) return;
+    const uguale = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) < 1e-6 * Math.abs(b[1] - b[0]);
+    this.btnIntera.classList.toggle('mosso', !(uguale(L.xaxis.range, I.x) && uguale(L.yaxis.range, I.y)));
+  }
+
   // tutte le tracce del piano: si rifà quando cambiano veicolo, assi o curve accese
   async costruisci() {
     const A = this.app, V = A.V, W = A.W, gx = this.x, gy = this.y;
     const rx = rangeAsse(gx, W ? [V, W] : [V]), ry = rangeAsse(gy, W ? [V, W] : [V]);
     const tracce = [];
+    this.intera = { x: rx.slice(), y: ry.slice() };          // la vista intera, per il bottone (copie: Plotly riscrive i range che riceve)
 
     // più curve in una traccia sola, separate da NaN; customdata = [curva, riga]
     const unisci = (pezzi, conDati) => {
@@ -173,11 +199,13 @@ class Piano {
         const p = ev.points && ev.points[0];
         if (p && p.customdata) A.scegli(p.customdata[0], p.customdata[1]);
       });
-      this.gd.on('plotly_relayout', () => this.disegnaSopra(true));
-      this.gd.on('plotly_relayouting', () => this.disegnaSopra(true));
-      this.gd.on('plotly_afterplot', () => this.disegnaSopra(true));
+      const mosso = () => { this.disegnaSopra(true); this.segnaIntera(); };
+      this.gd.on('plotly_relayout', mosso);
+      this.gd.on('plotly_relayouting', mosso);
+      this.gd.on('plotly_afterplot', mosso);
     }
     this.disegnaSopra(true);
+    this.segnaIntera();
   }
 
   // un'etichetta per curva: si prova prima l'estremo più vicino al limite (ã_y più alta;
