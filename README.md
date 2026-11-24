@@ -19,6 +19,7 @@ Then open `http://localhost:8000`.
 - Navigation and entrance animations: `assets/js/main.js`
 - Portrait: `assets/images/Marco_mezzo_busto.jpg`
 - Public manuscripts: `papers/`
-- Teaching material remains linked at `https://marcogabiccini.github.io/AppliedMechanicsLab/`
+- Teaching laboratories, linked from the Teaching cards: `https://marcogabiccini.github.io/RobotMechanicsLab/`,
+  `https://marcogabiccini.github.io/VehicleDynamicsLab/`, `https://marcogabiccini.github.io/AppliedMechanicsLab/`
 
 GitHub Pages publishes the repository root automatically when Pages is configured to deploy from the default branch.
